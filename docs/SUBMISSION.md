@@ -37,7 +37,7 @@ Product discovery and offers come from the shop.dev Shop MCP (`search_catalog` b
 ## Links
 - Repository: https://github.com/hxbib/signalforge
 - Live demo: https://reviewing-look-liz-course.trycloudflare.com
-- One-minute video: TODO-LEAD (README.md currently links https://github.com/hxbib/signalforge/blob/main/docs/demo/signalforge-demo.mp4)
+- One-minute video: https://github.com/hxbib/signalforge/blob/main/docs/demo/signalforge-demo.mp4
 - Evidence page: https://reviewing-look-liz-course.trycloudflare.com/proof
 
 ## Team
