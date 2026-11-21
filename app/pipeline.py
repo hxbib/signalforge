@@ -20,6 +20,10 @@ LOG = logging.getLogger("signalforge.pipeline")
 _runs = ThreadPoolExecutor(max_workers=8, thread_name_prefix="run")
 _write = threading.Lock()
 RUN_LIMIT_S = 90.0
+MAX_OPTIONS = 5
+SCREEN_LISTINGS = 60
+SCREEN_LIKELY = 0.5
+PRINTED_MIN = 0.75
 TIMEOUT_MESSAGE = "This search took longer than 90 seconds and was stopped. Please try again."
 INTERRUPTED_MESSAGE = "This search was interrupted by a server restart. Please try again."
 
@@ -309,6 +313,8 @@ def _fresh(run: dict, image: bytes, steps: Steps) -> None:
         receipts = {r.get("job"): r for r in seen.get("receipts", [])}
         run["receipts"]["models"] = list(seen.get("receipts", []))
         run["decision"] = {k: decision.get(k) for k in ("choice", "confidence", "pass", "threshold", "ms", "id", "model")}
+        if isinstance(decision.get("probabilities"), dict):
+            run["decision"]["probabilities"] = dict(decision["probabilities"])
         run["target"] = {"name": visual.get("name") or "", "brand": visual.get("brand") or "",
                          "mpn": visual.get("part_number") or "", "gtin": _valid_gtin(visual.get("barcode")), "upid": "",
                          "title": "", "variant_details": list(visual.get("variant_details") or []),
@@ -338,7 +344,84 @@ def _fresh(run: dict, image: bytes, steps: Steps) -> None:
     _identify(run, working_image, steps, ctx)
 
 
+def _ask_choice(run: dict, ctx: dict, anchors: list[dict], rows: list[dict], text: str) -> None:
+    """One choice question. The offered anchors are kept so the buyer's pick binds exactly what was shown."""
+    offered = anchors[:MAX_OPTIONS]
+    options = []
+    for a in offered:
+        option = {"id": a["upid"], "label": f"{a.get('title')} ({a.get('sellers') or 1} sellers)"}
+        if type(a.get("p")) is float:
+            option["p"] = a["p"]
+        options.append(option)
+    options.append({"id": "none", "label": "None of these"})
+    ctx["offered"] = offered
+    run["question"] = {"question_id": "q_" + uuid.uuid4().hex[:12], "kind": "choice", "text": text, "options": options}
+    run["result"] = _empty_result(rows, "needs_identity")
+    if ctx.get("screen"):
+        run["result"]["screen"] = dict(ctx["screen"])
+    run["coverage"] = _catalog_coverage(rows, run["receipts"]["sources"])
+    run["state"] = "needs_detail"
+
+
+def _read_product(shop, upid: str) -> tuple[list[dict], dict]:
+    """Fresh rows of one catalog product and the receipt of that call; a failed call is recorded, never hidden."""
+    started = time.monotonic()
+    try:
+        doc, receipt = shop.product(upid)
+        return list(shop.rows_from(doc, int(time.time()))), dict(receipt)
+    except Exception as exc:
+        return [], {"source": "shop_catalog", "tool": "get_product", "status": "failed", "upid": upid,
+                    "error": type(exc).__name__, "read_at": int(time.time()),
+                    "ms": round((time.monotonic() - started) * 1000)}
+
+
+def _chosen(run: dict, steps: Steps, ctx: dict, chosen: str) -> None:
+    """The buyer picked an offered product: bind that one and read its current listings straight from the catalog."""
+    shop = _lane("app.merchants.shop")
+    offered = [a for a in ctx.get("offered") or [] if a.get("upid")]
+    anchor = next(a for a in offered if a["upid"] == chosen)
+    run["state"] = "searching"
+    steps.start("identity", "Shop catalog identity evidence")
+    upids = [chosen] + [a["upid"] for a in offered if a["upid"] != chosen]
+    with ThreadPoolExecutor(max_workers=len(upids)) as pool:
+        reads = list(pool.map(lambda u: _read_product(shop, u), upids))
+    run["receipts"]["sources"] = [receipt for _, receipt in reads]
+    rows, seen = [], set()
+    for found, _ in reads:
+        for row in found:
+            key = (row.get("seller"), row.get("listing"))
+            if key not in seen:
+                seen.add(key)
+                rows.append(row)
+    for row in rows:
+        p = (ctx.get("screen_by_listing") or {}).get(row.get("listing"))
+        if type(p) is float:
+            row["screen_p"] = p
+    own = [r for r in reads[0][0]]
+    sellers = len({r.get("seller") for r in rows if r.get("seller")})
+    if not own:
+        steps.end("identity", "failed", "The chosen product could not be read from the Shop catalog just now")
+        rest = [a for a in offered if a["upid"] != chosen]
+        if rest:
+            _ask_choice(run, ctx, rest, rows, "I could not read that product from the catalog just now. Is it one of these?")
+        else:
+            run["question"] = {"question_id": "q_" + uuid.uuid4().hex[:12], "kind": "text", "options": [],
+                               "text": "I could not read that product from the catalog just now. "
+                                       "What is it? Brand and model in a few words."}
+            run["result"] = _empty_result(rows, "needs_identity")
+            run["coverage"] = _catalog_coverage(rows, run["receipts"]["sources"])
+            run["state"] = "needs_detail"
+        return
+    steps.end("identity", "done", f"{len(upids)} catalog products · {len(rows)} listings · {sellers} sellers")
+    steps.start("bind", "Exact product chosen")
+    steps.end("bind", "done", f"{anchor.get('title')} · {BASIS_WORDS['buyer_choice']}")
+    _compare(run, steps, ctx, anchor, "buyer_choice", rows)
+
+
 def _identify(run: dict, image: bytes, steps: Steps, ctx: dict, chosen: str | None = None) -> None:
+    if chosen is not None and any(a.get("upid") == chosen for a in ctx.get("offered") or []):
+        _chosen(run, steps, ctx, chosen)
+        return
     visual, decision, scan = ctx["visual"], ctx["decision"], ctx.get("scan")
     shop = _lane("app.merchants.shop")
     run["state"] = "searching"
@@ -361,18 +444,24 @@ def _identify(run: dict, image: bytes, steps: Steps, ctx: dict, chosen: str | No
         steps.start("bind", "Exact product chosen")
         if anchor is None:
             steps.end("bind", "failed", "That product is no longer in the catalog results")
-            run["result"] = _empty_result(rows, "needs_identity")
-            run["coverage"] = _catalog_coverage(rows, run["receipts"]["sources"])
-            run["state"] = "partial" if _degraded(run["coverage"]) else "complete"
+            _ask_choice(run, ctx, anchors, rows, "That product is no longer in the catalog results. Is it one of these?")
             return
         steps.end("bind", "done", f"{anchor.get('title')} · {BASIS_WORDS['buyer_choice']}")
         _compare(run, steps, ctx, anchor, "buyer_choice", rows)
         return
     gate_ok = bool(decision.get("pass")) or bool(scan)
     if not gate_ok or visual.get("target_count") != "one":
-        text = ("I could not make out one product in this photo. What should I look for? A few words are enough."
-                if decision.get("choice") == "other" else
-                "I can see more than one possible item. Which one should I compare? A few words are enough.")
+        if decision.get("choice") == "other":
+            text = "I could not make out one product in this photo. What should I look for? A few words are enough."
+        elif decision.get("choice") == "multiple" or visual.get("target_count") == "many":
+            text = "I can see more than one possible item. Which one should I compare? A few words are enough."
+        elif not gate_ok:
+            text = (f"I am not sure this photo shows one clear product (confidence "
+                    f"{float(decision.get('confidence') or 0):.2f}, needs "
+                    f"{float(decision.get('threshold') or GATE_THRESHOLD):.2f}). Which item should I compare? "
+                    f"A few words are enough.")
+        else:
+            text = "I could not tell exactly which product this is. What is it? A few words are enough."
         run["question"] = {"question_id": "q_" + uuid.uuid4().hex[:12], "kind": "text", "text": text, "options": []}
         run["result"] = _empty_result(rows, "needs_identity")
         run["coverage"] = _catalog_coverage(rows, run["receipts"]["sources"])
@@ -380,25 +469,83 @@ def _identify(run: dict, image: bytes, steps: Steps, ctx: dict, chosen: str | No
         return
     models = _lane("app.models")
     steps.start("bind", "Gemini 4 Carbon binds the exact product")
-    bound = models.bind(image, run["note"], anchors, visual, decision, scan)
+    screen_fn = getattr(models, "screen", None)
+    steps.start("screen", "Gemini Decision 1 screens every listing in one pass")
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        screen_job = None
+        if screen_fn is not None:
+            side = {"name": visual.get("name") or "", "brand": visual.get("brand") or "",
+                    "mpn": visual.get("part_number") or "", "variant_details": list(visual.get("variant_details") or [])}
+            claims = {k: v for k, v in (("mpn", visual.get("part_number")), ("brand", visual.get("brand"))) if v}
+            screen_job = pool.submit(screen_fn, image, side, rows[:SCREEN_LISTINGS], claims)
+        try:
+            bound = models.bind(image, run["note"], anchors, visual, decision, scan)
+        except Exception:
+            _screened(run, steps, ctx, screen_job, rows)
+            raise
+        screened = _screened(run, steps, ctx, screen_job, rows)
     receipt = bound.get("receipt") or {}
     if receipt:
         run["receipts"]["models"].append(receipt)
     anchor = bound.get("anchor")
+    if screened is not None:
+        best: dict[str, float] = {}
+        for row in rows:
+            if type(row.get("screen_p")) is float and row.get("product"):
+                best[row["product"]] = max(best.get(row["product"], 0.0), row["screen_p"])
+        for a in anchors:
+            if a.get("upid") in best:
+                a["p"] = round(best[a["upid"]], 3)
+        anchors.sort(key=lambda a: -a.get("p", -1.0))
+        printed = (screened.get("printed") or {}).get("mpn") or {}
+        if anchor is not None and (bound.get("basis") or "model_number") == "model_number" \
+                and type(printed.get("p")) is float and printed["p"] < PRINTED_MIN:
+            steps.end("bind", "done", f"Printed model number not confirmed on the photo "
+                                      f"(Decision 1 {printed['p']:.2f}, needs {PRINTED_MIN:.2f})", receipt.get("ms"))
+            _ask_choice(run, ctx, anchors, rows,
+                        "I could not confirm a printed model number on the photo. Is it one of these?")
+            return
     if anchor is None:
         steps.end("bind", "done", "No exact product could be confirmed from the photo alone", receipt.get("ms"))
-        options = [{"id": a["upid"], "label": f"{a.get('title')} ({a.get('sellers') or 1} sellers)"} for a in anchors[:4]]
-        options.append({"id": "none", "label": "None of these"})
-        run["question"] = {"question_id": "q_" + uuid.uuid4().hex[:12], "kind": "choice",
-                           "text": "I could not confirm the exact product from the photo alone. Is it one of these?",
-                           "options": options}
-        run["result"] = _empty_result(rows, "needs_identity")
-        run["coverage"] = _catalog_coverage(rows, run["receipts"]["sources"])
-        run["state"] = "needs_detail"
+        _ask_choice(run, ctx, anchors, rows,
+                    "I could not confirm the exact product from the photo alone. Is it one of these?")
         return
     basis = bound.get("basis") or "model_number"
     steps.end("bind", "done", f"{anchor.get('title')} · {BASIS_WORDS.get(basis, basis)}", receipt.get("ms"))
     _compare(run, steps, ctx, anchor, basis, rows)
+
+
+def _screened(run: dict, steps: Steps, ctx: dict, job, rows: list[dict]) -> dict | None:
+    """Close the `screen` row with what the one Decision 1 pass really returned; a missing or failed screen changes
+    nothing else. Scores annotate the rows (ordering evidence only, never identity)."""
+    if job is None:
+        steps.end("screen", "failed", "The listing screen is not part of this build")
+        return None
+    try:
+        out = job.result()
+    except Exception as exc:
+        steps.end("screen", "failed", _classify(exc)[1])
+        return None
+    receipt = out.get("receipt")
+    if not receipt:
+        steps.end("screen", "skipped", "Nothing to screen")
+        return None
+    run["receipts"]["models"].append(receipt)
+    by_listing = {}
+    for score in out.get("scores") or []:
+        index, p = score.get("index"), score.get("p_same")
+        if type(index) is int and 0 <= index < len(rows) and isinstance(p, (int, float)) and not isinstance(p, bool):
+            rows[index]["screen_p"] = round(float(p), 3)
+            if rows[index].get("listing"):
+                by_listing[rows[index]["listing"]] = rows[index]["screen_p"]
+    likely = sum(1 for p in by_listing.values() if p >= SCREEN_LIKELY)
+    scored = len(out.get("scores") or [])
+    ctx["screen_by_listing"] = by_listing
+    ctx["screen"] = {"model": receipt.get("model") or "gemini-decision-1", "listings": scored, "ms": receipt.get("ms"),
+                     "note": f"{likely} of {scored} listings likely the same item"
+                             + (f"; {len(rows) - scored} not screened" if len(rows) > scored else "")}
+    steps.end("screen", "done", f"{scored} listings · {likely} likely the same item", receipt.get("ms"))
+    return out
 
 
 def _compare(run: dict, steps: Steps, ctx: dict, anchor: dict, basis: str, rows: list[dict]) -> None:
@@ -426,6 +573,8 @@ def _compare(run: dict, steps: Steps, ctx: dict, anchor: dict, basis: str, rows:
                     source["status"] = status
                 source["note"] = "; ".join(x for x in (source.get("note"), note) if x)
     run["result"], run["coverage"] = out.get("result"), coverage
+    if ctx.get("screen") and isinstance(run["result"], dict):
+        run["result"]["screen"] = dict(ctx["screen"])
     run["_evaluation"] = out.get("evaluation")
     for receipt in out.get("receipts") or []:
         run["receipts"]["models" if receipt.get("model") else "sources"].append(receipt)
@@ -456,7 +605,9 @@ def _answered(run: dict, image: bytes, steps: Steps, answer: dict) -> None:
         if answer.get("choice") == "none":
             leads = (run.get("result") or {}).get("leads") or []
             run["result"] = {**_empty_result([], "needs_identity"), "leads": leads}
-            run["state"] = "complete"
+            run["question"] = {"question_id": "q_" + uuid.uuid4().hex[:12], "kind": "text", "options": [],
+                               "text": "What is it? Brand and model in a few words."}
+            run["state"] = "needs_detail"
             return
         _identify(run, image, steps, ctx, chosen=answer["choice"])
         return

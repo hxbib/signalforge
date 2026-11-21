@@ -10,16 +10,26 @@ import io as _io
 import re
 from concurrent.futures import ThreadPoolExecutor
 
-from app.models.io import ModelCallError, THRESHOLD, gate, parts, structured, text_part
+from app.models.io import ModelCallError, THRESHOLD, gate, parts, structured, text_part, yes_no
 from gemini_io import CARBON, NEON
 
-__all__ = ["ModelCallError", "inspect", "parse_goal", "bind", "pair", "scan", "compile_watch"]
+__all__ = ["ModelCallError", "PAIR_VERSION", "inspect", "parse_goal", "bind", "pair", "pair_v1", "screen", "scan", "compile_watch"]
 
 MAX_ANCHORS = 8
+MAX_SCREEN_LISTINGS = 60
+PAIR_VERSION = "v2-carbon-verified-quotes"
+PAIR_V1_VERSION = "v1-neon-extract-carbon-verdict"
+
+
+PRINTED_ONLY = """
+part_number and barcode hold ONLY characters you can literally see printed in this image. Never fill them from
+recognising the product or from memory: a bare item with no printed model or set number has an empty part_number.
+Whenever part_number or barcode is not empty, one evidence entry must quote the printed text that contains it."""
 
 
 def _look(raw, note):
     from deal_models import VIEW, Visual
+    VIEW = VIEW + PRINTED_ONLY
     data = parts(raw, note)
     with ThreadPoolExecutor(max_workers=2) as pool:
         gate_job = pool.submit(gate, data)
@@ -84,6 +94,19 @@ def _part_ok(part, anchor):
     return want in pool
 
 
+def _quoted_in_evidence(part, visual):
+    """Neon's own evidence lines must quote the part number as printed text (whole tokens, punctuation ignored)."""
+    want = _tokens(part)
+    joined = _norm(part)
+    if not joined:
+        return False
+    for line in visual.get("evidence") or []:
+        have = _tokens(line)
+        if joined in have or any(have[i:i + len(want)] == want for i in range(len(have) - len(want) + 1)):
+            return True
+    return False
+
+
 def _valid_gtin(value):
     from compare_offers import gtin
     try:
@@ -109,7 +132,10 @@ def corroborate(anchor: dict, visual: dict, decision: dict, verified_scan: str |
         if scan_code or printed:
             return "barcode", ""
     if _brand_ok(visual.get("brand"), anchor) and _part_ok(visual.get("part_number"), anchor):
-        return "model_number", ""
+        # a model number that Neon did not quote from visible print is a recollection, not printed evidence
+        if _quoted_in_evidence(visual.get("part_number"), visual):
+            return "model_number", ""
+        return None, "Could you show the printed model number or barcode?"
     return None, "Could you show the model number or barcode?"
 
 
@@ -137,7 +163,33 @@ def _side(value):
     return {str(k): v for k, v in (value or {}).items() if isinstance(v, (str, int, float, bool, list)) and v not in ("", [])}
 
 
+def _fold(value):
+    return " ".join(str(value).split()).casefold()
+
+
+def _quote_verified(quote, side):
+    """Every non-empty fragment of the quote (split on an ellipsis) must appear in one field of its own side,
+    compared after whitespace normalisation and case-folding. An empty quote is never verified."""
+    fragments = [f for f in (_fold(x) for x in re.split(r"\.\.\.|\u2026", quote or "")) if f]
+    fields = [_fold(x) for v in side.values() for x in (v if isinstance(v, list) else [v])]
+    return bool(fragments) and all(any(f in field for field in fields) for f in fragments)
+
+
 def pair(target: dict, listing: dict) -> dict:
+    """Listing check v2: one Gemini 4 Carbon verdict with one decisive quote per side, then deterministic
+    verification of both quotes against their own side. Anything unverifiable abstains."""
+    from deal_models import PAIR, Pair
+    packet = {"left": _side(target), "right": _side(listing)}
+    final, receipt = structured("pair_verdict", CARBON, PAIR, Pair, text_part(packet))
+    verdict = final.verdict
+    if not (_quote_verified(final.left_quote, packet["left"]) and _quote_verified(final.right_quote, packet["right"])):
+        verdict = "abstain"
+    return {"verdict": verdict, "version": PAIR_VERSION, "receipts": [receipt]}
+
+
+def pair_v1(target: dict, listing: dict) -> dict:
+    """Listing check v1 (kept callable for the evaluation record): Neon extracts, Carbon rules, both must agree
+    and each quote must appear verbatim in its side."""
     from deal_models import EXTRACT, PAIR, Pair
     packet = {"left": _side(target), "right": _side(listing)}
     data = text_part(packet)
@@ -151,7 +203,38 @@ def pair(target: dict, listing: dict) -> dict:
             quote = getattr(inspection, side + "_quote").strip().casefold()
             if not quote or not any(quote in str(v).casefold() for v in packet[side].values()):
                 verdict = "abstain"
-    return {"verdict": verdict, "receipts": [first, second]}
+    return {"verdict": verdict, "version": PAIR_V1_VERSION, "receipts": [first, second]}
+
+
+def screen(image: bytes, target: dict, listings: list[dict], claims: dict | None = None) -> dict:
+    """ONE Gemini Decision 1 forward pass: a calibrated yes/no per listing ("same sellable product as the pictured
+    item?") and, when claims are given, per claim ("is this text visibly printed on the item?"). It orders and
+    annotates; it never grants identity. At most MAX_SCREEN_LISTINGS listings are scored; the rest get no score."""
+    import base64
+    import json
+    scored = list(listings or [])[:MAX_SCREEN_LISTINGS]
+    asked = {str(k): str(v).strip() for k, v in (claims or {}).items() if str(v or "").strip()}
+    printed = {"mpn": None, "brand": None, **{k: None for k in (claims or {})}}
+    if not scored and not asked:   # nothing to ask: no model call, so no receipt
+        return {"scores": [], "printed": printed, "receipt": None}
+    packet = {"target": _side(target), "listings": [
+        {"i": i, "title": str(row.get("title") or ""), "seller": str(row.get("seller_name") or row.get("seller") or ""),
+         "condition": str(row.get("condition") or "")} for i, row in enumerate(scored)]}
+    data = [{"type": "image", "mime_type": "image/jpeg", "data": base64.b64encode(image).decode()},
+            {"type": "text", "text": json.dumps(packet, ensure_ascii=False)}]
+    questions = {f"listing_{i}": f"Is listing {i} the exact same sellable product as the buyer's pictured item — "
+                                 "same brand, model or set number, edition and pack size?" for i in range(len(scored))}
+    for key, value in asked.items():
+        questions[f"claim_{key}"] = f"Is the text {value!r} visibly printed on the pictured item or its packaging?"
+    answers, ms = yes_no("screen", data, questions)
+    for key in asked:
+        printed[key] = answers[f"claim_{key}"]
+    receipt = {"job": "screen", "model": "gemini-decision-1", "id": None, "ms": ms, "questions": len(questions)}
+    if len(listings or []) > len(scored):
+        receipt["not_scored"] = len(listings) - len(scored)
+    return {"scores": [{"index": i, "p_same": answers[f"listing_{i}"]["p"],
+                        "confidence": answers[f"listing_{i}"]["confidence"]} for i in range(len(scored))],
+            "printed": printed, "receipt": receipt}
 
 
 def scan(image: bytes, focus_box: list[int] | None = None) -> str | None:

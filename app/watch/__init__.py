@@ -4,6 +4,7 @@ A watch only becomes active when an authorized merchant feed for the exact selle
 configured server-side (SIGNALFORGE_WATCH_FEED). Otherwise it is an honest rule preview. Nothing here
 polls a merchant or shop.dev."""
 from collections import namedtuple
+from types import SimpleNamespace
 from dataclasses import asdict
 import json
 import os
@@ -28,6 +29,7 @@ ASK_RESTATE = ("I could not turn every condition in your words into one rule. Re
 ASK_ONE_STORE = ("I can only watch one store at a time, so I can't watch every store. Name the store, or say "
                  "\"this seller\" to watch the store shown.")
 ANY_STORE = re.compile(r"\b(?:any|every|all|other)\s+(?:stores?|sellers?|shops?|retailers?|merchants?|sites?)\b|\banywhere\b", re.I)
+DROPS_UNDER = re.compile(r"\b(drops?)\s+under\b", re.I)
 MAX_FEED_BYTES = 1_000_000
 
 Binding = namedtuple("Binding", "seller variant")
@@ -106,6 +108,43 @@ def pause(watch_id: str) -> dict:
             return doc
         finally:
             ledger.close()
+
+
+def attach(watch_id: str, key: str, value) -> dict:
+    """Store an extra key (e.g. "challenge") on a watch and on its run's run["watch"]. Unknown keys are kept."""
+    if key in ("watch_id", "run_id", "status", "rule", "proof_hash", "origin"):
+        raise WatchError("protected_key", "That watch field cannot be overwritten.")
+    with _lock:
+        ledger = _open()
+        try:
+            with ledger.write():
+                doc = _load(ledger, watch_id)
+                if doc is None:
+                    raise WatchError("not_found", "Unknown watch.", 404)
+                doc[key] = value
+                ledger.db.execute("UPDATE app_watch SET doc=? WHERE id=?", (json.dumps(doc), watch_id))
+        finally:
+            ledger.close()
+    sync_run(doc)
+    return doc
+
+
+def run_id_of(watch_id: str) -> str | None:
+    doc = get(watch_id)
+    return doc.get("run_id") if doc else None
+
+
+def sync_run(doc: dict) -> None:
+    """Mirror the stored watch into run["watch"] when that run currently shows this watch (or none)."""
+    from app import store
+    run = store.get_run(doc.get("run_id") or "")
+    if run is None:
+        return
+    current = run.get("watch") or {}
+    if current and current.get("watch_id") != doc["watch_id"]:
+        return
+    run["watch"] = doc
+    store.save_run(run)
 
 
 # ---------- source permission ----------
@@ -281,8 +320,37 @@ def _base(watch_id, run, command, status):
 
 
 def _persist(ledger, doc):
-    ledger.db.execute("INSERT OR IGNORE INTO app_watch(id,run_id,status,doc,created_at) VALUES(?,?,?,?,?)",
+    old = _load(ledger, doc["watch_id"])
+    if old is not None and old["status"] != "needs_detail":
+        return
+    if old is not None:
+        doc = {**{k: v for k, v in old.items() if k not in doc}, **doc}  # keep keys other lanes attached
+    ledger.db.execute("INSERT OR REPLACE INTO app_watch(id,run_id,status,doc,created_at) VALUES(?,?,?,?,?)",
                       (doc["watch_id"], doc["run_id"] or "", doc["status"], json.dumps(doc), doc["created_at"]))
+
+
+def _explicit_cap(command):
+    from decimal import Decimal
+    caps = list(CAP.finditer(command))
+    return int(Decimal(caps[0].group(2)) * 100) if len(caps) == 1 else None
+
+
+def _server_binding(run, command, candidates):
+    """The candidate slot fixed in code: a seller named in the words, else the run's single winning seller."""
+    low = command.casefold()
+    named = [c for c in candidates if c["seller_name"] and c["seller_name"].casefold() in low]
+    if len(named) == 1:
+        return named[0]["slot"], "seller named in the request"
+    if named:
+        return None, None
+    winners = {(o.get("seller"), o.get("listing")) for o in ((run.get("result") or {}).get("winners") or [])
+               if o and o.get("verified")}
+    hits = [c for c in candidates if (c["seller"], c["listing"]) in winners]
+    if len(hits) == 1:
+        return hits[0]["slot"], "the run's only winning seller"
+    if not winners and len(candidates) == 1:
+        return 0, "the run's only verified offer"
+    return None, None
 
 
 def create(run: dict, command: str, replies: dict | None = None, *, compile=None, image=None) -> dict:
@@ -290,9 +358,9 @@ def create(run: dict, command: str, replies: dict | None = None, *, compile=None
     replies = {k: v for k, v in (replies or {}).items() if type(v) is bool}
     command = (command or "").strip()
     run_id = run.get("run_id") or ""
-    watch_id = "w_" + digest({"run": run_id, "command": command, "replies": sorted(replies.items())})[:20]
+    watch_id = "w_" + digest({"v": 2, "run": run_id, "command": command, "replies": sorted(replies.items())})[:20]
     existing = get(watch_id)
-    if existing is not None:
+    if existing is not None and existing["status"] != "needs_detail":
         return existing
     doc = _base(watch_id, run, command, "needs_detail")
     if not command:
@@ -310,29 +378,48 @@ def create(run: dict, command: str, replies: dict | None = None, *, compile=None
         image = _image_for(run_id)
     if not image:
         raise WatchError("no_image", "The photo for this search is no longer available.", 404)
-    compiled = (compile or _compile)(image, command, candidates)
+    slot, basis = _server_binding(run, command, candidates)
+    cap = _explicit_cap(command)
+    shown = [dict(c, server_bound=True, binding_basis=basis) if c["slot"] == slot else c for c in candidates]
+    compiled = (compile or _compile)(image, command, shown)
     doc["receipts"] = [compiled.get("receipt")]
     proposal = Proposal.model_validate(compiled["proposal"])
     doc["draft"] = {"candidate": proposal.candidate, "mode": proposal.mode, "op": proposal.op,
                     "cents": proposal.cents, "status": proposal.status, "reason": proposal.reason,
                     "cap_evidence": proposal.cap_evidence, "binding_evidence": proposal.binding_evidence,
-                    "blockers": proposal.blockers, "editable": True}
-    if proposal.status != "ready":
-        ask = (ASK_CAP if proposal.reason == "missing_budget" or len(CAP.findall(command)) != 1
+                    "blockers": proposal.blockers, "editable": True, "model_question": proposal.question,
+                    "server_bound_slot": slot, "binding_basis": basis, "explicit_cap_cents": cap}
+    # Seller and cap facts decided in code win over the model's draft; real hard-constraint flags still stop it.
+    waived = (("ambiguous_target", "no_exact_variant") if slot is not None else ()) + (("missing_budget",) if cap else ())
+    if slot is None and proposal.status != "ready" and proposal.reason == "ambiguous_target" and len(candidates) > 1:
+        proposal = proposal.model_copy(update={"candidate": None})
+        waived = waived + ("ambiguous_target",)
+    if proposal.status != "ready" and proposal.reason not in waived:
+        ask = (ASK_CAP if proposal.reason == "missing_budget" or cap is None
                else proposal.question.strip() or ASK_RESTATE)
         doc["question"] = _text_question(ask, f"q_watch_{proposal.reason}")
         return _store(doc)
-    try:
-        draft = bound_rule(proposal, [Binding(c["seller"], c["listing"]) for c in candidates])
-    except ValueError:
-        doc["question"] = _text_question("Which store's listing should I watch?", "q_watch_seller")
+    slot = slot if slot is not None else (proposal.candidate if proposal.status == "ready" else None)
+    cents = cap if cap is not None else proposal.cents
+    if cents is None:
+        doc["question"] = _text_question(ASK_CAP, "q_watch_cap")
         return _store(doc)
+    if slot is None or not 0 <= slot < len(candidates):
+        names = " or ".join(dict.fromkeys(c["seller_name"] for c in candidates[:4]))
+        doc["question"] = _text_question(f"Which store should I watch: {names}?", "q_watch_seller")
+        return _store(doc)
+    doc["draft"]["waived"] = [proposal.reason] if proposal.status != "ready" else []
+    final = SimpleNamespace(status="ready", candidate=slot, mode=proposal.mode or "restock",
+                            op=proposal.op or "lt", cents=cents)
+    draft = bound_rule(final, [Binding(c["seller"], c["listing"]) for c in candidates])
+    proposal = final
     cand = candidates[proposal.candidate]
     name = cand["seller_name"]
     doc["rule"] = asdict(draft)
     doc["seller_name"], doc["title"], doc["url"] = name, cand["title"], cand["url"]
     try:
-        result = advance(draft, command, replies)
+        # "drops under" says the same as the parser's "drops below"; the cap word itself is untouched.
+        result = advance(draft, DROPS_UNDER.sub(r"\1 below", command), replies)
     except ValueError:
         doc["question"] = _text_question("That answer no longer matches this rule. What should I watch for?",
                                          "q_watch_stale")

@@ -1,0 +1,1805 @@
+{
+ "experiment": "A",
+ "name": "pairs-b-v2",
+ "version": "v2",
+ "draw": "B",
+ "arms_run": [
+  "baseline",
+  "full"
+ ],
+ "label": "v2 \u00b7 held-out draw B (new seed, disjoint from A, frozen before any call)",
+ "system_arm": "app.models.pair v2-carbon-verified-quotes",
+ "pair_version": "v2-carbon-verified-quotes",
+ "code_sha": "6fc87117da0e163d68852441a119e511daa7829a",
+ "freeze_code_sha": "6fc87117da0e163d68852441a119e511daa7829a",
+ "inputs_sha256": "69e609c877e96c159db0faab954943ebcb9f2af89660765bc7b29edccd8a9057",
+ "started_at": 1795295062,
+ "finished_at": 1795295267,
+ "bench_score": {
+  "baseline": {
+   "n": 40,
+   "false_matches": 0,
+   "abstained": 4,
+   "answered": 36,
+   "correct": 36
+  },
+  "full": {
+   "n": 40,
+   "false_matches": 0,
+   "abstained": 5,
+   "answered": 35,
+   "correct": 35
+  },
+  "paired": {
+   "both": 35,
+   "baseline_only": 1,
+   "neither": 4
+  },
+  "median_ms": {
+   "baseline": 4325.5,
+   "full": 4417.5
+  }
+ },
+ "cases": [
+  {
+   "id": "b-pair-01",
+   "wdc_pair_id": "158032#15552592",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4046,
+   "wall_ms": 4046,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdWd2NDYTduVEpjMi14ZElQaXQyWG1RNBIXVndjQ2E3blRKYzIteGRJUGl0MlhtUTQ",
+     "ms": 4035
+    }
+   ]
+  },
+  {
+   "id": "b-pair-01",
+   "wdc_pair_id": "158032#15552592",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4849,
+   "wall_ms": 4849,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdWd2NDYV9yeEllSzJ4ZElQNF8zRWtBRRIXVndjQ2FfcnhJZUsyeGRJUDRfM0VrQUU",
+     "ms": 4839
+    }
+   ]
+  },
+  {
+   "id": "b-pair-02",
+   "wdc_pair_id": "15482392#16810018",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4759,
+   "wall_ms": 4759,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdXd2NDYS11TUJvZkd4ZElQOHVpRTBBZxIXV3djQ2EtdU1Cb2ZHeGRJUDh1aUUwQWc",
+     "ms": 4759
+    }
+   ]
+  },
+  {
+   "id": "b-pair-02",
+   "wdc_pair_id": "15482392#16810018",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3239,
+   "wall_ms": 3239,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdXd2NDYTVMRk9LR3M1Tm9QLU5yNzJBMBIXV3djQ2E1TEZPS0dzNU5vUC1OcjcyQTA",
+     "ms": 3239
+    }
+   ]
+  },
+  {
+   "id": "b-pair-03",
+   "wdc_pair_id": "7685605#13408654",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3494,
+   "wall_ms": 3494,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdYd2NDYTdYcUNOeXR1TVlQaFl5TWlBdxIXWHdjQ2E3WHFDTnl0dU1ZUGhZeU1pQXc",
+     "ms": 3494
+    }
+   ]
+  },
+  {
+   "id": "b-pair-03",
+   "wdc_pair_id": "7685605#13408654",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4365,
+   "wall_ms": 4365,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdYd2NDYTRIOE5NZkF4ZElQMlpQbjRBSRIXWHdjQ2E0SDhOTWZBeGRJUDJaUG40QUk",
+     "ms": 4365
+    }
+   ]
+  },
+  {
+   "id": "b-pair-04",
+   "wdc_pair_id": "7703549#1457786",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 17677,
+   "wall_ms": 17677,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdZZ2NDYTk2ZUp1LVB5dE1QbDd2YXlRWRIXWWdjQ2E5NmVKdS1QeXRNUGw3dmF5UVk",
+     "ms": 17677
+    }
+   ]
+  },
+  {
+   "id": "b-pair-04",
+   "wdc_pair_id": "7703549#1457786",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3668,
+   "wall_ms": 3668,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChZaQWNDYTVyUkRxcUt5dE1QNXJ2bWNREhZaQWNDYTVyUkRxcUt5dE1QNXJ2bWNR",
+     "ms": 3668
+    }
+   ]
+  },
+  {
+   "id": "b-pair-05",
+   "wdc_pair_id": "5925762#7373528",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3697,
+   "wall_ms": 3697,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chdad2NDYTltMk5vVGd5dE1Qd2NMdndBOBIXWndjQ2E5bTJOb1RneXRNUHdjTHZ3QTg",
+     "ms": 3697
+    }
+   ]
+  },
+  {
+   "id": "b-pair-05",
+   "wdc_pair_id": "5925762#7373528",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "abstain",
+   "gold": "different",
+   "correct": false,
+   "abstained": true,
+   "error": null,
+   "ms": 3673,
+   "wall_ms": 3673,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chdhd2NDYThTaUpZRFVpTE1QMTdETzJROBIXYXdjQ2E4U2lKWURVaUxNUDE3RE8yUTg",
+     "ms": 3673
+    }
+   ]
+  },
+  {
+   "id": "b-pair-06",
+   "wdc_pair_id": "3432970#3692182",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3935,
+   "wall_ms": 3935,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChZid2NDYTUyVEVhdkh4ZElQbkxPSElBEhZid2NDYTUyVEVhdkh4ZElQbkxPSElB",
+     "ms": 3935
+    }
+   ]
+  },
+  {
+   "id": "b-pair-06",
+   "wdc_pair_id": "3432970#3692182",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 6240,
+   "wall_ms": 6240,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chdjd2NDYTZYVERKbXR1TVlQOGNILW9BSRIXY3djQ2E2WFRESm10dU1ZUDhjSC1vQUk",
+     "ms": 6240
+    }
+   ]
+  },
+  {
+   "id": "b-pair-07",
+   "wdc_pair_id": "6179192#1546919",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4606,
+   "wall_ms": 4606,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdkQWNDYTUybUZNU0t5dE1QMDhXMTBRURIXZEFjQ2E1Mm1GTVNLeXRNUDA4VzEwUVE",
+     "ms": 4606
+    }
+   ]
+  },
+  {
+   "id": "b-pair-07",
+   "wdc_pair_id": "6179192#1546919",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4940,
+   "wall_ms": 4940,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdlQWNDYTZlX09KVEF4ZElQeTZfTmdRSRIXZUFjQ2E2ZV9PSlRBeGRJUHk2X05nUUk",
+     "ms": 4940
+    }
+   ]
+  },
+  {
+   "id": "b-pair-08",
+   "wdc_pair_id": "15786433#11086374",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4037,
+   "wall_ms": 4037,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdlUWNDYS1tU0c0Q2lvX1VQOTlmUDRRTRIXZVFjQ2EtbVNHNENpb19VUDk5ZlA0UU0",
+     "ms": 4036
+    }
+   ]
+  },
+  {
+   "id": "b-pair-08",
+   "wdc_pair_id": "15786433#11086374",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4537,
+   "wall_ms": 4537,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdmUWNDYTZ2Skh1dmgwX2dQbnRPZTRBTRIXZlFjQ2E2dkpIdXZoMF9nUG50T2U0QU0",
+     "ms": 4537
+    }
+   ]
+  },
+  {
+   "id": "b-pair-09",
+   "wdc_pair_id": "5712523#17557325",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4854,
+   "wall_ms": 4854,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdmUWNDYTd6eE5KYUV5dE1QbEtXY3FRRRIXZlFjQ2E3enhOSmFFeXRNUGxLV2NxUUU",
+     "ms": 4854
+    }
+   ]
+  },
+  {
+   "id": "b-pair-09",
+   "wdc_pair_id": "5712523#17557325",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4804,
+   "wall_ms": 4804,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdnZ2NDYTlPNUFxS2pvX1VQejg3SzhBTRIXZ2djQ2E5TzVBcUtqb19VUHo4N0s4QU0",
+     "ms": 4803
+    }
+   ]
+  },
+  {
+   "id": "b-pair-10",
+   "wdc_pair_id": "16783767#2193504",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4252,
+   "wall_ms": 4252,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdnZ2NDYV9taUxKUE15dE1QcTZ1VjBRbxIXZ2djQ2FfbWlMSlBNeXRNUHE2dVYwUW8",
+     "ms": 4252
+    }
+   ]
+  },
+  {
+   "id": "b-pair-10",
+   "wdc_pair_id": "16783767#2193504",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 7666,
+   "wall_ms": 7666,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdoZ2NDYTVtT001eWZ5dE1QdTYtUm9RcxIXaGdjQ2E1bU9NNXlmeXRNUHU2LVJvUXM",
+     "ms": 7665
+    }
+   ]
+  },
+  {
+   "id": "b-pair-11",
+   "wdc_pair_id": "12870503#5286105",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 5893,
+   "wall_ms": 5893,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdoZ2NDYTRLU1BPYXd5dE1QaHVueXNBRRIXaGdjQ2E0S1NQT2F3eXRNUGh1bnlzQUU",
+     "ms": 5893
+    }
+   ]
+  },
+  {
+   "id": "b-pair-11",
+   "wdc_pair_id": "12870503#5286105",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3668,
+   "wall_ms": 3668,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdqQWNDYTRqME5iWG5pTE1QaWRYRTBRRRIXakFjQ2E0ajBOYlhuaUxNUGlkWEUwUUU",
+     "ms": 3667
+    }
+   ]
+  },
+  {
+   "id": "b-pair-12",
+   "wdc_pair_id": "403680#9153628",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "abstain",
+   "gold": "match",
+   "correct": false,
+   "abstained": true,
+   "error": null,
+   "ms": 4303,
+   "wall_ms": 4303,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChZqZ2NDYTVMZEhaWGd5dE1Qckt5OVFBEhZqZ2NDYTVMZEhaWGd5dE1Qckt5OVFB",
+     "ms": 4303
+    }
+   ]
+  },
+  {
+   "id": "b-pair-12",
+   "wdc_pair_id": "403680#9153628",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "abstain",
+   "gold": "match",
+   "correct": false,
+   "abstained": true,
+   "error": null,
+   "ms": 7518,
+   "wall_ms": 7518,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdrQWNDYTRfN0lKUGN5dE1QeFp2YnNBdxIXa0FjQ2E0XzdJSlBjeXRNUHhadmJzQXc",
+     "ms": 7518
+    }
+   ]
+  },
+  {
+   "id": "b-pair-13",
+   "wdc_pair_id": "3959870#754970",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3732,
+   "wall_ms": 3732,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdrZ2NDYTZ1Vk1NMkZ5dE1QMjl6MDZRSRIXa2djQ2E2dVZNTTJGeXRNUDI5ejA2UUk",
+     "ms": 3732
+    }
+   ]
+  },
+  {
+   "id": "b-pair-13",
+   "wdc_pair_id": "3959870#754970",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 6460,
+   "wall_ms": 6460,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdsZ2NDYThfLUlQYm15dE1QeTR1eW9RRRIXbGdjQ2E4Xy1JUGJteXRNUHk0dXlvUUU",
+     "ms": 6460
+    }
+   ]
+  },
+  {
+   "id": "b-pair-14",
+   "wdc_pair_id": "334319#9625896",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 2797,
+   "wall_ms": 2797,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdtQWNDYV96X0FzckZ4ZElQaFpqZHVRRRIXbUFjQ2Ffel9Bc3JGeGRJUGhaamR1UUU",
+     "ms": 2797
+    }
+   ]
+  },
+  {
+   "id": "b-pair-14",
+   "wdc_pair_id": "334319#9625896",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 6018,
+   "wall_ms": 6018,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdtZ2NDYTVHdU5QdkppTE1QeUlfcHVBOBIXbWdjQ2E1R3VOUHZKaUxNUHlJX3B1QTg",
+     "ms": 6017
+    }
+   ]
+  },
+  {
+   "id": "b-pair-15",
+   "wdc_pair_id": "624792#8806489",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 5074,
+   "wall_ms": 5074,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChduQWNDYV9MT1BOckF5dE1QN3VlaHNRURIXbkFjQ2FfTE9QTnJBeXRNUDd1ZWhzUVE",
+     "ms": 5074
+    }
+   ]
+  },
+  {
+   "id": "b-pair-15",
+   "wdc_pair_id": "624792#8806489",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3680,
+   "wall_ms": 3680,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdvQWNDYTVyeU5iZWw1Tm9QemVpRjhRdxIXb0FjQ2E1cnlOYmVsNU5vUHplaUY4UXc",
+     "ms": 3680
+    }
+   ]
+  },
+  {
+   "id": "b-pair-16",
+   "wdc_pair_id": "1220565#8415690",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 5308,
+   "wall_ms": 5308,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdvZ2NDYTlUQ0JyLUx5dE1Qa3Nfa3FRRRIXb2djQ2E5VENCci1MeXRNUGtzX2txUUU",
+     "ms": 5308
+    }
+   ]
+  },
+  {
+   "id": "b-pair-16",
+   "wdc_pair_id": "1220565#8415690",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4015,
+   "wall_ms": 4015,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdwQWNDYTZ1U0pOam13YlVQazliZW9RRRIXcEFjQ2E2dVNKTmptd2JVUGs5YmVvUUU",
+     "ms": 4015
+    }
+   ]
+  },
+  {
+   "id": "b-pair-17",
+   "wdc_pair_id": "10633151#17557274",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3537,
+   "wall_ms": 3537,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chdwd2NDYV9yR0ZySzR3YlVQOXVITWlBOBIXcHdjQ2FfckdGcks0d2JVUDl1SE1pQTg",
+     "ms": 3537
+    }
+   ]
+  },
+  {
+   "id": "b-pair-17",
+   "wdc_pair_id": "10633151#17557274",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 5710,
+   "wall_ms": 5710,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdxQWNDYTYzZ0tlSGd5dE1QMklTVzRBURIXcUFjQ2E2M2dLZUhneXRNUDJJU1c0QVE",
+     "ms": 5710
+    }
+   ]
+  },
+  {
+   "id": "b-pair-18",
+   "wdc_pair_id": "4196824#4686619",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3691,
+   "wall_ms": 3691,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdxZ2NDYTVUZ05fR2c1Tm9QdnZ6YjZBOBIXcWdjQ2E1VGdOX0dnNU5vUHZ2emI2QTg",
+     "ms": 3691
+    }
+   ]
+  },
+  {
+   "id": "b-pair-18",
+   "wdc_pair_id": "4196824#4686619",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 6758,
+   "wall_ms": 6758,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdyZ2NDYTRiRkVMMmVvX1VQcnVHMTRBYxIXcmdjQ2E0YkZFTDJlb19VUHJ1RzE0QWM",
+     "ms": 6758
+    }
+   ]
+  },
+  {
+   "id": "b-pair-19",
+   "wdc_pair_id": "14899970#13204304",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4853,
+   "wall_ms": 4853,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdyZ2NDYThiakpZZU15dE1QdGRIaG1BOBIXcmdjQ2E4YmpKWWVNeXRNUHRkSGhtQTg",
+     "ms": 4853
+    }
+   ]
+  },
+  {
+   "id": "b-pair-19",
+   "wdc_pair_id": "14899970#13204304",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 5558,
+   "wall_ms": 5558,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chdzd2NDYTRlMkhlMmd5dE1QbGNuYjRRMBIXc3djQ2E0ZTJIZTJneXRNUGxjbmI0UTA",
+     "ms": 5558
+    }
+   ]
+  },
+  {
+   "id": "b-pair-20",
+   "wdc_pair_id": "2198128#3705669",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3234,
+   "wall_ms": 3234,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chd0UWNDYV9USEFwSElpTE1QaWRDUm9BRRIXdFFjQ2FfVEhBcEhJaUxNUGlkQ1JvQUU",
+     "ms": 3234
+    }
+   ]
+  },
+  {
+   "id": "b-pair-20",
+   "wdc_pair_id": "2198128#3705669",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4547,
+   "wall_ms": 4547,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chd1QWNDYTdicUQ4YUMxc2dQa1BENC1BbxIXdUFjQ2E3YnFEOGFDMXNnUGtQRDQtQW8",
+     "ms": 4547
+    }
+   ]
+  },
+  {
+   "id": "b-pair-21",
+   "wdc_pair_id": "17115507#2507055",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 5832,
+   "wall_ms": 5832,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chd1UWNDYTdubkFhem13YlVQODVQaG1RdxIXdVFjQ2E3bm5BYXptd2JVUDg1UGhtUXc",
+     "ms": 5832
+    }
+   ]
+  },
+  {
+   "id": "b-pair-21",
+   "wdc_pair_id": "17115507#2507055",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3196,
+   "wall_ms": 3196,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chd2QWNDYV9QTk1iRGUwX2dQbFlQVm9RURIXdkFjQ2FfUE5NYkRlMF9nUGxZUFZvUVE",
+     "ms": 3195
+    }
+   ]
+  },
+  {
+   "id": "b-pair-22",
+   "wdc_pair_id": "7039592#16418231",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3140,
+   "wall_ms": 3140,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chd2Z2NDYV9DQU5mWEJ4ZElQX3JpWW1RMBIXdmdjQ2FfQ0FOZlhCeGRJUF9yaVltUTA",
+     "ms": 3140
+    }
+   ]
+  },
+  {
+   "id": "b-pair-22",
+   "wdc_pair_id": "7039592#16418231",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3885,
+   "wall_ms": 3885,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChZ3QWNDYTRGU210M0swdy1ObkxUQkRREhZ3QWNDYTRGU210M0swdy1ObkxUQkRR",
+     "ms": 3885
+    }
+   ]
+  },
+  {
+   "id": "b-pair-23",
+   "wdc_pair_id": "8935499#14833053",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4084,
+   "wall_ms": 4084,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChR3UWNDYS1IVFBMZUZ5dE1QMzk5NRIUd1FjQ2EtSFRQTGVGeXRNUDM5OTU",
+     "ms": 4084
+    }
+   ]
+  },
+  {
+   "id": "b-pair-23",
+   "wdc_pair_id": "8935499#14833053",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4470,
+   "wall_ms": 4470,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chd3d2NDYTdMbE5ydmR5dE1QOHZxSm1BURIXd3djQ2E3TGxOcnZkeXRNUDh2cUptQVE",
+     "ms": 4470
+    }
+   ]
+  },
+  {
+   "id": "b-pair-24",
+   "wdc_pair_id": "2108362#8138613",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4269,
+   "wall_ms": 4269,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chd4Z2NDYTc3dEJQcWhvX1VQcTVlZXdBMBIXeGdjQ2E3N3RCUHFob19VUHE1ZWV3QTA",
+     "ms": 4269
+    }
+   ]
+  },
+  {
+   "id": "b-pair-24",
+   "wdc_pair_id": "2108362#8138613",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3317,
+   "wall_ms": 3317,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chd5QWNDYTUyakYtSEZ4ZElQNE03YmdRRRIXeUFjQ2E1MmpGLUhGeGRJUDRNN2JnUUU",
+     "ms": 3317
+    }
+   ]
+  },
+  {
+   "id": "b-pair-25",
+   "wdc_pair_id": "3418034#12565434",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3401,
+   "wall_ms": 3401,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChZ5Z2NDYTlEU0ZjcU55dE1QX3VxYlFBEhZ5Z2NDYTlEU0ZjcU55dE1QX3VxYlFB",
+     "ms": 3401
+    }
+   ]
+  },
+  {
+   "id": "b-pair-25",
+   "wdc_pair_id": "3418034#12565434",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3080,
+   "wall_ms": 3080,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chd5d2NDYTlUdktiMkV1TVlQcWFtRXFRRRIXeXdjQ2E5VHZLYjJFdU1ZUHFhbUVxUUU",
+     "ms": 3079
+    }
+   ]
+  },
+  {
+   "id": "b-pair-26",
+   "wdc_pair_id": "4543586#9840928",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4703,
+   "wall_ms": 4703,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chd6UWNDYTdHckw5UFgwX2dQZ2U2czBRdxIXelFjQ2E3R3JMOVBYMF9nUGdlNnMwUXc",
+     "ms": 4703
+    }
+   ]
+  },
+  {
+   "id": "b-pair-26",
+   "wdc_pair_id": "4543586#9840928",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 12984,
+   "wall_ms": 12984,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chd6Z2NDYTVPNUxzU1U1Tm9QMGJTZjhBOBIXemdjQ2E1TzVMc1NVNU5vUDBiU2Y4QTg",
+     "ms": 12984
+    }
+   ]
+  },
+  {
+   "id": "b-pair-27",
+   "wdc_pair_id": "5225361#10525286",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3398,
+   "wall_ms": 3399,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChcwZ2NDYTlubUc0eXB4ZElQMGRqS3VRMBIXMGdjQ2E5bm1HNHlweGRJUDBkakt1UTA",
+     "ms": 3398
+    }
+   ]
+  },
+  {
+   "id": "b-pair-27",
+   "wdc_pair_id": "5225361#10525286",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4022,
+   "wall_ms": 4022,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChcxUWNDYThHa002SGx3YlVQcEtXaTZBTRIXMVFjQ2E4R2tNNkhsd2JVUHBLV2k2QU0",
+     "ms": 4021
+    }
+   ]
+  },
+  {
+   "id": "b-pair-28",
+   "wdc_pair_id": "13905161#3043249",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 5165,
+   "wall_ms": 5165,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChcyUWNDYS11NU5vdWpvX1VQdjlEeXdBNBIXMlFjQ2EtdTVOb3Vqb19VUHY5RHl3QTQ",
+     "ms": 5165
+    }
+   ]
+  },
+  {
+   "id": "b-pair-28",
+   "wdc_pair_id": "13905161#3043249",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3390,
+   "wall_ms": 3390,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chcyd2NDYV9yLUxPMmw1Tm9QbElHMm1RMBIXMndjQ2Ffci1MTzJsNU5vUGxJRzJtUTA",
+     "ms": 3390
+    }
+   ]
+  },
+  {
+   "id": "b-pair-29",
+   "wdc_pair_id": "11949216#14839612",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "abstain",
+   "gold": "match",
+   "correct": false,
+   "abstained": true,
+   "error": null,
+   "ms": 4451,
+   "wall_ms": 4451,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chczd2NDYTh2YUJPWFl5dE1QdS1QUW9BcxIXM3djQ2E4dmFCT1hZeXRNUHUtUFFvQXM",
+     "ms": 4451
+    }
+   ]
+  },
+  {
+   "id": "b-pair-29",
+   "wdc_pair_id": "11949216#14839612",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "abstain",
+   "gold": "match",
+   "correct": false,
+   "abstained": true,
+   "error": null,
+   "ms": 3870,
+   "wall_ms": 3870,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chczd2NDYTVhdENjcmh5dE1QN2VERXFBcxIXM3djQ2E1YXRDY3JoeXRNUDdlREVxQXM",
+     "ms": 3870
+    }
+   ]
+  },
+  {
+   "id": "b-pair-30",
+   "wdc_pair_id": "1491045#3167651",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 5666,
+   "wall_ms": 5666,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chc0d2NDYThiSUFmSGcwX2dQcmZxaDRRSRIXNHdjQ2E4YklBZkhnMF9nUHJmcWg0UUk",
+     "ms": 5666
+    }
+   ]
+  },
+  {
+   "id": "b-pair-30",
+   "wdc_pair_id": "1491045#3167651",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4203,
+   "wall_ms": 4203,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chc0d2NDYTh6R0hhWE4wX2dQbXItU3FBRRIXNHdjQ2E4ekdIYVhOMF9nUG1yLVNxQUU",
+     "ms": 4203
+    }
+   ]
+  },
+  {
+   "id": "b-pair-31",
+   "wdc_pair_id": "15882782#235116",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3386,
+   "wall_ms": 3386,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chc1d2NDYThPNEt1UGR5dE1QMjhxTjBBSRIXNXdjQ2E4TzRLdVBkeXRNUDI4cU4wQUk",
+     "ms": 3386
+    }
+   ]
+  },
+  {
+   "id": "b-pair-31",
+   "wdc_pair_id": "15882782#235116",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 5035,
+   "wall_ms": 5035,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chc2QWNDYTl1RktzU1JpTE1QLXFYSnlBOBIXNkFjQ2E5dUZLc1NSaUxNUC1xWEp5QTg",
+     "ms": 5034
+    }
+   ]
+  },
+  {
+   "id": "b-pair-32",
+   "wdc_pair_id": "1571041#16293002",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4513,
+   "wall_ms": 4513,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chc2d2NDYV9xMUJxV3F4ZElQd1lYbW1BMBIXNndjQ2FfcTFCcVdxeGRJUHdZWG1tQTA",
+     "ms": 4512
+    }
+   ]
+  },
+  {
+   "id": "b-pair-32",
+   "wdc_pair_id": "1571041#16293002",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 11330,
+   "wall_ms": 11330,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chc3UWNDYTdlV0steXV3YlVQN3Y2RnFRTRIXN1FjQ2E3ZVdLLXl1d2JVUDd2NkZxUU0",
+     "ms": 11330
+    }
+   ]
+  },
+  {
+   "id": "b-pair-33",
+   "wdc_pair_id": "15265349#4624542",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4461,
+   "wall_ms": 4461,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chc3d2NDYTVQUEk5dXR4ZElQb3NqVXlBNBIXN3djQ2E1UFBJOXV0eGRJUG9zalV5QTQ",
+     "ms": 4461
+    }
+   ]
+  },
+  {
+   "id": "b-pair-33",
+   "wdc_pair_id": "15265349#4624542",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3952,
+   "wall_ms": 3952,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chc5QWNDYV9lOUF0V0V5dE1QdkkzOGlBURIXOUFjQ2FfZTlBdFdFeXRNUHZJMzhpQVE",
+     "ms": 3951
+    }
+   ]
+  },
+  {
+   "id": "b-pair-34",
+   "wdc_pair_id": "15811361#11928695",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 7408,
+   "wall_ms": 7408,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChYtQWNDYThBWGtMdkJ0US1Uc2FyUUFnEhYtQWNDYThBWGtMdkJ0US1Uc2FyUUFn",
+     "ms": 7408
+    }
+   ]
+  },
+  {
+   "id": "b-pair-34",
+   "wdc_pair_id": "15811361#11928695",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4164,
+   "wall_ms": 4164,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChctUWNDYTdfRkFlTFNpTE1QaVpfcG1RRRIXLVFjQ2E3X0ZBZUxTaUxNUGlaX3BtUUU",
+     "ms": 4164
+    }
+   ]
+  },
+  {
+   "id": "b-pair-35",
+   "wdc_pair_id": "2357586#10442864",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3764,
+   "wall_ms": 3764,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdfUWNDYTZEQ0RmSDYwX2dQM3NEUnVRMBIXX1FjQ2E2RENEZkg2MF9nUDNzRFJ1UTA",
+     "ms": 3764
+    }
+   ]
+  },
+  {
+   "id": "b-pair-35",
+   "wdc_pair_id": "2357586#10442864",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 3586,
+   "wall_ms": 3586,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_Chdfd2NDYTYtNUdaU3Z3YlVQbGJ2OGdBMBIXX3djQ2E2LTVHWlN2d2JVUGxidjhnQTA",
+     "ms": 3585
+    }
+   ]
+  },
+  {
+   "id": "b-pair-36",
+   "wdc_pair_id": "4629011#7576687",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "abstain",
+   "gold": "match",
+   "correct": false,
+   "abstained": true,
+   "error": null,
+   "ms": 4348,
+   "wall_ms": 4348,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdBQWdDYTlhZk84bWhvX1VQMV9YdXVBdxIXQUFnQ2E5YWZPOG1ob19VUDFfWHV1QXc",
+     "ms": 4348
+    }
+   ]
+  },
+  {
+   "id": "b-pair-36",
+   "wdc_pair_id": "4629011#7576687",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "abstain",
+   "gold": "match",
+   "correct": false,
+   "abstained": true,
+   "error": null,
+   "ms": 5448,
+   "wall_ms": 5448,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdBZ2dDYV9MTVBKWGd5dE1QMHVHYS1BbxIXQWdnQ2FfTE1QSlhneXRNUDB1R2EtQW8",
+     "ms": 5448
+    }
+   ]
+  },
+  {
+   "id": "b-pair-37",
+   "wdc_pair_id": "11949216#10200879",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4959,
+   "wall_ms": 4959,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdCUWdDYS1QVEUtUGR5dE1QMjhxTjBBSRIXQlFnQ2EtUFRFLVBkeXRNUDI4cU4wQUk",
+     "ms": 4959
+    }
+   ]
+  },
+  {
+   "id": "b-pair-37",
+   "wdc_pair_id": "11949216#10200879",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "different",
+   "gold": "different",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 5382,
+   "wall_ms": 5382,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdDQWdDYV95UEdycTV4ZElQeFBTWmdRRRIXQ0FnQ2FfeVBHcnE1eGRJUHhQU1pnUUU",
+     "ms": 5382
+    }
+   ]
+  },
+  {
+   "id": "b-pair-38",
+   "wdc_pair_id": "72675#139789",
+   "category": "computers",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 2935,
+   "wall_ms": 2935,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdDZ2dDYTVYT0VPTGR5dE1QbjRlVHVRRRIXQ2dnQ2E1WE9FT0xkeXRNUG40ZVR1UUU",
+     "ms": 2935
+    }
+   ]
+  },
+  {
+   "id": "b-pair-38",
+   "wdc_pair_id": "72675#139789",
+   "category": "computers",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 4269,
+   "wall_ms": 4269,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdEUWdDYV9MRERLV3Z5dE1QM2NDUHVRVRIXRFFnQ2FfTERES1d2eXRNUDNjQ1B1UVU",
+     "ms": 4268
+    }
+   ]
+  },
+  {
+   "id": "b-pair-39",
+   "wdc_pair_id": "11490536#15841498",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "abstain",
+   "gold": "match",
+   "correct": false,
+   "abstained": true,
+   "error": null,
+   "ms": 7036,
+   "wall_ms": 7036,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdEUWdDYS1pek1zSzh4ZElQaGRlVXlRTRIXRFFnQ2EtaXpNc0s4eGRJUGhkZVV5UU0",
+     "ms": 7036
+    }
+   ]
+  },
+  {
+   "id": "b-pair-39",
+   "wdc_pair_id": "11490536#15841498",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "abstain",
+   "gold": "match",
+   "correct": false,
+   "abstained": true,
+   "error": null,
+   "ms": 3845,
+   "wall_ms": 3845,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdFUWdDYThuZkhJR3N5dE1QajRYWHVBRRIXRVFnQ2E4bmZISUdzeXRNUGo0WFh1QUU",
+     "ms": 3845
+    }
+   ]
+  },
+  {
+   "id": "b-pair-40",
+   "wdc_pair_id": "13107466#15251616",
+   "category": "cameras",
+   "arm": "baseline",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 14539,
+   "wall_ms": 14539,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_baseline",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdGQWdDYS1UTk5laXJ4ZElQM3NfcjBROBIXRkFnQ2EtVE5OZWlyeGRJUDNzX3IwUTg",
+     "ms": 14539
+    }
+   ]
+  },
+  {
+   "id": "b-pair-40",
+   "wdc_pair_id": "13107466#15251616",
+   "category": "cameras",
+   "arm": "full",
+   "verdict": "match",
+   "gold": "match",
+   "correct": true,
+   "abstained": false,
+   "error": null,
+   "ms": 5538,
+   "wall_ms": 5538,
+   "rate_limit_retries": 0,
+   "receipts": [
+    {
+     "job": "pair_verdict",
+     "model": "gemini-4-carbon",
+     "id": "v1_ChdGUWdDYTRfekV0ckF5dE1QN3VlaHNRURIXRlFnQ2E0X3pFdHJBeXRNUDd1ZWhzUVE",
+     "ms": 5538
+    }
+   ]
+  }
+ ]
+}

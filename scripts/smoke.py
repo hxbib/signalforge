@@ -26,8 +26,8 @@ def line(job, model, ok, summary, id=None, ms=None):
 
 def failed(job, model, exc):
     if isinstance(exc, models.ModelCallError):
-        return line(exc.job, exc.model, False, exc.safe_message)
-    return line(job, model, False, model_io.safe_message(exc))
+        return line(exc.job, exc.model, False, exc.detail)
+    return line(job, model, False, model_io.detail_message(exc))
 
 
 def main():

@@ -151,3 +151,18 @@ def test_search_clamps_limit(monkeypatch):
     monkeypatch.setattr(shop._ref, "call", fake)
     shop.search("x", limit=500)
     assert fake.calls[0][1]["pagination"]["limit"] == shop.MAX_LIMIT
+
+
+def test_anchor_brand_requires_whole_tokens(monkeypatch):
+    # bug 006: "Sony" must not become the anchor brand of "Ultrasonyx Bluetooth Speaker SPK-200"
+    assert not shop.brand_in_title("Ultrasonyx Bluetooth Speaker SPK-200", "Sony")
+    assert shop.brand_in_title("LEGO® Botanicals 10343", "LEGO")
+    assert shop.brand_in_title("Z-Man Games Pandemic", "Z-Man Games")
+    assert not shop.brand_in_title("Z-Man Pandemic", "Z-Man Games")
+    assert not shop.brand_in_title("Anything", "")
+    doc = {"products": [prod("S", "Ultrasonyx Bluetooth Speaker SPK-200",
+                             [variant(1, 11, "One", "Ultrasonyx Bluetooth Speaker SPK-200")])]}
+    fake = FakeCall(doc, products={"gid://shopify/p/S": doc["products"][0]})
+    monkeypatch.setattr(shop._ref, "call", fake)
+    res = shop.anchors_for({"name": "Speaker", "brand": "Sony", "part_number": "SPK-200", "query": ""})
+    assert res["anchors"][0]["brand"] == ""

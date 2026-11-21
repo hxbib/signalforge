@@ -1,0 +1,2183 @@
+{
+ "run": "screen-v1",
+ "code_sha": "6fc87117da0e163d68852441a119e511daa7829a",
+ "tree_dirty": true,
+ "freeze_seed": "caf5b8f8661aa63f223a1bbedc1d2dd9138b2bf9",
+ "model": "gemini-decision-1",
+ "listing_cap": 60,
+ "started_at": 1795295521,
+ "target_source": "photo only: name, brand, model number and variant details read by Gemini 4 Neon in the system-arm run",
+ "label": "positive iff the listing belongs to the drawn (gold) catalog product id",
+ "generated_at": 1795295532,
+ "complete": true,
+ "metrics": {
+  "cases": 24,
+  "calls": 24,
+  "error_cases": 0,
+  "judgments": 240,
+  "not_scored": 0,
+  "positives": 22,
+  "negatives": 218,
+  "cases_without_positive": 2,
+  "median_ms_per_call": 384,
+  "thresholds": [
+   {
+    "threshold": 0.5,
+    "tp": 15,
+    "fp": 1,
+    "fn": 7,
+    "tn": 217,
+    "precision": 0.9375,
+    "recall": 0.6818,
+    "false_accept_rate": 0.0046
+   },
+   {
+    "threshold": 0.75,
+    "tp": 12,
+    "fp": 0,
+    "fn": 10,
+    "tn": 218,
+    "precision": 1.0,
+    "recall": 0.5455,
+    "false_accept_rate": 0.0
+   },
+   {
+    "threshold": 0.9,
+    "tp": 2,
+    "fp": 0,
+    "fn": 20,
+    "tn": 218,
+    "precision": 1.0,
+    "recall": 0.0909,
+    "false_accept_rate": 0.0
+   }
+  ],
+  "false_accept_rate_at_0.9": 0.0,
+  "reliability": [
+   {
+    "bin": "0.0-0.2",
+    "count": 212,
+    "mean_predicted": 0.1003,
+    "observed_positive_rate": 0.0142
+   },
+   {
+    "bin": "0.2-0.4",
+    "count": 11,
+    "mean_predicted": 0.2751,
+    "observed_positive_rate": 0.3636
+   },
+   {
+    "bin": "0.4-0.6",
+    "count": 1,
+    "mean_predicted": 0.4931,
+    "observed_positive_rate": 0.0
+   },
+   {
+    "bin": "0.6-0.8",
+    "count": 8,
+    "mean_predicted": 0.7326,
+    "observed_positive_rate": 0.875
+   },
+   {
+    "bin": "0.8-1.0",
+    "count": 8,
+    "mean_predicted": 0.8652,
+    "observed_positive_rate": 1.0
+   }
+  ],
+  "roc_auc": 0.9875,
+  "brier": 0.0325,
+  "top1_positive_cases": 19,
+  "cases_with_positive": 22
+ },
+ "cases": [
+  {
+   "case_id": "e2e-01",
+   "query": "building set",
+   "gold_upid": "gid://shopify/p/3EwC6G4sDtRpi6Wass45Pf",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 1535,
+   "wall_ms": 1938,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/46245352210673",
+     "p_same": 0.061131977442899735,
+     "confidence": 0.9388680225571002,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/68253177446627",
+     "p_same": 0.06117844093616685,
+     "confidence": 0.9388215590638331,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/32202795253804",
+     "p_same": 0.057006236756670256,
+     "confidence": 0.9429937632433297,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/67570620367138",
+     "p_same": 0.055281420061187664,
+     "confidence": 0.9447185799388124,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/44951090987203",
+     "p_same": 0.054807390325780594,
+     "confidence": 0.9451926096742194,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/44456880275698",
+     "p_same": 0.05719744520981434,
+     "confidence": 0.9428025547901857,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/46256496410865",
+     "p_same": 0.06505585569253822,
+     "confidence": 0.9349441443074618,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/47888912384241",
+     "p_same": 0.9094439790784129,
+     "confidence": 0.9094439790784129,
+     "positive": true
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/56549329666214",
+     "p_same": 0.04942675901563069,
+     "confidence": 0.9505732409843693,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/51934094885231",
+     "p_same": 0.06576201316558926,
+     "confidence": 0.9342379868344107,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-02",
+   "query": "board game",
+   "gold_upid": "gid://shopify/p/7rZiZOrVF3kToZK2hsg7Rs",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 1447,
+   "wall_ms": 1710,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 0,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/40097373978811",
+     "p_same": 0.11783877919254819,
+     "confidence": 0.8821612208074519,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/21931850596410",
+     "p_same": 0.10361895337338942,
+     "confidence": 0.8963810466266106,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/47226329890973",
+     "p_same": 0.10466920561058217,
+     "confidence": 0.8953307943894179,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/44435816481020",
+     "p_same": 0.07136020008696924,
+     "confidence": 0.9286397999130308,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/46214356074683",
+     "p_same": 0.08966625688501437,
+     "confidence": 0.9103337431149856,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/40459714232489",
+     "p_same": 0.09706493859247492,
+     "confidence": 0.9029350614075251,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/40993939914939",
+     "p_same": 0.0872703072128527,
+     "confidence": 0.9127296927871473,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/41754029883443",
+     "p_same": 0.09241481072773355,
+     "confidence": 0.9075851892722664,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/43446782656563",
+     "p_same": 0.09740642369448138,
+     "confidence": 0.9025935763055186,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/45478043385994",
+     "p_same": 0.08356876628719521,
+     "confidence": 0.9164312337128048,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-03",
+   "query": "action figure",
+   "gold_upid": "gid://shopify/p/2eX3uPXxJXnXnmByWL77v2",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 316,
+   "wall_ms": 557,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/48367292022989",
+     "p_same": 0.10575818260874452,
+     "confidence": 0.8942418173912555,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/44165039947879",
+     "p_same": 0.08439334399821687,
+     "confidence": 0.9156066560017831,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/42890989043936",
+     "p_same": 0.8331841376706455,
+     "confidence": 0.8331841376706455,
+     "positive": true
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/67791448703200",
+     "p_same": 0.09273942356569076,
+     "confidence": 0.9072605764343092,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/48753044914471",
+     "p_same": 0.08187645949539216,
+     "confidence": 0.9181235405046079,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/41838070628485",
+     "p_same": 0.07422549874982451,
+     "confidence": 0.9257745012501755,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/43591476281511",
+     "p_same": 0.07434897763938159,
+     "confidence": 0.9256510223606185,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/48711140180183",
+     "p_same": 0.0891039268452167,
+     "confidence": 0.9108960731547833,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/45279841222709",
+     "p_same": 0.06947166123165745,
+     "confidence": 0.9305283387683425,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/44834685518047",
+     "p_same": 0.08581722069682649,
+     "confidence": 0.9141827793031735,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-04",
+   "query": "phone charger",
+   "gold_upid": "gid://shopify/p/65JeQKD6RL2Xd6n2sHFzz9",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 332,
+   "wall_ms": 580,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/45136446554262",
+     "p_same": 0.09346205243619143,
+     "confidence": 0.9065379475638086,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/43308878659822",
+     "p_same": 0.11149799102169482,
+     "confidence": 0.8885020089783052,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/43481604063299",
+     "p_same": 0.08406245915600025,
+     "confidence": 0.9159375408439998,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/44232916926614",
+     "p_same": 0.11321833679241448,
+     "confidence": 0.8867816632075856,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/44837547802822",
+     "p_same": 0.0733598745921935,
+     "confidence": 0.9266401254078065,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/49123085516954",
+     "p_same": 0.19230535477362065,
+     "confidence": 0.8076946452263793,
+     "positive": true
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/28532324040782",
+     "p_same": 0.08336137698213517,
+     "confidence": 0.9166386230178648,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/40233967681622",
+     "p_same": 0.1110377351482583,
+     "confidence": 0.8889622648517417,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/67694946582827",
+     "p_same": 0.19805213989201395,
+     "confidence": 0.801947860107986,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/67701843034422",
+     "p_same": 0.15465313948941442,
+     "confidence": 0.8453468605105856,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-05",
+   "query": "power bank",
+   "gold_upid": "gid://shopify/p/2AXR7W3ArDCre1tutQBnCB",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 425,
+   "wall_ms": 771,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/41988659281994",
+     "p_same": 0.10466996341253504,
+     "confidence": 0.895330036587465,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/46336176423062",
+     "p_same": 0.09498726462094459,
+     "confidence": 0.9050127353790554,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/48320179142902",
+     "p_same": 0.8462264027128167,
+     "confidence": 0.8462264027128167,
+     "positive": true
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/45469273522424",
+     "p_same": 0.099629948997482,
+     "confidence": 0.900370051002518,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/43841276674242",
+     "p_same": 0.14763726083463682,
+     "confidence": 0.8523627391653632,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/44058070515862",
+     "p_same": 0.08646802888513948,
+     "confidence": 0.9135319711148605,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/43041407467672",
+     "p_same": 0.1008780072132286,
+     "confidence": 0.8991219927867714,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/41988658888778",
+     "p_same": 0.08422620369042691,
+     "confidence": 0.9157737963095731,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/44358650265750",
+     "p_same": 0.10410212792196302,
+     "confidence": 0.895897872078037,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/50016635191596",
+     "p_same": 0.1296666926925676,
+     "confidence": 0.8703333073074324,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-06",
+   "query": "wireless headphones",
+   "gold_upid": "gid://shopify/p/23bCHNQ4exQeaqeqUdkZei",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 381,
+   "wall_ms": 636,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/44853670871215",
+     "p_same": 0.2176655285169635,
+     "confidence": 0.7823344714830365,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/60417182466129",
+     "p_same": 0.07418888428730491,
+     "confidence": 0.9258111157126951,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/42010452721721",
+     "p_same": 0.10426761893933548,
+     "confidence": 0.8957323810606646,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/40011990335688",
+     "p_same": 0.15558452748469756,
+     "confidence": 0.8444154725153025,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/37652049756350",
+     "p_same": 0.25094839856303164,
+     "confidence": 0.7490516014369684,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/40846763753533",
+     "p_same": 0.2924278008872121,
+     "confidence": 0.7075721991127879,
+     "positive": true
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/53128500805939",
+     "p_same": 0.15113419014835305,
+     "confidence": 0.848865809851647,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/42857576267997",
+     "p_same": 0.1785554098536967,
+     "confidence": 0.8214445901463033,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/45691131920453",
+     "p_same": 0.09925358282701144,
+     "confidence": 0.9007464171729885,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/43202619408441",
+     "p_same": 0.18312665884449017,
+     "confidence": 0.8168733411555098,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-07",
+   "query": "usb-c cable",
+   "gold_upid": "gid://shopify/p/3fw7mi1QJ4ISVZ7z9dPUwH",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 361,
+   "wall_ms": 706,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/39889864130622",
+     "p_same": 0.10965455320382703,
+     "confidence": 0.890345446796173,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/46094084735222",
+     "p_same": 0.1411750579302554,
+     "confidence": 0.8588249420697446,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/45186562457750",
+     "p_same": 0.08260663060168616,
+     "confidence": 0.9173933693983138,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/45464832606453",
+     "p_same": 0.1399045707484492,
+     "confidence": 0.8600954292515508,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/39850687397965",
+     "p_same": 0.11273423316385689,
+     "confidence": 0.8872657668361431,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/41528593514574",
+     "p_same": 0.3175290535548146,
+     "confidence": 0.6824709464451855,
+     "positive": true
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/43171575169069",
+     "p_same": 0.20994093050076731,
+     "confidence": 0.7900590694992327,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/47233156415718",
+     "p_same": 0.49308830167550805,
+     "confidence": 0.5069116983244919,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/48714560307495",
+     "p_same": 0.10949835236367932,
+     "confidence": 0.8905016476363207,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/31716169711699",
+     "p_same": 0.11490339705926142,
+     "confidence": 0.8850966029407386,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-08",
+   "query": "mechanical keyboard",
+   "gold_upid": "gid://shopify/p/5OS7FuVEdzWVAhAmyRuSOr",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 289,
+   "wall_ms": 577,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 0,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/48002081784106",
+     "p_same": 0.08011375220923428,
+     "confidence": 0.9198862477907657,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/47049438920926",
+     "p_same": 0.07540992705090949,
+     "confidence": 0.9245900729490906,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/31063869718617",
+     "p_same": 0.07703093472047819,
+     "confidence": 0.9229690652795218,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/50734554218796",
+     "p_same": 0.06867895695203642,
+     "confidence": 0.9313210430479636,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/44396775309533",
+     "p_same": 0.09693232406557661,
+     "confidence": 0.9030676759344234,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/48908546408756",
+     "p_same": 0.0695296336438563,
+     "confidence": 0.9304703663561437,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/51214447640880",
+     "p_same": 0.0838613737588201,
+     "confidence": 0.9161386262411799,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/45526067871997",
+     "p_same": 0.06442057633307255,
+     "confidence": 0.9355794236669275,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/52248710185263",
+     "p_same": 0.0747254008087738,
+     "confidence": 0.9252745991912262,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/44455597244651",
+     "p_same": 0.038793708239155886,
+     "confidence": 0.9612062917608442,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-09",
+   "query": "insulated water bottle",
+   "gold_upid": "gid://shopify/p/52gow3FTgSM3iYFPQ5q43f",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 369,
+   "wall_ms": 684,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/53974509486440",
+     "p_same": 0.12520296778401668,
+     "confidence": 0.8747970322159833,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/46709718745278",
+     "p_same": 0.09937641758280183,
+     "confidence": 0.9006235824171982,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/56975928820096",
+     "p_same": 0.6442418534082993,
+     "confidence": 0.6442418534082993,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/40199945093254",
+     "p_same": 0.10996578768530883,
+     "confidence": 0.8900342123146912,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/39709227417667",
+     "p_same": 0.09895942079015421,
+     "confidence": 0.9010405792098458,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/41633083555996",
+     "p_same": 0.08755631380041493,
+     "confidence": 0.912443686199585,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/50472143159596",
+     "p_same": 0.11242766916958014,
+     "confidence": 0.8875723308304199,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/44559899230335",
+     "p_same": 0.7546409051556694,
+     "confidence": 0.7546409051556694,
+     "positive": true
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/39795361546442",
+     "p_same": 0.1033737928109069,
+     "confidence": 0.8966262071890931,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/47572276379880",
+     "p_same": 0.1015848354034977,
+     "confidence": 0.8984151645965023,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-10",
+   "query": "tumbler",
+   "gold_upid": "gid://shopify/p/3ZemO87J3BOf54YP7p8pXZ",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 319,
+   "wall_ms": 591,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/44560277799039",
+     "p_same": 0.08538945701772428,
+     "confidence": 0.9146105429822757,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/47388180054201",
+     "p_same": 0.08061628739662637,
+     "confidence": 0.9193837126033736,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/53972772454760",
+     "p_same": 0.06315366642731844,
+     "confidence": 0.9368463335726815,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/44559849455743",
+     "p_same": 0.08682736345415504,
+     "confidence": 0.913172636545845,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/45838902460487",
+     "p_same": 0.8663154976446326,
+     "confidence": 0.8663154976446326,
+     "positive": true
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/48476258369824",
+     "p_same": 0.08503070825865455,
+     "confidence": 0.9149692917413454,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/53974350987624",
+     "p_same": 0.06593912772293913,
+     "confidence": 0.9340608722770609,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/53974148677992",
+     "p_same": 0.07187654588769081,
+     "confidence": 0.9281234541123092,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/53973029945704",
+     "p_same": 0.0694920843769686,
+     "confidence": 0.9305079156230314,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/53628626272569",
+     "p_same": 0.09497544936570787,
+     "confidence": 0.9050245506342921,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-11",
+   "query": "nonstick frying pan",
+   "gold_upid": "gid://shopify/p/40zFO1avHTSojt13usQZAY",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 499,
+   "wall_ms": 731,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/42039054729295",
+     "p_same": 0.12759268871339646,
+     "confidence": 0.8724073112866035,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/49187007332512",
+     "p_same": 0.1276974967288242,
+     "confidence": 0.8723025032711758,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/59276873760849",
+     "p_same": 0.12064598845958356,
+     "confidence": 0.8793540115404165,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/31684037771316",
+     "p_same": 0.11677762310664616,
+     "confidence": 0.8832223768933538,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/31252764819502",
+     "p_same": 0.3569910439484154,
+     "confidence": 0.6430089560515846,
+     "positive": true
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/49444798726456",
+     "p_same": 0.11228402722491412,
+     "confidence": 0.8877159727750858,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/41392546152630",
+     "p_same": 0.19041858391772945,
+     "confidence": 0.8095814160822705,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/54591930630217",
+     "p_same": 0.12455542729178029,
+     "confidence": 0.8754445727082197,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/45055342903365",
+     "p_same": 0.1366652318638217,
+     "confidence": 0.8633347681361783,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/39478179856480",
+     "p_same": 0.10115245873929427,
+     "confidence": 0.8988475412607058,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-12",
+   "query": "chef knife",
+   "gold_upid": "gid://shopify/p/2EiffKbipYPEuTbVPMb5nq",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 324,
+   "wall_ms": 729,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/45834625351915",
+     "p_same": 0.11205944990107174,
+     "confidence": 0.8879405500989282,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/39727578251398",
+     "p_same": 0.0903741607015009,
+     "confidence": 0.909625839298499,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/40871753810077",
+     "p_same": 0.10079665028148153,
+     "confidence": 0.8992033497185185,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/42567823392919",
+     "p_same": 0.10851558487040588,
+     "confidence": 0.8914844151295941,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/21656462000207",
+     "p_same": 0.8660853932560871,
+     "confidence": 0.8660853932560871,
+     "positive": true
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/40043293933776",
+     "p_same": 0.10810199993494017,
+     "confidence": 0.8918980000650598,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/44011972886782",
+     "p_same": 0.09717028774835965,
+     "confidence": 0.9028297122516403,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/42900793655490",
+     "p_same": 0.08940267218811229,
+     "confidence": 0.9105973278118877,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/42490557300953",
+     "p_same": 0.10903909051573822,
+     "confidence": 0.8909609094842618,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/46642910593201",
+     "p_same": 0.10001586233812404,
+     "confidence": 0.899984137661876,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-13",
+   "query": "pour over coffee maker",
+   "gold_upid": "gid://shopify/p/5cVA7zYYDNjCRR2UQJ0YQG",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 1632,
+   "wall_ms": 1921,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/45003308171573",
+     "p_same": 0.1279824896700396,
+     "confidence": 0.8720175103299603,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/47202672181555",
+     "p_same": 0.11791237836162272,
+     "confidence": 0.8820876216383773,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/39967018287175",
+     "p_same": 0.0886909326903921,
+     "confidence": 0.9113090673096079,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/12898520596535",
+     "p_same": 0.1240385109576996,
+     "confidence": 0.8759614890423004,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/51614656823608",
+     "p_same": 0.1378587754128725,
+     "confidence": 0.8621412245871275,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/47645942351",
+     "p_same": 0.7310624747296767,
+     "confidence": 0.7310624747296767,
+     "positive": true
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/6025077633",
+     "p_same": 0.0914408242730573,
+     "confidence": 0.9085591757269427,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/43048789541039",
+     "p_same": 0.10575526081749957,
+     "confidence": 0.8942447391825005,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/41628359688247",
+     "p_same": 0.10966808798923006,
+     "confidence": 0.89033191201077,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/39434840899783",
+     "p_same": 0.09155006874164034,
+     "confidence": 0.9084499312583596,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-14",
+   "query": "face moisturizer",
+   "gold_upid": "gid://shopify/p/5kfU3O2usZ89v9y8Ly11TO",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 405,
+   "wall_ms": 626,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/43222120759461",
+     "p_same": 0.09804688748155276,
+     "confidence": 0.9019531125184472,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/41281393721417",
+     "p_same": 0.10715994980447932,
+     "confidence": 0.8928400501955207,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/43034906558650",
+     "p_same": 0.10981895904800554,
+     "confidence": 0.8901810409519945,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/41280243433545",
+     "p_same": 0.8351635672188295,
+     "confidence": 0.8351635672188295,
+     "positive": true
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/31037070508115",
+     "p_same": 0.07215553433419393,
+     "confidence": 0.927844465665806,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/45872217981094",
+     "p_same": 0.09744881210530162,
+     "confidence": 0.9025511878946983,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/46120960524532",
+     "p_same": 0.10421836365791613,
+     "confidence": 0.8957816363420839,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/32029896081526",
+     "p_same": 0.10227590643778317,
+     "confidence": 0.8977240935622168,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/47269475582126",
+     "p_same": 0.0916783595083478,
+     "confidence": 0.9083216404916522,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/41657108168804",
+     "p_same": 0.11390407267128491,
+     "confidence": 0.8860959273287151,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-15",
+   "query": "hardcover novel",
+   "gold_upid": "gid://shopify/p/7n0bo5Jgyn2cxST71OSj9C",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 343,
+   "wall_ms": 578,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/46750141415665",
+     "p_same": 0.07921771441505583,
+     "confidence": 0.9207822855849441,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/48347816296689",
+     "p_same": 0.06157583049526712,
+     "confidence": 0.9384241695047328,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/55905433584003",
+     "p_same": 0.0620977791724219,
+     "confidence": 0.9379022208275781,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/46420873871601",
+     "p_same": 0.07857788733325166,
+     "confidence": 0.9214221126667483,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/46246448890097",
+     "p_same": 0.1423977054488073,
+     "confidence": 0.8576022945511927,
+     "positive": true
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/43319576133695",
+     "p_same": 0.09018031724655473,
+     "confidence": 0.9098196827534453,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/47726984265969",
+     "p_same": 0.07154432062507847,
+     "confidence": 0.9284556793749216,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/42868852850768",
+     "p_same": 0.08047989678936843,
+     "confidence": 0.9195201032106316,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/56086777987449",
+     "p_same": 0.06203942877374394,
+     "confidence": 0.9379605712262561,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/46333475225841",
+     "p_same": 0.07018488742702624,
+     "confidence": 0.9298151125729738,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-16",
+   "query": "jigsaw puzzle",
+   "gold_upid": "gid://shopify/p/6wQUCgpGkrVgU7gq8Prsrq",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 422,
+   "wall_ms": 639,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/44127175049304",
+     "p_same": 0.09310333148339774,
+     "confidence": 0.9068966685166022,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/43866551845060",
+     "p_same": 0.06004604426242265,
+     "confidence": 0.9399539557375773,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/45527850746055",
+     "p_same": 0.07851085949302666,
+     "confidence": 0.9214891405069734,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/41062053970008",
+     "p_same": 0.09076022144614881,
+     "confidence": 0.9092397785538512,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/48257632370997",
+     "p_same": 0.10812549825760859,
+     "confidence": 0.8918745017423915,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/43824932814936",
+     "p_same": 0.11480287505084627,
+     "confidence": 0.8851971249491537,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/40764408758321",
+     "p_same": 0.10964681776372659,
+     "confidence": 0.8903531822362734,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/42734594424920",
+     "p_same": 0.1198733297101223,
+     "confidence": 0.8801266702898777,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/31748626219088",
+     "p_same": 0.11866393809355727,
+     "confidence": 0.8813360619064428,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/43962168705112",
+     "p_same": 0.6872694489493518,
+     "confidence": 0.6872694489493518,
+     "positive": true
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-17",
+   "query": "dog toy",
+   "gold_upid": "gid://shopify/p/6TnHEjpgiXH0BFwr7qiS5V",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 587,
+   "wall_ms": 866,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/40831751684183",
+     "p_same": 0.12177447674771323,
+     "confidence": 0.8782255232522868,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/46894291353767",
+     "p_same": 0.11292141279517415,
+     "confidence": 0.8870785872048259,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/42090560946372",
+     "p_same": 0.100279820973774,
+     "confidence": 0.899720179026226,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/41306605551702",
+     "p_same": 0.08570738466626088,
+     "confidence": 0.9142926153337392,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/43704060280901",
+     "p_same": 0.10547894306689473,
+     "confidence": 0.8945210569331052,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/41502163828811",
+     "p_same": 0.09172691117192344,
+     "confidence": 0.9082730888280766,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/41276312453207",
+     "p_same": 0.1212941206623658,
+     "confidence": 0.8787058793376342,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/41524846690391",
+     "p_same": 0.10637527687811094,
+     "confidence": 0.893624723121889,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/41288325398615",
+     "p_same": 0.767716159477325,
+     "confidence": 0.767716159477325,
+     "positive": true
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/48503987634470",
+     "p_same": 0.10197716448031184,
+     "confidence": 0.8980228355196882,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-18",
+   "query": "yoga mat",
+   "gold_upid": "gid://shopify/p/tX1srx7qs6NVVDKjS6zCU",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 445,
+   "wall_ms": 704,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/43121823056047",
+     "p_same": 0.11969014201960197,
+     "confidence": 0.8803098579803981,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/41170816958507",
+     "p_same": 0.09600965877778572,
+     "confidence": 0.9039903412222143,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/39546596589740",
+     "p_same": 0.09617905304206525,
+     "confidence": 0.9038209469579348,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/40123660632162",
+     "p_same": 0.09243900203603071,
+     "confidence": 0.9075609979639693,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/50662142968167",
+     "p_same": 0.7611842899956935,
+     "confidence": 0.7611842899956935,
+     "positive": true
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/39899986624595",
+     "p_same": 0.10672212328444122,
+     "confidence": 0.8932778767155588,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/44079973695807",
+     "p_same": 0.11278154141940788,
+     "confidence": 0.8872184585805921,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/50262894248176",
+     "p_same": 0.10389247969203583,
+     "confidence": 0.8961075203079641,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/32320412975217",
+     "p_same": 0.1125334929966965,
+     "confidence": 0.8874665070033035,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/44329379430538",
+     "p_same": 0.09362332832189091,
+     "confidence": 0.9063766716781091,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-19",
+   "query": "notebook",
+   "gold_upid": "gid://shopify/p/4OsEFQvDujseVbtNYzRwdI",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 336,
+   "wall_ms": 587,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/41702917800096",
+     "p_same": 0.12708392571401259,
+     "confidence": 0.8729160742859874,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/39303912063043",
+     "p_same": 0.08835279046446681,
+     "confidence": 0.9116472095355332,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/41947141308534",
+     "p_same": 0.10082784411252377,
+     "confidence": 0.8991721558874762,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/40169898377297",
+     "p_same": 0.11787878062823709,
+     "confidence": 0.8821212193717629,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/44395912003841",
+     "p_same": 0.1858484685421498,
+     "confidence": 0.8141515314578502,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/44569723273410",
+     "p_same": 0.09273718860465138,
+     "confidence": 0.9072628113953486,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/41253842878654",
+     "p_same": 0.10057943903840319,
+     "confidence": 0.8994205609615968,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/42957119783146",
+     "p_same": 0.17028759350007003,
+     "confidence": 0.8297124064999299,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/29792300859464",
+     "p_same": 0.36494918943913063,
+     "confidence": 0.6350508105608694,
+     "positive": true
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/40421580505171",
+     "p_same": 0.11081515455919258,
+     "confidence": 0.8891848454408074,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-20",
+   "query": "backpack",
+   "gold_upid": "gid://shopify/p/6mDNHE0MyTGwU1aVc1Gjeb",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 377,
+   "wall_ms": 601,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/43610243956923",
+     "p_same": 0.1294326637754672,
+     "confidence": 0.8705673362245328,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/46146659188872",
+     "p_same": 0.09632051166374489,
+     "confidence": 0.9036794883362551,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/41391030566967",
+     "p_same": 0.0921909341473611,
+     "confidence": 0.9078090658526389,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/42242974580822",
+     "p_same": 0.11056615333696466,
+     "confidence": 0.8894338466630354,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/33362691410",
+     "p_same": 0.06577905646374642,
+     "confidence": 0.9342209435362536,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/41122671820882",
+     "p_same": 0.08467354110631646,
+     "confidence": 0.9153264588936836,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/49643603624234",
+     "p_same": 0.08646006688027955,
+     "confidence": 0.9135399331197205,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/46117222351000",
+     "p_same": 0.0876206296413322,
+     "confidence": 0.9123793703586678,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/40492059951292",
+     "p_same": 0.09461657898682763,
+     "confidence": 0.9053834210131724,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/41357322321978",
+     "p_same": 0.7359366848233859,
+     "confidence": 0.7359366848233859,
+     "positive": true
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-21",
+   "query": "bluetooth speaker",
+   "gold_upid": "gid://shopify/p/2cdHAtdujP1fEKJvw302lw",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 543,
+   "wall_ms": 837,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/50354174361911",
+     "p_same": 0.11033689930361226,
+     "confidence": 0.8896631006963878,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/45983886606388",
+     "p_same": 0.08173434733724053,
+     "confidence": 0.9182656526627595,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/42200363728980",
+     "p_same": 0.105817760651998,
+     "confidence": 0.894182239348002,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/40601562644552",
+     "p_same": 0.10461443596291256,
+     "confidence": 0.8953855640370875,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/50200090083575",
+     "p_same": 0.9017006018500916,
+     "confidence": 0.9017006018500916,
+     "positive": true
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/43796910538927",
+     "p_same": 0.08437602630697726,
+     "confidence": 0.9156239736930227,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/37652057391294",
+     "p_same": 0.08740424545796968,
+     "confidence": 0.9125957545420303,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/43695864184892",
+     "p_same": 0.09758420544833948,
+     "confidence": 0.9024157945516605,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/48304910434537",
+     "p_same": 0.09094740854782686,
+     "confidence": 0.9090525914521731,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/49682617303347",
+     "p_same": 0.07345470191747477,
+     "confidence": 0.9265452980825253,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-22",
+   "query": "desk lamp",
+   "gold_upid": "gid://shopify/p/1RrIrwhjIDYqACldQzpHWg",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 409,
+   "wall_ms": 643,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/67717236457517",
+     "p_same": 0.15646078125673304,
+     "confidence": 0.843539218743267,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/50687484952905",
+     "p_same": 0.2432967636961779,
+     "confidence": 0.7567032363038221,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/48273645895833",
+     "p_same": 0.13623429300867643,
+     "confidence": 0.8637657069913236,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/53569533968597",
+     "p_same": 0.2455384617917472,
+     "confidence": 0.7544615382082528,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/52810360455535",
+     "p_same": 0.09822842695207078,
+     "confidence": 0.9017715730479292,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/40407417258020",
+     "p_same": 0.14843112899016178,
+     "confidence": 0.8515688710098382,
+     "positive": true
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/31785408331824",
+     "p_same": 0.09898062025384623,
+     "confidence": 0.9010193797461538,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/51218086789407",
+     "p_same": 0.12690944203749094,
+     "confidence": 0.873090557962509,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/41680219177027",
+     "p_same": 0.1742899911990802,
+     "confidence": 0.8257100088009198,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/40527537471534",
+     "p_same": 0.21508601415431797,
+     "confidence": 0.7849139858456821,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-23",
+   "query": "sunscreen",
+   "gold_upid": "gid://shopify/p/VFhwa1rJ8dBDfOblxfccD",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 316,
+   "wall_ms": 528,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/53692453814644",
+     "p_same": 0.094052015377389,
+     "confidence": 0.9059479846226111,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/42243578560747",
+     "p_same": 0.06643617744650347,
+     "confidence": 0.9335638225534966,
+     "positive": false
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/44341952315618",
+     "p_same": 0.0725248416024753,
+     "confidence": 0.9274751583975247,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/49173457010985",
+     "p_same": 0.1046389001147922,
+     "confidence": 0.8953610998852078,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/39943637827642",
+     "p_same": 0.8637863613199582,
+     "confidence": 0.8637863613199582,
+     "positive": true
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/43809521959063",
+     "p_same": 0.07621727353924727,
+     "confidence": 0.9237827264607528,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/52381063774517",
+     "p_same": 0.07759340862781387,
+     "confidence": 0.9224065913721862,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/39428058906806",
+     "p_same": 0.0834847140603435,
+     "confidence": 0.9165152859396565,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/43130780811417",
+     "p_same": 0.10189215940190846,
+     "confidence": 0.8981078405980916,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/39899902836898",
+     "p_same": 0.07435239024800569,
+     "confidence": 0.9256476097519943,
+     "positive": false
+    }
+   ]
+  },
+  {
+   "case_id": "e2e-24",
+   "query": "running socks",
+   "gold_upid": "gid://shopify/p/Y675JaYcz8R0lIRsF6zZn",
+   "status": "ok",
+   "error_code": null,
+   "called": true,
+   "ms": 387,
+   "wall_ms": 637,
+   "listings": 10,
+   "scored": 10,
+   "not_scored": 0,
+   "positives": 1,
+   "target_from_photo": true,
+   "judgments": [
+    {
+     "index": 0,
+     "listing": "gid://shopify/ProductVariant/37874239668410",
+     "p_same": 0.10786956589657058,
+     "confidence": 0.8921304341034294,
+     "positive": false
+    },
+    {
+     "index": 1,
+     "listing": "gid://shopify/ProductVariant/39787043029200",
+     "p_same": 0.7784336288544002,
+     "confidence": 0.7784336288544002,
+     "positive": true
+    },
+    {
+     "index": 2,
+     "listing": "gid://shopify/ProductVariant/49669656248629",
+     "p_same": 0.3119009047319677,
+     "confidence": 0.6880990952680324,
+     "positive": false
+    },
+    {
+     "index": 3,
+     "listing": "gid://shopify/ProductVariant/42183758250080",
+     "p_same": 0.0969152176754437,
+     "confidence": 0.9030847823245562,
+     "positive": false
+    },
+    {
+     "index": 4,
+     "listing": "gid://shopify/ProductVariant/12621368655957",
+     "p_same": 0.10749575840108966,
+     "confidence": 0.8925042415989104,
+     "positive": false
+    },
+    {
+     "index": 5,
+     "listing": "gid://shopify/ProductVariant/40047820439624",
+     "p_same": 0.07709597502250104,
+     "confidence": 0.9229040249774989,
+     "positive": false
+    },
+    {
+     "index": 6,
+     "listing": "gid://shopify/ProductVariant/43928848531699",
+     "p_same": 0.10880676799101927,
+     "confidence": 0.8911932320089807,
+     "positive": false
+    },
+    {
+     "index": 7,
+     "listing": "gid://shopify/ProductVariant/50040213406014",
+     "p_same": 0.1280809526900541,
+     "confidence": 0.8719190473099458,
+     "positive": false
+    },
+    {
+     "index": 8,
+     "listing": "gid://shopify/ProductVariant/44871688749245",
+     "p_same": 0.10279585968065666,
+     "confidence": 0.8972041403193434,
+     "positive": false
+    },
+    {
+     "index": 9,
+     "listing": "gid://shopify/ProductVariant/45034556129488",
+     "p_same": 0.09913946381295234,
+     "confidence": 0.9008605361870476,
+     "positive": false
+    }
+   ]
+  }
+ ]
+}

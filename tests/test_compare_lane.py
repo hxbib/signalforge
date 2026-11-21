@@ -236,9 +236,10 @@ class CompareLane(unittest.TestCase):
         t0 = time.monotonic()
         out = run([row("alpha", 2999)] + cands, pair=slow_pair,
                   confirm=confirming(barcode=None, delay={"Alpha": 0.6}))
-        self.assertLess(time.monotonic() - t0, 1.1)       # 6 checks at once, alongside the confirm
+        self.assertLess(time.monotonic() - t0, 1.1)       # 4 checks at once, alongside the confirm
         lc = out["coverage"]["sources"][2]
-        self.assertEqual((lc["id"], lc["status"], lc["offers"], lc["eligible"]), ("listing_checks", "ok", 6, 6))
+        self.assertEqual((lc["id"], lc["status"], lc["offers"], lc["eligible"]), ("listing_checks", "limited", 4, 4))
+        self.assertEqual(lc["name"], "Listing check (Gemini 4 Carbon, verified quotes)")
         self.assertIsInstance(lc["ms"], int)
         self.assertIsInstance(out["coverage"]["sources"][1]["ms"], int)
 
@@ -261,9 +262,9 @@ class CompareLane(unittest.TestCase):
         pair = pair_says("abstain")
         cands = [row("c%d" % i, 2000 - i, product="gid://shopify/p/other", title="Acme X100") for i in range(8)]
         out = run([row("alpha", 2999)] + cands, pair=pair, confirm=confirming(barcode=None))
-        self.assertEqual(len(pair.calls), 6)
-        self.assertNotIn("C0", {c["seller_name"] for c in pair.calls})   # the two dearest are not checked
-        self.assertIn("2 not checked (limit)", out["coverage"]["sources"][2]["note"])
+        self.assertEqual(len(pair.calls), 4)
+        self.assertEqual({c["seller_name"] for c in pair.calls}, {"C4", "C5", "C6", "C7"})   # cheapest four
+        self.assertIn("4 not checked (limit)", out["coverage"]["sources"][2]["note"])
 
     def test_merchant_read_after_clock_is_not_stale(self):
         """bug 003: a confirm that reads after run start must not be called stale, nor the winner rejected."""
@@ -285,6 +286,135 @@ class CompareLane(unittest.TestCase):
         r = out["result"]
         self.assertEqual([w["seller_name"] for w in r["winners"]], ["Alpha"])
         self.assertEqual(r["rejected"], [])
+
+    def test_runner_up_is_next_seller(self):
+        r = run([row("alpha", 2999), row("beta", 3499), row("gamma", 3999)])["result"]
+        self.assertEqual((r["runner_up"]["seller_name"], r["runner_up"]["item_cents"]), ("Beta", 3499))
+        self.assertTrue(r["runner_up"]["verified"])
+
+    def test_runner_up_skips_tied_winners_and_null_when_alone(self):
+        r = run([row("alpha", 2999), row("beta", 2999), row("gamma", 3999)])["result"]
+        self.assertEqual(r["runner_up"]["seller_name"], "Gamma")
+        self.assertIsNone(run([row("alpha", 2999)])["result"]["runner_up"])
+        self.assertIsNone(run([row("alpha", 2999), row("beta", 2999)])["result"]["runner_up"])
+
+    def test_price_outlier_caution(self):
+        r = run([row("cheap", 3050), row("b", 8499), row("c", 8599), row("d", 8999)])["result"]
+        c = r["caution"]
+        self.assertEqual(r["winners"][0]["seller_name"], "Cheap")          # nothing re-ranked
+        self.assertEqual((c["code"], c["median_cents"], c["eligible_sellers"], c["percent_below"]),
+                         ("price_outlier", 8549, 4, 64))
+        self.assertEqual(c["sentence"], "This price is 64% below the median of the 4 verified offers ($85.49). "
+                         "Verified means the merchant's own storefront states this price and stock for this exact item "
+                         "\u2014 it is not a rating of the merchant.")
+
+    def test_caution_boundary_at_40_percent(self):
+        # median of (6000, 10000, 10000) = 10000; 6000 is exactly 40% below -> caution; 6001 is not
+        c = run([row("a", 6000), row("b", 10000), row("c", 10000)])["result"]["caution"]
+        self.assertEqual((c["percent_below"], c["median_cents"], c["eligible_sellers"]), (40, 10000, 3))
+        self.assertIsNone(run([row("a", 6001), row("b", 10000), row("c", 10000)])["result"]["caution"])
+
+    def test_caution_needs_three_sellers(self):
+        self.assertIsNone(run([row("a", 1000), row("b", 10000)])["result"]["caution"])
+        self.assertIsNone(run([row("a", 1000)])["result"]["caution"])
+        self.assertIsNone(run([row("a", 1000, stock="sold_out"), row("b", 10000), row("c", 10000)],
+                              confirm=confirming(overrides={"A": {"stock": "sold_out"}}))["result"]["caution"])
+
+    def test_caution_with_tied_winners(self):
+        r = run([row("a", 3000), row("b", 3000), row("c", 9000), row("d", 9000), row("e", 9000)])["result"]
+        self.assertEqual(r["status"], "tie")
+        self.assertEqual((r["caution"]["median_cents"], r["caution"]["percent_below"]), (9000, 66))
+        self.assertEqual(r["runner_up"]["item_cents"], 9000)
+
+    def test_single_outlier_barcode_does_not_wipe_cluster(self):
+        """bug 020: 3 sellers agree on one barcode, 1 outlier publishes another -> majority stands."""
+        def conf(q, as_of):
+            return confirming(barcode=OTHER_UPC if q["seller_name"] == "Odd" else UPC)(q, as_of)
+        out = run([row("alpha", 2999), row("beta", 3099), row("gamma", 3199), row("odd", 2500)], confirm=conf)
+        ev, r = out["evaluation"], out["result"]
+        self.assertTrue(ev["barcode_conflict"])
+        self.assertEqual((ev["target_gtin"], ev["gtin_source"]), (UPC.zfill(14), "cluster_merchant_barcode_majority"))
+        self.assertEqual([w["seller_name"] for w in r["winners"]], ["Alpha"])
+        self.assertEqual({x["offer"]["seller_name"]: x["reason"] for x in r["rejected"]},
+                         {"Odd": "different_or_unverified_item"})
+
+    def test_even_barcode_split_stays_conservative(self):
+        def conf(q, as_of):
+            return confirming(barcode=OTHER_UPC if q["seller_name"] in ("Odd", "Beta") else UPC)(q, as_of)
+        out = run([row("alpha", 2999), row("beta", 3099), row("odd", 2500), row("gamma", 3199)], confirm=conf)
+        self.assertIsNone(out["evaluation"]["target_gtin"])
+        self.assertEqual(out["result"]["status"], "no_verified_offer")
+
+    def test_amount_without_currency_never_shown(self):
+        """bug 021: a storefront amount with unknown currency is never displayed as a number."""
+        conf = confirming(overrides={"Uk": {"item_cents": 10000, "currency": None}}, statuses={"Uk": "mismatch"})
+        r = run([row("alpha", 2999), row("uk", 13347)], confirm=conf)["result"]
+        uk = [x for x in r["rejected"] if x["offer"]["seller_name"] == "Uk"][0]
+        self.assertIsNone(uk["offer"]["item_cents"])
+        self.assertNotIn(10000, [x["offer"]["item_cents"] for x in r["rejected"]])
+
+    def test_leads_cheapest_first(self):
+        rows = [row("alpha", 2999)] + [row(n, c, product="gid://shopify/p/other", title="Other thing")
+                                       for n, c in (("x", 5000), ("y", 1100), ("z", 3000))]
+        r = run(rows)["result"]
+        self.assertEqual([l["item_cents"] for l in r["leads"]], [1100, 3000, 5000])
+
+    # ---- C. Decision 1 screen (consumer side): orders, prunes, annotates; never grants identity
+    def test_screen_p_carried_into_every_offer_view(self):
+        conf = confirming(overrides={"Used": {"condition": "secondhand"}})
+        rows = [row("alpha", 2999, screen_p=0.97), row("beta", 3499, screen_p=0.91),
+                row("used", 2599, condition="secondhand", screen_p=0.88),
+                row("lead", 999, product="gid://shopify/p/other", title="Other thing", screen_p=0.2)]
+        r = run(rows, confirm=conf)["result"]
+        self.assertEqual(r["winners"][0]["screen_p"], 0.97)
+        self.assertEqual(r["runner_up"]["screen_p"], 0.91)
+        self.assertEqual(r["near_miss"]["offer"]["screen_p"], 0.88)
+        self.assertEqual(r["rejected"][0]["offer"]["screen_p"], 0.88)
+        self.assertEqual(r["leads"][0]["screen_p"], 0.2)
+        self.assertIsNone(run([row("alpha", 2999)])["result"]["winners"][0]["screen_p"])   # absent when no screen ran
+
+    def test_screen_low_p_keeps_candidate_a_lead_without_check(self):
+        pair = pair_says("match")
+        cand = row("outside", 1999, product="gid://shopify/p/other", title="Acme X100", screen_p=0.05)
+        r = run([row("alpha", 2999), cand], pair=pair, confirm=confirming(barcode=None))["result"]
+        self.assertEqual(pair.calls, [])
+        self.assertEqual(r["leads"][0]["lead_reason"], "Decision 1 screen: different item (p 0.05)")
+
+    def test_screen_middle_p_not_checked(self):
+        pair = pair_says("match")
+        cand = row("outside", 1999, product="gid://shopify/p/other", title="Acme X100", screen_p=0.3)
+        r = run([row("alpha", 2999), cand], pair=pair, confirm=confirming(barcode=None))["result"]
+        self.assertEqual(pair.calls, [])
+        self.assertEqual(r["leads"][0]["lead_reason"], "Not checked: Decision 1 screen below 0.5 (p 0.30)")
+
+    def test_screen_high_p_checked_and_match_ranked(self):
+        pair = pair_says("match")
+        cand = row("outside", 1999, product="gid://shopify/p/other", title="Acme X100", screen_p=0.8)
+        r = run([row("alpha", 2999), cand], pair=pair, confirm=confirming(barcode=None))["result"]
+        self.assertEqual(len(pair.calls), 1)
+        self.assertEqual((r["winners"][0]["seller_name"], r["winners"][0]["identity_basis"]), ("Outside", "model_number"))
+
+    def test_only_candidates_cheaper_than_cluster_are_checked(self):
+        pair = pair_says("match")
+        cand = row("pricey", 3999, product="gid://shopify/p/other", title="Acme X100")
+        r = run([row("alpha", 2999), cand], pair=pair, confirm=confirming(barcode=None))["result"]
+        self.assertEqual(pair.calls, [])
+        self.assertEqual(r["leads"][0]["lead_reason"], "Not checked: not cheaper than the verified catalog offer")
+        # no eligible cluster offer -> every candidate may be checked
+        pair = pair_says("match")
+        r = run([row("alpha", 2999, stock="sold_out"), cand], pair=pair,
+                confirm=confirming(barcode=None, overrides={"Alpha": {"stock": "sold_out"}}))["result"]
+        self.assertEqual(len(pair.calls), 1)
+        self.assertEqual(r["winners"][0]["seller_name"], "Pricey")
+
+    def test_screen_never_changes_cluster_or_barcode_ranking(self):
+        cand = row("outside", 1999, product="gid://shopify/p/other", title="Acme X100", screen_p=0.01)
+        r = run([row("alpha", 2999, screen_p=0.01), row("beta", 3499, screen_p=0.99), cand],
+                pair=pair_says("different"))["result"]
+        # agreeing published barcode outranks the screen; cluster rows ranked by price only
+        self.assertEqual([w["seller_name"] for w in r["winners"]], ["Outside"])
+        self.assertEqual(r["winners"][0]["identity_basis"], "merchant_barcode")
+        self.assertEqual(r["runner_up"]["seller_name"], "Alpha")
 
 
 if __name__ == "__main__":

@@ -59,11 +59,15 @@ _clients = None
 
 
 class ModelCallError(Exception):
-    """A real model call failed. Carries (job, model, safe_message); never swallowed, never defaulted."""
+    """A real model call failed. Carries (job, model, safe_message); never swallowed, never defaulted.
 
-    def __init__(self, job, model, safe_message):
+    safe_message is a plain sentence that may be shown to a shopper. `detail` is the scrubbed technical text
+    (exception class + the service's message) for logs and the smoke script. `ms` is the time spent, when known."""
+
+    def __init__(self, job, model, safe_message, detail=None, ms=None):
         super().__init__(f"{job} [{model}]: {safe_message}")
         self.job, self.model, self.safe_message = job, model, safe_message
+        self.detail, self.ms = detail or safe_message, ms
 
 
 def _scrub(text):
@@ -75,10 +79,37 @@ def _scrub(text):
     return text[:400]
 
 
-def safe_message(exc):
+def detail_message(exc):
+    """Technical, key-scrubbed text: exception class, status code and the service's own message. Not for shoppers."""
     code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
     detail = getattr(exc, "message", None) or str(exc)
     return _scrub(f"{type(exc).__name__}{' ' + str(code) if code else ''}: {detail}")
+
+
+def safe_message(exc):
+    """A short sentence that is safe to show a shopper: no SDK text, class names or configuration advice."""
+    name = type(exc).__name__.lower()
+    code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+    code = code if isinstance(code, int) else None
+    if "timeout" in name or isinstance(exc, TimeoutError):
+        return "The model service took too long to answer. Please try again."
+    if code == 429 or "ratelimit" in name:
+        return "The model service is busy right now. Please try again in a moment."
+    if code in (401, 403) or "permission" in name or "authentication" in name:
+        return "The model service did not accept this server's credentials."
+    if code is not None and code >= 500:
+        return "The model service had a problem on its side. Please try again."
+    if code is not None and code >= 400:
+        return "The model service did not accept the request."
+    if "connect" in name or isinstance(exc, (ConnectionError, OSError)):
+        return "The model service could not be reached. Please try again."
+    if "validation" in name or isinstance(exc, (ValueError, KeyError, TypeError)):
+        return "The model's answer did not pass validation, so it was not used."
+    return "The model call did not complete."
+
+
+def _failure(job, model, exc, start):
+    return ModelCallError(job, model, safe_message(exc), detail_message(exc), round((time.monotonic() - start) * 1000))
 
 
 def _load_env():
@@ -102,7 +133,7 @@ def clients():
         if _clients is None:
             _load_env()
             if not os.environ.get("GEMINI_API_KEY"):
-                raise ModelCallError("setup", "-", "GEMINI_API_KEY is not configured on the server")
+                raise ModelCallError("setup", "-", "The model service key is not configured on this server.")
             from google import genai
             _clients = (genai.Client(http_options={"api_version": "v1", "timeout": STABLE_TIMEOUT_MS}),
                         genai.Client(http_options={"api_version": "v1beta", "timeout": BETA_TIMEOUT_MS}))
@@ -170,7 +201,7 @@ def structured(job, model, instruction, schema, data, thinking=None):
     except ModelCallError:
         raise
     except Exception as exc:
-        raise ModelCallError(job, model, safe_message(exc)) from exc
+        raise _failure(job, model, exc, start) from exc
     return value, {"job": job, "model": model, "id": issued, "ms": round((time.monotonic() - start) * 1000), **kept}
 
 
@@ -184,7 +215,7 @@ def _release(stable, issued):
             stable.interactions.delete(id=issued)
             return {"retained": False}
         except Exception as exc:
-            error = safe_message(exc)
+            error = detail_message(exc)
     return {"retained": True, "delete_error": error}
 
 
@@ -208,10 +239,37 @@ def gate(data, job="gate"):
             raise ValueError("decision returned an unknown choice")
         if not math.isfinite(confidence) or not 0 <= confidence <= 1:
             raise ValueError("invalid decision confidence")
+        probabilities = {k: float(v) for k, v in (answer.probabilities or {}).items()}
+        if set(probabilities) != set(QUESTION["target"]["criteria"]) or not all(
+                math.isfinite(v) and 0 <= v <= 1 for v in probabilities.values()):
+            raise ValueError("invalid decision probabilities")
     except ModelCallError:
         raise
     except Exception as exc:
-        raise ModelCallError(job, DECISION, safe_message(exc)) from exc
+        raise _failure(job, DECISION, exc, start) from exc
     return {"pass": choice == "single" and confidence >= THRESHOLD, "choice": choice, "confidence": confidence,
-            "threshold": THRESHOLD, "id": getattr(result, "id", None), "model": DECISION,
+            "probabilities": probabilities, "threshold": THRESHOLD, "id": getattr(result, "id", None), "model": DECISION,
             "ms": round((time.monotonic() - start) * 1000)}
+
+
+def yes_no(job, data, questions):
+    """ONE Gemini Decision 1 forward pass over `data` answering every yes/no question in `questions`
+    ({key: instructions}). Returns ({key: {"p": P(yes), "confidence": float}}, ms). Zero output tokens."""
+    start = time.monotonic()
+    try:
+        _, beta = clients()
+        result = beta.decisions.create(model=DECISION, input=data, questions={
+            key: {"type": "noul", "instructions": text} for key, text in questions.items()})
+        answers = result.answers or {}
+        out = {}
+        for key in questions:
+            answer = answers[key]
+            p, confidence = float(answer.noul), float(answer.confidence)
+            if not (math.isfinite(p) and 0 <= p <= 1 and math.isfinite(confidence) and 0 <= confidence <= 1):
+                raise ValueError("invalid decision probability")
+            out[key] = {"p": p, "confidence": confidence}
+    except ModelCallError:
+        raise
+    except Exception as exc:
+        raise _failure(job, DECISION, exc, start) from exc
+    return out, round((time.monotonic() - start) * 1000)

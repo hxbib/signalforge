@@ -210,6 +210,15 @@ def has_token(text: str, part: str) -> bool:
     return part.strip().upper() in toks or _compact(part) in toks
 
 
+def brand_in_title(title: str, brand: str) -> bool:
+    """True only when every word of the brand is a whole token of the catalog title (no substrings)."""
+    words = [w for w in (brand or "").split() if _compact(w)]
+    if not words:
+        return False
+    toks = _tokens(title)
+    return all(w.upper() in toks or _compact(w) in toks for w in words)
+
+
 def _query(visual: dict) -> str:
     parts = [str(visual.get(k) or "").strip() for k in ("brand", "part_number", "name")]
     seen, words = set(), []
@@ -328,7 +337,7 @@ def anchors_for(visual: dict, image: bytes | None = None) -> dict:
             toks |= _tokens(t)
         carrying = {r["seller"] for r in mine if r["seller"] and has_token(r["title"] or "", part)}
         exact = bool(part) and has_token(title, part) and len(carrying) >= 2
-        a_brand = brand if brand and (brand.upper() in _tokens(title) or brand.lower() in title.lower()) else ""
+        a_brand = brand if brand_in_title(title, brand) else ""
         anchors.append({
             "upid": upid,
             "title": title,

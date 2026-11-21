@@ -17,8 +17,10 @@ from buyer import amount
 
 MAX_CONFIRM_MERCHANTS = 12
 CONFIRM_WORKERS = 6
-MAX_PAIR_CALLS = 6
-PAIR_WORKERS = 6
+MAX_PAIR_CALLS = 4
+PAIR_WORKERS = 4
+SCREEN_PAIR_MIN = 0.5          # Decision 1 screen: a candidate needs p >= 0.5 (when screened) to get a listing check
+SCREEN_DIFFERENT_MAX = 0.10    # ... and p <= 0.10 keeps it a lead outright. The screen never grants identity.
 CONFIRM_PHASE_S = 9.0          # merchant confirms and listing checks run side by side, each with its own cap
 PAIR_PHASE_S = 9.0
 PAIR_LATE = "identity check did not finish in time"
@@ -80,13 +82,49 @@ def _offer(row, *, verified=False, confirmed_by=(), identity_basis=None):
     return {
         "seller": row.get("seller"), "seller_name": row.get("seller_name") or row.get("seller_domain") or "Unknown merchant",
         "listing": row.get("listing"), "title": row.get("title") or "", "url": row.get("url"),
-        "image_url": row.get("image_url"), "item_cents": row.get("item_cents") if amount(row.get("item_cents")) else None,
+        "image_url": row.get("image_url"),
+        "item_cents": row.get("item_cents") if amount(row.get("item_cents")) and row.get("currency") else None,
         "currency": row.get("currency"), "condition": row.get("condition") or "unknown",
         "stock": row.get("stock") or "unknown", "fulfillment": row.get("fulfillment"),
         "source": row.get("source") if row.get("source") in ("shop_native", "merchant_api", "merchant_page") else "discovery",
         "read_at": row.get("read_at"), "verified": bool(verified), "confirmed_by": list(confirmed_by),
         "identity_basis": identity_basis, "gtin": row.get("gtin") if _valid_gtin(row.get("gtin")) else None,
+        "screen_p": _screen_p(row),
     }
+
+
+CAUTION_MIN_SELLERS = 3
+CAUTION_PERCENT = 40
+
+
+def price_caution(eligible, floor):
+    """Deterministic outlier note. Median over each eligible seller's cheapest price; integer cents only.
+    Nothing is hidden or re-ranked: the winner stays the winner."""
+    if floor is None:
+        return None
+    best = {}
+    for e in eligible:
+        if e["seller"] not in best or e["cents"] < best[e["seller"]]:
+            best[e["seller"]] = e["cents"]
+    k = len(best)
+    if k < CAUTION_MIN_SELLERS:
+        return None
+    prices = sorted(best.values())
+    mid = k // 2
+    median = prices[mid] if k % 2 else (prices[mid - 1] + prices[mid]) // 2
+    if median <= 0 or (median - floor) * 100 < CAUTION_PERCENT * median:
+        return None
+    pct = (median - floor) * 100 // median
+    sentence = ("This price is {}% below the median of the {} verified offers ({}). Verified means the merchant's own "
+                "storefront states this price and stock for this exact item \u2014 it is not a rating of the merchant."
+                ).format(pct, k, _money(median))
+    return {"code": "price_outlier", "sentence": sentence, "median_cents": median, "eligible_sellers": k,
+            "percent_below": pct}
+
+
+def _screen_p(row):
+    p = row.get("screen_p")
+    return float(p) if type(p) in (int, float) and 0.0 <= p <= 1.0 else None
 
 
 def _basis_label(goal):
@@ -198,7 +236,22 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
     jobs = [r for s in chosen for r in by_seller[s]] if confirm else []
     cluster_ids = {id(r) for r in cluster}
 
-    pair_pool = sorted(candidates, key=lambda r: r["item_cents"] if amount(r.get("item_cents")) else 10**12)
+    # listing checks only where they can change the answer: candidates cheaper than the cheapest eligible
+    # catalog-cluster offer (or any, when the cluster has none), and not screened out by Decision 1
+    cluster_floor = evaluate({"upid": upid, "gtin": given_gtin}, goal, cluster, as_of)["price_cents"]
+    skip_reason = {}
+    pair_pool = []
+    for r in sorted(candidates, key=lambda r: r["item_cents"] if amount(r.get("item_cents")) else 10**12):
+        sp = _screen_p(r)
+        if sp is not None and sp <= SCREEN_DIFFERENT_MAX:
+            skip_reason[id(r)] = "Decision 1 screen: different item (p {:.2f})".format(sp)
+        elif cluster_floor is not None and not (amount(r.get("item_cents")) and r.get("currency") == "USD"
+                                                and r["item_cents"] < cluster_floor):
+            skip_reason[id(r)] = "Not checked: not cheaper than the verified catalog offer"
+        elif sp is not None and sp < SCREEN_PAIR_MIN:
+            skip_reason[id(r)] = "Not checked: Decision 1 screen below 0.5 (p {:.2f})".format(sp)
+        else:
+            pair_pool.append(r)
     pair_jobs = pair_pool[:MAX_PAIR_CALLS] if pair else []
     pair_over = pair_pool[MAX_PAIR_CALLS:] if pair else []
     target_summary = {"name": target.get("name") or "", "brand": brand, "mpn": mpn,
@@ -244,7 +297,7 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
             q = dict(q)
             q["source"] = q.get("source") or "merchant_api"
             q.setdefault("product", r.get("product"))
-            for k in ("seller_name", "seller_domain", "title", "image_url"):
+            for k in ("seller_name", "seller_domain", "title", "image_url", "screen_p"):
                 if not q.get(k) and r.get(k):
                     q[k] = r[k]
             if "identity_basis" in r:
@@ -274,7 +327,18 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
             run_gtin, gtin_source = agreed, "cluster_merchant_barcode"
         elif not same_gtin(agreed, given_gtin):
             barcode_conflict = True
-    if barcode_conflict and given_gtin is None:
+    elif barcode_conflict and given_gtin is None:
+        # independent sellers per barcode: a strict majority of >= 2 sellers sets the run GTIN; the minority rows
+        # then fail the identity predicate on their own (valid barcode differing from a known target GTIN)
+        sellers_per = {}
+        for (seller, _listing), code in published.items():
+            sellers_per.setdefault(code, set()).add(seller)
+        total = len({seller for seller, _ in published})
+        top = max(sellers_per, key=lambda c: len(sellers_per[c]))
+        n_top = len(sellers_per[top])
+        if n_top >= 2 and n_top * 2 > total and sum(1 for c in sellers_per if len(sellers_per[c]) == n_top) == 1:
+            run_gtin, gtin_source = top, "cluster_merchant_barcode_majority"
+    if barcode_conflict and given_gtin is None and run_gtin is None:
         # the cluster mixes barcodes and nothing says which is the target: barcode rows lose identity
         for r in cluster:
             if _key(r) in published:
@@ -320,10 +384,12 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
                    "abstain": "Listing check could not confirm the same item",
                    "timeout": PAIR_LATE}.get(verdict or kind, "Listing check failed")
             leads.append((r, why))
+        elif id(r) in skip_reason:
+            leads.append((r, skip_reason[id(r)]))
         elif id(r) in over_ids:
             leads.append((r, "Listing check limit reached"))
         else:
-            leads.append((r, "Two-model listing check not available"))
+            leads.append((r, "Listing check not available"))
     lead_keys = {_key(r) for r, _ in leads}
 
     # ---- d. rank
@@ -418,10 +484,23 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
     for rej in rejected:
         rej.pop("_row", None)
 
+    # runner-up: the cheapest eligible offer from a seller that is not among the winners
+    winner_sellers = {w["seller"] for w in winners}
+    runner_up = None
+    for e in ev["eligible"]:                       # already sorted by (cents, seller, listing)
+        if e["seller"] not in winner_sellers:
+            runner_up = offer_for(e["seller"], e["listing"], True, e["identity_basis"])
+            runner_up["total_cents"] = e["cents"]
+            break
+
     result = {
         "status": status, "headline": headline, "price_cents": floor, "currency": "USD" if floor is not None else None,
-        "basis_label": _basis_label(goal), "winners": winners, "near_miss": near_miss, "rejected": rejected,
-        "leads": [dict(_offer(r), lead_reason=why) for r, why in leads],
+        "basis_label": _basis_label(goal), "winners": winners, "runner_up": runner_up,
+        "caution": price_caution(ev["eligible"], floor),
+        "near_miss": near_miss, "rejected": rejected,
+        "leads": sorted((dict(_offer(r), lead_reason=why) for r, why in leads),   # cheapest first, unpriced last
+                        key=lambda o: (o["item_cents"] is None or o["currency"] != "USD", o["item_cents"] or 0,
+                                       o["seller_name"] or "")),
         "item_price_view": None,
     }
     if goal["basis"] == "delivered" and floor is None:
@@ -472,7 +551,9 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
     if not pair:
         l_status, l_note = "not_connected", "Listing check not available"
     elif not pair_jobs:
-        l_status, l_note = "ok", "No model-number candidates to check"
+        l_status = "ok"
+        l_note = ("{} candidates not checked: none cheaper than the verified catalog offer or screened out".format(len(skip_reason))
+                  if skip_reason else "No model-number candidates to check")
     else:
         answered = len(pair_jobs) - late_pairs - failed_pairs
         l_status = "ok" if answered == len(pair_jobs) and not pair_over else ("failed" if answered == 0 and not late_pairs else "limited")
@@ -496,7 +577,7 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
          "offers": len(merchant_quotes), "eligible": len({e["seller"] for e in ev["eligible"] if e["seller"] in responded_m}),
          "ms": confirm_ms if jobs else None, "note": m_note,
          "merchants": {"attempted": len(checked), "responded": len(responded_m), **counts}},
-        {"id": "listing_checks", "name": "Two-model listing check (Neon + Carbon)", "kind": "model",
+        {"id": "listing_checks", "name": "Listing check (Gemini 4 Carbon, verified quotes)", "kind": "model",
          "status": l_status, "offers": len(pair_jobs), "eligible": granted,
          "ms": pair_ms if pair_jobs else None, "note": l_note},
     ]
@@ -550,6 +631,8 @@ def _cli(argv):
                                   for w in r["winners"]],
                       "near_miss": r["near_miss"] and {"seller": r["near_miss"]["offer"]["seller_name"],
                                                        "sentence": r["near_miss"]["sentence"]},
+                      "runner_up": r["runner_up"] and (r["runner_up"]["seller_name"], r["runner_up"]["item_cents"]),
+                      "caution": r["caution"],
                       "rejected": [(x["offer"]["seller_name"], x["offer"]["item_cents"], x["sentence"]) for x in r["rejected"]],
                       "leads": [(x["seller_name"], x["title"][:60], x["lead_reason"]) for x in r["leads"]][:10],
                       "coverage": out["coverage"],

@@ -1,4 +1,4 @@
-import { h, fill, clock, duration, words } from './dom.js';
+import { h, fill, clock, duration, words, probBar } from './dom.js';
 
 function table(caption, heads, rows) {
   return h('div', { class: 'table-wrap' },
@@ -9,6 +9,9 @@ function table(caption, heads, rows) {
     ));
 }
 
+const NO_DECISION_ID = 'no id returned by the Decisions API';
+const isDecision = (m) => m.job === 'gate' || /decision/i.test(String(m.model || ''));
+const isProbs = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).some((x) => typeof x === 'number');
 const code = (v) => (v == null || v === '' ? null : h('code', null, String(v)));
 
 export function renderEvidence(shell, body, run) {
@@ -32,12 +35,16 @@ export function renderEvidence(shell, body, run) {
         h('strong', null, words(d.choice) || '—'), ' with confidence ', h('strong', null, conf),
         ` against a threshold of ${thr} — `, h('strong', null, d.pass ? 'passed' : 'did not pass'),
         typeof d.ms === 'number' ? ` · ${duration(d.ms)}` : ''),
-      d.id ? h('p', { class: 'gate-id' }, 'Decision id ', code(d.id)) : null,
+      isProbs(d.probabilities) ? probBar(d.probabilities, d.threshold) : null,
+      h('p', { class: 'gate-id' }, d.id ? ['Decision id ', code(d.id)] : NO_DECISION_ID),
     ));
   }
   if (models.length) {
-    parts.push(table('Model receipts', ['Job', 'Model', 'Response id', 'Time'],
-      models.map((m) => [words(m.job), m.model, code(m.id), duration(m.ms)])));
+    parts.push(table('Model receipts', ['Job', 'Model', 'Response id', 'Kept by the model service', 'Time'],
+      models.map((m) => [words(m.job), m.model,
+        code(m.id) || (isDecision(m) ? NO_DECISION_ID : 'no id returned'),
+        m.retained === false ? 'not retained' : m.retained === true ? (m.delete_error ? 'retained — delete failed' : 'retained') : null,
+        duration(m.ms)])));
   }
   if (sources.length) {
     parts.push(table('Source receipts', ['Source', 'Tool / host', 'Status', 'Read at', 'Time', 'Response hash'],

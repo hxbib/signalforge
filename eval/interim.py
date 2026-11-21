@@ -11,11 +11,15 @@ log = Path(sys.argv[1])
 done = {}
 for line in log.read_text().splitlines():
     parts = line.split()
-    if len(parts) >= 4 and parts[0].startswith("pair-") and parts[1] in ("baseline", "full"):
+    if len(parts) >= 4 and "pair-" in parts[0] and parts[1] in ("baseline", "full"):
         done.setdefault(parts[0], {})[parts[1]] = (parts[2], parts[3].removeprefix("err="))
-gold = {g["id"]: g["expected"] for g in read(ROOT / "private" / "wdc" / "bench" / "gold" / "pairs.jsonl")}
-both = sorted(k for k, v in done.items() if len(v) == 2)
-c = {a: Counter() for a in ("baseline", "full")}
+prefix = sys.argv[2] if len(sys.argv) > 2 else "pair-"
+gdir = ROOT / "private" / "wdc" / "bench" / ("b" if prefix.startswith("b-") else "")
+gold = {g["id"]: g["expected"] for g in read(gdir / "gold" / "pairs.jsonl")}
+done = {k: v for k, v in done.items() if k.startswith(prefix)}
+arms = sorted({a for v in done.values() for a in v})
+both = sorted(k for k, v in done.items() if len(v) == len(arms))
+c = {a: Counter() for a in arms}
 for k in both:
     for a in c:
         verdict, err = done[k][a]

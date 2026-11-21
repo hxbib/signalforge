@@ -36,7 +36,7 @@ def public(run: dict) -> dict:
 
 def offer_view(row: dict, verified: bool = False) -> dict:
     cents = row.get("item_cents")
-    return {
+    out = {
         "seller": row.get("seller"), "seller_name": row.get("seller_name") or row.get("seller_domain") or "Unknown merchant",
         "listing": row.get("listing"), "title": row.get("title") or "", "url": row.get("url"),
         "image_url": row.get("image_url"), "item_cents": cents if type(cents) is int else None,
@@ -46,3 +46,6 @@ def offer_view(row: dict, verified: bool = False) -> dict:
         "confirmed_by": list(row.get("confirmed_by") or []), "identity_basis": row.get("identity_basis"),
         "gtin": row.get("gtin"),
     }
+    if type(row.get("screen_p")) is float:
+        out["screen_p"] = row["screen_p"]
+    return out

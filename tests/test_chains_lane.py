@@ -111,49 +111,100 @@ def test_never_raises(monkeypatch):
     assert chains.confirm(None, 0)["status"] in ("not_permitted", "unavailable")
 
 
+PUBLIC = [(2, 1, 6, "", ("93.184.216.34", 443))]
+
+
+def dns(monkeypatch, answers):
+    seen = []
+
+    def fake(host, port, *a, **k):
+        seen.append(host)
+        if isinstance(answers, Exception):
+            raise answers
+        return [(2, 1, 6, "", (ip, port)) for ip in answers]
+    monkeypatch.setattr(chains, "_getaddrinfo", fake)
+    return seen
+
+
 def test_real_fetch_cache_and_threads(monkeypatch):
-    """_fetch itself: one request per URL across threads, cached, bounded."""
+    """_fetch itself: one request per URL across threads, cached, pinned to the validated address."""
     chains._cache.clear()
+    dns(monkeypatch, ["93.184.216.34"])
     n = []
 
-    class Resp:
-        def __init__(self, body): self.body = body
-        def __enter__(self): return self
-        def __exit__(self, *a): return False
-        def geturl(self): return f"https://{HOST}/products/demo-set.js"
-        def read(self, k): return self.body[:k]
-
-    def opener(req, timeout):
-        n.append(req.full_url)
-        assert req.get_header("User-agent") == chains.UA and timeout == chains.TIMEOUT_S
-        return Resp(json.dumps(doc()).encode())
-    monkeypatch.setattr(chains._opener, "open", opener)
+    def opener(host, ip, path):
+        n.append((host, ip, path))
+        return 200, json.dumps(doc()).encode()
+    monkeypatch.setattr(chains, "_open", opener)
     ts = [threading.Thread(target=chains.confirm, args=(dict(BASE), 0)) for _ in range(8)]
     [t.start() for t in ts]
     [t.join() for t in ts]
-    assert n == [f"https://{HOST}/products/demo-set.js"]
+    assert n == [(HOST, "93.184.216.34", "/products/demo-set.js")]
     assert chains.confirm(dict(BASE), 0)["status"] == "confirmed"
     chains._cache.clear()
 
 
 def test_oversize_and_redirect(monkeypatch):
     chains._cache.clear()
-
-    class Resp:
-        def __init__(self, body, url): self.body, self.url = body, url
-        def __enter__(self): return self
-        def __exit__(self, *a): return False
-        def geturl(self): return self.url
-        def read(self, k): return self.body[:k]
-    monkeypatch.setattr(chains._opener, "open",
-                        lambda req, timeout: Resp(b"x" * (chains.MAX_BYTES + 5), req.full_url))
+    dns(monkeypatch, ["93.184.216.34"])
+    monkeypatch.setattr(chains, "_open", lambda h, ip, p: (200, b"x" * (chains.MAX_BYTES + 5)))
     assert chains.confirm(dict(BASE), 0)["status"] == "unavailable"
     chains._cache.clear()
-    monkeypatch.setattr(chains._opener, "open",
-                        lambda req, timeout: Resp(json.dumps(doc()).encode(), "https://evil.example.net/x.js"))
+    monkeypatch.setattr(chains, "_open", lambda h, ip, p: (301, b""))
     out = chains.confirm(dict(BASE), 0)
-    assert out["status"] == "unavailable" and "another host" in out["note"]
+    assert out["status"] == "unavailable" and "redirect blocked" in out["note"]
     chains._cache.clear()
+
+
+@pytest.mark.parametrize("url", [
+    "https://169.254.169.254/products/x?variant=111", "https://127.0.0.1/products/x?variant=111",
+    "https://[::1]/products/x?variant=111", "https://10.0.0.5/products/x?variant=111",
+    "https://metadata.google.internal/products/x?variant=111", "https://printer.local/products/x?variant=111",
+    "https://localhost/products/x?variant=111", "https://2130706433/products/x?variant=111",
+    "https://store.example.com:443@evil/products/x?variant=111"])
+def test_internal_hosts_refused_before_any_io(monkeypatch, url):
+    chains._cache.clear()
+    seen = dns(monkeypatch, ["93.184.216.34"])
+    monkeypatch.setattr(chains, "_open", lambda *a: pytest.fail("must not connect"))
+    out = chains.confirm(dict(BASE, url=url), 0)
+    assert out["status"] == "not_permitted" and seen == []
+
+
+@pytest.mark.parametrize("answers", [["127.0.0.1"], ["10.1.2.3"], ["169.254.169.254"], ["192.168.0.1"],
+                                     ["93.184.216.34", "172.16.0.9"], ["::1"], ["fe80::1"], ["::ffff:127.0.0.1"],
+                                     ["0.0.0.0"], ["224.0.0.1"], ["100.64.0.1"], ["240.0.0.1"], []])
+def test_dns_to_non_public_refused(monkeypatch, answers):
+    chains._cache.clear()
+    dns(monkeypatch, answers)
+    monkeypatch.setattr(chains, "_open", lambda *a: pytest.fail("must not connect"))
+    out = chains.confirm(dict(BASE), 0)
+    assert out["status"] == "not_permitted" and out["quote"] is None and "refused" in out["note"]
+    assert chains.identity(dict(BASE))["status"] == "not_permitted"
+    chains._cache.clear()
+
+
+def test_dns_failure_refused(monkeypatch):
+    chains._cache.clear()
+    dns(monkeypatch, OSError("nxdomain"))
+    assert chains.confirm(dict(BASE), 0)["status"] == "not_permitted"
+    chains._cache.clear()
+
+
+def test_public_ip_helper():
+    assert chains._public_ip("93.184.216.34") and chains._public_ip("2606:4700::1111")
+    assert not any(chains._public_ip(x) for x in ["127.0.0.1", "::ffff:10.0.0.1", "fc00::1", "nonsense"])
+
+
+def test_pinned_connection_revalidates_peer(monkeypatch):
+    class Sock:
+        closed = False
+        def getpeername(self): return ("10.0.0.7", 443)
+        def close(self): Sock.closed = True
+    monkeypatch.setattr(chains.socket, "create_connection", lambda addr, timeout: Sock())
+    c = chains._PinnedHTTPS(HOST, "93.184.216.34", 1)
+    with pytest.raises(chains.Refused):
+        c.connect()
+    assert Sock.closed
 
 
 def test_registry_shape():
@@ -171,3 +222,10 @@ def test_locale_path(fake):
     calls = fake(doc())
     out = chains.confirm(dict(BASE, url=f"https://{HOST}/en-us/products/demo-set?variant=111"), 0)
     assert out["status"] == "confirmed" and calls == [(HOST, "/en-us/products/demo-set")]
+
+
+def test_url_host_must_match_catalog_seller_host(fake):
+    calls = fake(doc())
+    out = chains.confirm(dict(BASE, seller_domain="other-shop.example.org"), 0)
+    assert out["status"] == "not_permitted" and calls == []
+    assert chains.confirm(dict(BASE, seller_domain="example.com"), 0)["status"] == "confirmed"

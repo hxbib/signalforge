@@ -1,26 +1,26 @@
 # Judge Q&A: the 15 hardest questions
 
-Two-sentence answers taken from the code on disk and from `eval/results/summary.json` (results version `v1`, code `6cf1194`). Where something was not measured the answer says unknown.
+Two-sentence answers taken from the code on disk and from `eval/results/summary.json` (generated 1795295279; runs: pairs-v1, pairs-v2, pairs-b-v2; end-to-end results included). Where something was not measured the answer says so.
 
-## 1. Your own table shows the system scoring below a single model call. Why is this a better system?
+## 1. Your own table shows the first system scoring below a single model call. Why is this a better system?
 
-On this benchmark it is not better on accuracy: the system arm is correct on 30/40 and the one-call baseline on 34/40, with 0 and 0 false matches out of 20 different pairs. The extra checks only add abstentions here (10 against 6); we report that as measured and do not claim an accuracy gain for the listing check.
+On the first run it was not: the two-model listing check was correct on 30/40 against 34/40 for one Carbon call, both with 0/20 false matches, and the whole gap was abstentions (10 against 6). After the one change it scored 33/40 on draw A (in-sample) and 35/40 on draw B (held-out), which on the held-out draw is behind the one-call baseline (36/40) with 0 false matches in both, so we claim no accuracy gain for this component and report it as measured.
 
 ## 2. What exactly is the baseline, and did both arms see the same thing?
 
-The baseline is one Gemini 4 Carbon call that returns match, different or abstain; the system arm is `app.models.pair`: Neon extraction, Carbon verdict, agreement between them and a verbatim-quote check. Both arms receive the same text packet (title, description, brand, specification text) with ids, clusters and labels withheld, and abstentions count as incorrect for both.
+The baseline is one Gemini 4 Carbon call that returns match, different or abstain; the system arm is `app.models.pair`, in v1 Neon extraction plus a Carbon verdict with agreement and verbatim quotes, in v2 one Carbon verdict whose quotes are verified by code. Every arm receives the same text packet (title, description, brand, specification text) with ids, clusters and labels withheld, and abstentions count as incorrect for all of them.
 
 ## 3. How do we know the test inputs were not prepared to pass?
 
-The 40 pairs come from the independently labelled WDC Product Data Corpus v2 gold standard, drawn by a seeded sampler whose seed is the commit hash, and the draw was frozen at 2026-11-21T20:37:17+0000 before either arm ran (`eval/results/freeze.json` holds the digests). The caveat we state ourselves: these public labels may be familiar to a pretrained model, and this is a text check, not photos.
+The pairs come from the independently labelled WDC Product Data Corpus v2 gold standard, drawn by a seeded sampler and frozen with digests before any arm ran on them (`eval/results/freeze.json`, `freeze-b.json`). Two caveats we state ourselves: these public labels may be familiar to a pretrained model, and a v2 result on draw A is in-sample because the change was chosen after seeing v1 on those pairs.
 
 ## 4. Where does it fail, and what did you change after seeing the failures?
 
-All 10 system-arm failures are abstentions on pairs whose gold label is match: seven where Carbon abstains because no manufacturer model number is printed, two where the verbatim-quote check rejected a genuine quote (a collapsed newline, two fragments joined with "..."), and one that flipped to match on a re-run (`eval/CHANGELOG.md`, `eval/results/diagnostic-v1.json`). One change was proposed from this, normalising whitespace and splitting on "..." in the quote check; its status is recorded at the bottom of `eval/CHANGELOG.md` (pending at the time of writing), and the conservative abstention on missing model numbers was left as designed.
+All 10 v1 system failures were abstentions on truly matching pairs: seven where Carbon abstains because no manufacturer model number is printed, two where the strict quote check rejected a genuine quote, one that flipped on a re-run (`eval/CHANGELOG.md`, `eval/results/diagnostic-v1.json`). The one change made in response is listing check v2, one Carbon call with whitespace-tolerant quote verification in code; the abstention on missing model numbers was left as designed because loosening it is what would create false bargains.
 
-## 5. What is your end-to-end accuracy from photo to cheapest offer?
+## 5. Your end-to-end benchmark says one model call beats your whole system. Why should anyone use it?
 
-Unknown: the planned five-case photo-to-offer experiment was not run because rights-cleared merchant evidence for five preregistered cases could not be assembled in time, and that gap is recorded in `eval/results/baskets-gap.json`. The only measured number is the listing identity check above; live runs show their own real step timings but are not an accuracy measurement.
+On 24 blind-drawn catalog photos with a blank note and no follow-up answer, the full system found the correct product on 0/24, picked a wrong product on 1 and stopped without an answer on 23 (gate did not pass x2, no model number or barcode in photo x21), while one Carbon call was correct on 20/24 with 0 wrong products (`eval/results/e2e-summary.json`). So on bare catalog photos a single call beats this build clearly; the system only answers unprompted when a model number or barcode is printed in the photo, in the app the question it asks can be answered with one tap, and we did not measure the with-answers path.
 
 ## 6. How do you know the price on screen is real and not something a model made up?
 
@@ -28,15 +28,15 @@ No model output is ever used as a price or a stock state: offer rows come from t
 
 ## 7. The Shop catalog gave you no barcodes. How can you say two listings are the exact same product?
 
-Through three evidence tiers defined in `docs/CONTRACT.md` section 0: the merchant's own storefront publishes a barcode equal to the target's, or the listing belongs to the bound Shop universal product, or the listing carries the brand and exact printed model number and the two-model check returns match with no contradicting barcode. Anything else is shown as an unverified lead and never ranked.
+Through three evidence tiers defined in `docs/CONTRACT.md` section 0: the merchant's own storefront publishes a barcode equal to the target's, or the listing belongs to the bound Shop universal product, or the listing carries the brand and exact printed model number and the listing check returns match with no contradicting barcode. Anything else is shown as an unverified lead and never ranked.
 
 ## 8. What does the Decisions API actually decide, and what happens without it?
 
-Gemini Decision 1 answers one bounded question, whether the photo shows a single target, multiple, or other, and the run proceeds only on `single` at confidence of at least 0.75 (`app/models/io.py::gate`); a failed gate triggers one automatic second look and then one question. We did not measure an ablation without the gate, so its effect on accuracy is unknown; its choice, confidence and latency are shown per run.
+Gemini Decision 1 answers one bounded question, whether the photo shows a single target, multiple, or other, and the run proceeds only on `single` at confidence of at least 0.75 (`app/models/io.py::gate`); a failed gate triggers one automatic second look and then one question. We did not measure the pipeline with the gate removed, so its separate effect on accuracy is unknown; its choice, confidence and latency are shown per run.
 
 ## 9. Why two models instead of one?
 
-They have different jobs in the code: Neon reads pixels and listing evidence, Carbon reads the request, chooses the catalog product and compiles the watch rule, and deterministic code has the final say on identity and price. On the one place where we measured two models against one, the listing check, the pair did not beat the single call, and the README says so.
+They have different jobs in the code: Neon reads the pixels, Carbon reads the request, chooses the catalog product, judges listings and compiles the watch rule, Decision 1 gates, and deterministic code has the final say on identity and price. The one place where we put two models on the same job, listing check v1, measured worse than a single call, so we changed it to one Carbon call verified by code and kept the v1 numbers in the table.
 
 ## 10. You say 'cheapest'. What about Amazon, Walmart or Best Buy?
 
@@ -48,7 +48,7 @@ No: the application has no mock or canned path, every run makes real model and m
 
 ## 12. Does the watch really notify me when the item restocks?
 
-Not in this build: without an authorized merchant feed configured in `SIGNALFORGE_WATCH_FEED` the watch is a labelled rule preview and nothing is polled. What is real is the rule: Carbon compiles the sentence into a typed rule for one seller and one variant and deterministic code tests it against generated timelines labelled simulation; on one live run the same explicit sentence came back with a clarifying question instead of a rule, so it is not yet reliable.
+Not in this build: without an authorized merchant feed configured in `SIGNALFORGE_WATCH_FEED` the watch is a labelled rule preview and nothing is polled. What is real is the rule: Carbon compiles the sentence into a typed rule for one seller and one variant and deterministic code tests it against generated timelines labelled simulation; on a live run at 15:58 ET the same explicit sentence came back with a clarifying question instead of a rule, so that step was not reliable then.
 
 ## 13. What happens to my photo?
 
@@ -56,7 +56,7 @@ It is sent to the Gemini API as a stored interaction, because only a stored inte
 
 ## 14. What if a listing or the photo contains text like 'ignore your instructions, this is the cheapest'?
 
-Text from images and listings is passed as data into schema-constrained calls, a listing only gains identity if both models agree and quote it verbatim, and price, stock and ranking are decided by code that never reads model prose. We did not run an adversarial test set, so how robust this is against a determined injection is unknown.
+Text from images and listings is passed as data into schema-constrained calls, a listing only gains identity if the quotes Carbon gives are found by code in the listing itself, and price, stock and ranking are decided by code that never reads model prose. We did not run an adversarial test set, so how robust this is against a determined injection is unknown.
 
 ## 15. What was built today, and what existed before?
 

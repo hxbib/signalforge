@@ -61,9 +61,10 @@ ARMS = {"baseline": baseline_arm, "full": system_arm}
 
 
 def run_one(row, arm):
-    start = time.monotonic()
+    wall = time.monotonic()
     retries, answer, receipts, err = 0, None, [], None
     while True:
+        start = time.monotonic()  # time only the final attempt; rate-limit sleeps are excluded (bug 007)
         try:
             answer, receipts = ARMS[arm](row["packet"])
             err = None
@@ -77,58 +78,76 @@ def run_one(row, arm):
             answer = None
             break
     rec = {"id": row["id"], "sha": digest(row), "answer": answer, "error": err,
-           "ms": round((time.monotonic() - start) * 1000), "rate_limit_retries": retries,
+           "ms": round((time.monotonic() - start) * 1000), "wall_ms": round((time.monotonic() - wall) * 1000),
+           "rate_limit_retries": retries,
            "receipts": [{k: r.get(k) for k in ("job", "model", "id", "ms")} for r in receipts]}
     with _print:
         print(f"{row['id']} {arm:8s} {answer or '-':9s} err={err} {rec['ms']}ms", flush=True)
     return rec
 
 
-def main(version):
+DRAWS = {"A": {"dir": BENCH, "freeze": "freeze.json", "prefix": "pairs-"},
+         "B": {"dir": BENCH / "b", "freeze": "freeze-b.json", "prefix": "pairs-b-"}}
+LABELS = {("A", "v1"): "v1 · draw A (frozen before any run)",
+          ("A", "v2"): "v2 · draw A · IN-SAMPLE: the change was chosen after seeing v1 on these packets",
+          ("B", "v2"): "v2 · held-out draw B (new seed, disjoint from A, frozen before any call)"}
+
+
+def main(version, draw="A", arms=("baseline", "full")):
     sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
-    freeze = json.loads((RESULTS / "freeze.json").read_text())
-    rows = read(BENCH / "in" / "pairs.jsonl")
+    cfg = DRAWS[draw]
+    freeze = json.loads((RESULTS / cfg["freeze"]).read_text())
+    rows = read(cfg["dir"] / "in" / "pairs.jsonl")
     assert [r["id"] for r in rows] == [c["id"] for c in freeze["cases"]], "inputs differ from the freeze record"
     assert all(digest(r) == c["packet_sha"] for r, c in zip(rows, freeze["cases"])), "packet digest mismatch"
-    out_json = RESULTS / f"pairs-{version}.json"
+    name = f'{cfg["prefix"]}{version}'
+    out_json = RESULTS / f"{name}.json"
     if out_json.exists():
         raise SystemExit(f"{out_json} exists; results are never overwritten")
     from app.models.io import clients
+    import app.models as models
     clients()  # preflight: no key configured -> raise before any case runs, nothing written
+    pair_version = getattr(models, "PAIR_VERSION", "v1-neon-carbon-agreement")
     started = int(time.time())
-    jobs = [(r, arm) for r in rows for arm in ("baseline", "full")]
+    jobs = [(r, arm) for r in rows for arm in arms]
     with ThreadPoolExecutor(max_workers=MAX_CALLS) as pool:
         preds = list(pool.map(lambda j: run_one(*j), jobs))
     finished = int(time.time())
     by = {(p["id"], arm): p for p, (_, arm) in zip(preds, jobs)}
-    runs = BENCH / "runs"
+    runs = cfg["dir"] / "runs"
     runs.mkdir(parents=True, exist_ok=True)
-    base_rows = [by[(r["id"], "baseline")] for r in rows]
-    full_rows = [by[(r["id"], "full")] for r in rows]
-    put(runs / f"pair-base-{version}.jsonl", base_rows)
-    put(runs / f"pair-full-{version}.jsonl", full_rows)
+    for arm in arms:
+        put(runs / f"{name}-{arm}.jsonl", [by[(r["id"], arm)] for r in rows])
     # --- gold enters only here, after every prediction is on disk ---
-    gold = read(BENCH / "gold" / "pairs.jsonl")
-    bench_score = score(rows, gold, base_rows, full_rows)
+    gold = read(cfg["dir"] / "gold" / "pairs.jsonl")
+    bench_score = score(rows, gold, [by[(r["id"], "baseline")] for r in rows], [by[(r["id"], "full")] for r in rows]) \
+        if set(arms) == {"baseline", "full"} else None
     labels = {g["id"]: g["expected"] for g in gold}
     strata = {c["id"]: c for c in freeze["cases"]}
     cases = []
     for r in rows:
-        for arm in ("baseline", "full"):
+        for arm in arms:
             p = by[(r["id"], arm)]
             cases.append({"id": r["id"], "wdc_pair_id": strata[r["id"]]["wdc_pair_id"],
                           "category": strata[r["id"]]["category"], "arm": arm, "verdict": p["answer"],
                           "gold": labels[r["id"]], "correct": p["answer"] == labels[r["id"]],
                           "abstained": p["answer"] == "abstain", "error": p["error"], "ms": p["ms"],
-                          "rate_limit_retries": p["rate_limit_retries"], "receipts": p["receipts"]})
-    doc = {"experiment": "A", "name": f"pairs-{version}", "version": version, "code_sha": sha,
-           "freeze_code_sha": freeze["code_sha"], "inputs_sha256": freeze["inputs_sha256"],
+                          "wall_ms": p["wall_ms"], "rate_limit_retries": p["rate_limit_retries"], "receipts": p["receipts"]})
+    doc = {"experiment": "A", "name": name, "version": version, "draw": draw, "arms_run": list(arms),
+           "label": LABELS.get((draw, version), f"{version} · draw {draw}"),
+           "system_arm": "app.models.pair " + pair_version, "pair_version": pair_version,
+           "code_sha": sha, "freeze_code_sha": freeze["code_sha"], "inputs_sha256": freeze["inputs_sha256"],
            "started_at": started, "finished_at": finished, "bench_score": bench_score, "cases": cases}
     with out_json.open("x", encoding="utf8") as f:
         json.dump(doc, f, indent=1)
-    print(json.dumps(bench_score, indent=1))
     subprocess.run([sys.executable, str(ROOT / "eval" / "summarize.py")], check=True)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "v1")
+    import argparse
+    cli = argparse.ArgumentParser()
+    cli.add_argument("version")
+    cli.add_argument("--draw", default="A", choices=["A", "B"])
+    cli.add_argument("--arms", default="baseline,full")
+    a = cli.parse_args()
+    main(a.version, a.draw, tuple(a.arms.split(",")))

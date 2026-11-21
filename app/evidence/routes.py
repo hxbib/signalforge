@@ -20,12 +20,16 @@ def load(results: Path = RESULTS):
     for path in raw:
         doc = json.loads(path.read_text())
         for c in doc["cases"]:
-            cases.append({"run": doc["name"], "version": doc["version"], "code_sha": doc["code_sha"],
+            cases.append({"run": doc["name"], "version": doc["version"], "draw": doc.get("draw", "A"),
+                          "code_sha": doc["code_sha"],
                           **{k: c.get(k) for k in ("id", "wdc_pair_id", "category", "arm", "verdict", "gold", "correct",
                                                    "abstained", "error", "ms")}})
     names = [p.name for p in raw] + ["summary.json"]
-    extra = [p.name for p in (results / "freeze.json", results / "baskets-gap.json") if p.exists()]
-    return {"generated_from": names + extra, "summary": summary, "cases": cases}
+    extra = [p.name for p in (results / "freeze.json", results / "freeze-b.json", results / "baskets-gap.json",
+                              results / "e2e-summary.json") if p.exists()]
+    e2e = results / "e2e-summary.json"
+    return {"generated_from": names + extra, "summary": summary, "cases": cases,
+            "e2e": json.loads(e2e.read_text()) if e2e.exists() else None}
 
 
 @router.get("/api/proof/eval")

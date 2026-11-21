@@ -38,15 +38,20 @@ Say only what the screen shows. If something fails, show the real failure and th
   frozen build before going on stage.
 
 ## 2:05–2:40 · Proof
-- Open /proof. Read both arms with the denominator, straight from the page: correct out of the total, abstentions,
-  false matches out of the actually different pairs.
+- Open /proof. Read the rows straight from the page, each with its denominator: the one-call baseline, the first
+  listing check (v1) and the changed one (v2). Say which draw each row is on, and say "in-sample" for v2 on draw A
+  (the change was chosen after seeing v1 fail on those pairs) and "held-out" only for a row on draw B.
 - Say what each arm saw: the same text packet from independently labelled public product pairs (WDC v2), ids and
-  labels withheld; the baseline is one Carbon call, the system is Neon plus Carbon with agreement and a verbatim
-  quote check.
-- Say the honest result: the system arm abstains more and scores lower than the single call on this benchmark, with
-  no false match in either arm. Show one failing case from the list on the page (a matching pair the system
-  abstained on).
-- Say that the five-case photo-to-offer experiment was not run and why (no rights-cleared merchant evidence in time).
+  labels withheld; the baseline is one Carbon call.
+- Say the honest story: the first two-model check abstained more than a single call and scored lower, with no false
+  match in any arm; we read the failures case by case and changed the check once. Show one failing case from the
+  list on the page.
+- Read the end-to-end table (whole pipeline on blind-drawn catalog photos, no answers given, against one Carbon
+  call) exactly as shown, and say it first before a judge finds it: the single call wins that benchmark, because
+  the system stops and asks when a photo shows no printed model number or barcode. Then say what the demo item has
+  that those photos lack: the number printed on the box.
+- Say that the five-case experiment with human-adjudicated prices was not run and why (no rights-cleared merchant
+  evidence in time).
 
 ## 2:40–3:00 · One real trace, then close
 - Back on the result, open the evidence drawer once: Neon's reading (brand, model number), Decision 1's choice and

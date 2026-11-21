@@ -12,7 +12,9 @@ sys.path.insert(0, str(HERE))
 import summarize  # noqa: E402
 
 LABEL = {"baseline": "Baseline: 1× Gemini 4 Carbon call",
-         "full": "System: Neon extract + Carbon verdict + quote check (app.models.pair)"}
+         "full": "System listing check"}
+SYSTEM = {"v1-neon-carbon-agreement": "Neon extract + Carbon verdict, must agree, verbatim quotes",
+          "v2-carbon-verified-quotes": "1× Carbon verdict + deterministic verbatim-quote check (whitespace-normalised, fragment-wise)"}
 
 
 def fmt_ms(lat):
@@ -24,6 +26,8 @@ def arm_table(v):
     rows = ["| Arm | Correct | Wrong | Abstained | Errors | False accepts (of actual negatives) | Answered | Median / p90 latency |",
             "|---|---|---|---|---|---|---|---|"]
     for k in ("baseline", "full"):
+        if k not in a:
+            continue
         x = a[k]
         rows.append(f'| {LABEL[k]} | {x["correct"]}/{x["n"]} | {x["wrong"]} | {x["abstained"]} | {x["errors"]} | '
                     f'{x["false_accepts"]}/{x["actual_negatives"]} | {x["answered"]}/{x["n"]} | {fmt_ms(x["latency"])} |')
@@ -35,7 +39,7 @@ def stratum_table(v):
             "|---|---|---|---|---|---|---|"]
     for s in v["by_stratum"]:
         b, f = s["baseline"], s["full"]
-        rows.append(f'| {s["stratum"]} | {b["n"]} | {b["correct"]} | {f["correct"]} | {f["abstained"]} | {b["false_accepts"]} | {f["false_accepts"]} |')
+        rows.append(f'| {s["stratum"]} | {max(b["n"], f["n"])} | {b["correct"]} | {f["correct"]} | {f["abstained"]} | {b["false_accepts"]} | {f["false_accepts"]} |')
     return "\n".join(rows)
 
 
@@ -55,14 +59,30 @@ def render(summary):
         out += [f'Frozen before either arm ran: {fr["frozen_at_iso"]}, seed = code SHA `{fr["seed"][:12]}`, '
                 f'inputs sha256 `{fr["inputs_sha256"][:12]}…`, gold sha256 `{fr["gold_sha256"][:12]}…`, '
                 f'corpus sha256 computers `{fr["corpus_sha256"]["computers"][:12]}…` cameras `{fr["corpus_sha256"]["cameras"][:12]}…`.', ""]
+    fb = summary.get("freeze_b")
+    if fb:
+        out += [f'Held-out draw B frozen {fb["frozen_at_iso"]} before any call: seed = {fb["seed_rule"]} (`{fb["seed"][:12]}…`), '
+                f'disjoint from draw A, inputs sha256 `{fb["inputs_sha256"][:12]}…`, gold sha256 `{fb["gold_sha256"][:12]}…`.', ""]
+    if summary.get("reading"):
+        out += ["**Plain reading (generated from the numbers below):**", ""] + [f"- {r}" for r in summary["reading"]] + [""]
+    out += [f'_{summary.get("latency_note", "")}_', ""]
     for v in summary["versions"]:
-        out += [f'### Run {v["version"]} · code `{v["code_sha"][:12]}` · models {", ".join(v["model_ids"]) or "–"}', "",
-                arm_table(v), "",
-                f'Paired outcomes on the same {v["n"]} packets: both correct {v["paired"]["both"]}, only system {v["paired"]["full_only"]}, '
-                f'only baseline {v["paired"]["baseline_only"]}, neither {v["paired"]["neither"]}.', "",
-                stratum_table(v), ""]
+        sysname = v.get("system_arm", "").split(" ", 1)[-1]
+        out += [f'### {v.get("label", v["version"])}', "",
+                f'Code `{v["code_sha"][:12]}` · system arm: {SYSTEM.get(sysname, sysname)} · models {", ".join(v["model_ids"]) or "–"} · '
+                f'baseline from `{v.get("baseline_source", v["name"] + ".json")}`', "",
+                arm_table(v), ""]
+        if v.get("paired"):
+            p = v["paired"]
+            out += [f'Paired outcomes on the same {v["n"]} packets: both correct {p["both"]}, only system {p["full_only"]}, '
+                    f'only baseline {p["baseline_only"]}, neither {p["neither"]}.', ""]
+        out += [stratum_table(v), ""]
+    e2e = summary.get("e2e")
+    if e2e:
+        out += ["## Blind end-to-end benchmark", "", "From `eval/results/e2e-summary.json` (written by the E2E lane):", "",
+                "```json", json.dumps(e2e, indent=1)[:3000], "```", ""]
     eb = summary.get("experiment_b")
-    out += ["## Experiment B · five fresh photo-to-offer shopping cases", ""]
+    out += ["## Five-basket photo-to-offer shopping check (protocol Experiment B)", ""]
     if eb:
         out += [f'Status: **{eb["status"]}**. {eb["statement"]}', ""] + [f"- {m}" for m in eb.get("missing", [])] + [""]
     else:
@@ -78,9 +98,11 @@ def main():
     summary = json.loads((summarize.RESULTS / "summary.json").read_text())
     (HERE / "RESULTS.md").write_text(render(summary))
     for v in summary["versions"]:
-        print(f'Experiment A run {v["version"]} (code {v["code_sha"][:12]}, n={v["n"]})')
+        print(f'{v.get("label", v["version"])} (code {v["code_sha"][:12]}, n={v["n"]}, baseline from {v.get("baseline_source")})')
         print(arm_table(v))
         print("paired:", v["paired"])
+    for r in summary.get("reading", []):
+        print("reading:", r)
     print("wrote", HERE / "RESULTS.md")
 
 

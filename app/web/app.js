@@ -9,8 +9,10 @@ import { renderWatch } from './watch.js';
 
 const POLL_MS = 1000;
 const STALL_S = 45;
+const BUSY_RETRIES = 3;
+const BUSY_WAIT_MS = 2000;
 const view = { capture: $('#capture'), run: $('#run'), shot: $('#shot'), live: $('#live'), conn: $('#conn') };
-const state = { runId: null, run: null, token: 0, timer: null, localUrl: null, announced: null, cache: new Map() };
+const state = { lanes: null, runId: null, run: null, token: 0, timer: null, localUrl: null, announced: null, cache: new Map() };
 
 const capture = initCapture({ onImage: submit });
 
@@ -28,6 +30,7 @@ function reset() {
   state.runId = null;
   state.announced = null;
   state.mark = null;
+  state.watchReply = null;
   state.markAt = Date.now();
   state.cache.clear();
   view.live.textContent = '';
@@ -36,6 +39,8 @@ function reset() {
     $(`#${id}`).replaceChildren();
   }
   $('#retry').hidden = true;
+  $('.progress-panel').hidden = false;
+  view.shot.closest('figure').classList.remove('shot-broken');
   $('#evidence').hidden = true;
   $('#evidence').open = false;
   return state.token;
@@ -67,7 +72,13 @@ function fail(message) {
   head('Not searched', 'This photo did not go through', message);
   $('#result').dataset.tone = 'quiet';
   $('#retry').hidden = false;
+  panels();
+  document.title = 'Not searched — SignalForge';
   view.live.textContent = message;
+}
+
+function panels() {
+  $('.progress-panel').hidden = !$('#progress').children.length && !view.conn.textContent && !$('#elapsed').textContent;
 }
 
 async function submit(blob, note) {
@@ -81,17 +92,25 @@ async function submit(blob, note) {
   window.scrollTo(0, 0);
   $('#run-title').focus({ preventScroll: true });
 
-  const form = new FormData();
-  form.append('image', blob, blob.name || 'capture.jpg');
-  form.append('note', note || '');
   let r;
-  try {
-    r = await api('/api/search', { method: 'POST', body: form });
-  } catch {
-    if (token === state.token) fail('The server could not be reached. Check the connection and try again.');
-    return;
+  for (let attempt = 0; ; attempt += 1) {
+    const form = new FormData();
+    form.append('image', blob, blob.name || 'capture.jpg');
+    form.append('note', note || '');
+    try {
+      r = await api('/api/search', { method: 'POST', body: form });
+    } catch {
+      if (token === state.token) fail('The server could not be reached. Check the connection and try again.');
+      return;
+    }
+    if (token !== state.token) return;
+    if (r.status !== 429 || attempt >= BUSY_RETRIES) break;
+    view.conn.textContent = `Server busy — retrying in 2 s (retry ${attempt + 1} of ${BUSY_RETRIES}).`;
+    head('Working', 'Server busy — retrying…', '');
+    await new Promise((resolve) => { setTimeout(resolve, BUSY_WAIT_MS); });
+    if (token !== state.token) return;
   }
-  if (token !== state.token) return;
+  view.conn.textContent = '';
   if (!r.ok || !r.body || !r.body.run_id) {
     fail(errorText(r, 'The photo could not be submitted'));
     return;
@@ -130,11 +149,16 @@ async function poll(token) {
     ? `No new step reported for ${quiet} s. Still checking every second — or start a new search.` : '';
   state.run = r.body;
   render(r.body);
-  if (!TERMINAL.has(r.body.state)) again();
+  const challenge = r.body.watch && r.body.watch.challenge;
+  if (!TERMINAL.has(r.body.state) || (challenge && challenge.status === 'running')) again();
 }
 
-function refresh() {
+function refresh(watchDoc) {
   clearTimeout(state.timer);
+  if (watchDoc && typeof watchDoc === 'object' && typeof watchDoc.watch_id === 'string') {
+    state.watchReply = { doc: watchDoc, stale: JSON.stringify((state.run && state.run.watch) ?? null) };
+  }
+  state.cache.delete('watch');
   state.token += 1;
   poll(state.token);
 }
@@ -142,26 +166,29 @@ function refresh() {
 function render(run) {
   const result = run.result || null;
   const done = TERMINAL.has(run.state);
-  const actions = { runId: run.run_id, revision: run.revision, refresh };
+  const actions = { runId: run.run_id, revision: run.revision, refresh, lanes: state.lanes };
 
   if (!state.localUrl && typeof run.image_url === 'string' && run.image_url.startsWith('/') && view.shot.getAttribute('src') !== run.image_url) {
     view.shot.src = run.image_url;
   }
   sync('note', run.note, () => { $('#shot-note').textContent = run.note ? `Your note: “${run.note}”` : ''; });
   sync('head', [run.state, result && result.status, result && result.headline, run.error, !!run.question], () => renderHead(run));
-  sync('offer', [result && [result.status, result.price_cents, result.currency, result.basis_label, result.winners, result.item_price_view], run.coverage && run.coverage.checked_at], () => renderOffer($('#offer'), run));
+  sync('offer', [result && [result.status, result.price_cents, result.currency, result.basis_label, result.winners, result.item_price_view, result.caution, result.runner_up], run.coverage && run.coverage.checked_at], () => renderOffer($('#offer'), run));
   sync('identity', [run.target, result && result.winners && result.winners[0] && result.winners[0].image_url], () => renderIdentity($('#identity'), run));
   sync('assumptions', run.assumptions, () => renderAssumptions($('#assumptions'), run));
   sync('question', [run.question, run.state, run.revision], () => renderQuestion($('#question'), run, actions));
-  renderProgress($('#progress'), run.progress || []);
+  renderProgress($('#progress'), run.progress || [], run.decision);
   $('#elapsed').textContent = typeof run.elapsed_ms === 'number'
     ? `${!done ? 'Running for' : run.state === 'needs_detail' ? 'Ran for' : 'Finished in'} ${(run.elapsed_ms / 1000).toFixed(1)} s` : '';
   sync('why', result && [result.near_miss, result.rejected, result.leads], () => renderWhy($('#why'), run));
-  sync('coverage', run.coverage, () => renderCoverage($('#coverage'), run));
-  sync('watch', [run.watch, run.state, result && result.status, run.revision], () => renderWatch($('#watch'), run, actions));
+  sync('coverage', [run.coverage, result && result.screen], () => renderCoverage($('#coverage'), run));
+  if (state.watchReply && JSON.stringify(run.watch ?? null) !== state.watchReply.stale) state.watchReply = null;
+  const watch = state.watchReply ? state.watchReply.doc : run.watch;
+  sync('watch', [watch, run.state, result && result.status, run.revision, state.lanes && state.lanes['app.optional.routes']], () => renderWatch($('#watch'), { ...run, watch }, actions));
   sync('evidence', [run.receipts, run.decision, result && result.rejected], () => renderEvidence($('#evidence'), $('#evidence-body'), run));
 
   $('#retry').hidden = !(run.state === 'unavailable' && !result);
+  panels();
   if (done) {
     const key = `${run.run_id}:${run.revision}:${run.state}`;
     if (state.announced !== key) {
@@ -200,8 +227,24 @@ function startOver() {
 }
 $('#new-search').addEventListener('click', startOver);
 $('#retry').addEventListener('click', startOver);
+view.shot.addEventListener('error', () => { if (view.shot.getAttribute('src')) view.shot.closest('figure').classList.add('shot-broken'); });
+view.shot.addEventListener('load', () => view.shot.closest('figure').classList.remove('shot-broken'));
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || e.defaultPrevented) return;
+  const open = e.target instanceof Element ? e.target.closest('details[open]') : null;
+  if (!open) return;
+  open.open = false;
+  const summary = open.querySelector('summary');
+  if (summary) summary.focus();
+});
 window.addEventListener('popstate', route);
 window.addEventListener('hashchange', route);
 window.addEventListener('pagehide', () => capture.stopCamera());
+
+api('/api/health').then((r) => {
+  if (!r.ok || !r.body || typeof r.body.lanes !== 'object') return;
+  state.lanes = r.body.lanes;
+  if (state.run) render(state.run);
+}).catch(() => {});
 
 route();

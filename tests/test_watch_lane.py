@@ -196,6 +196,8 @@ def test_routes(monkeypatch):
     assert c.post(f"/api/watch/{w['watch_id']}/pause").json()["status"] == "paused"
     assert c.post(f"/api/watch/{w['watch_id']}/pause").json()["status"] == "paused"
     assert c.post("/api/watch/w_nope/pause").status_code == 404
+    assert runs["run_test"]["watch"]["status"] == "paused"
+    assert c.get(f"/api/watch/{w['watch_id']}").json()["status"] == "paused"
     assert c.post("/api/search/run_nope/watch", json={}).status_code == 404
     assert c.post("/api/search/run_test/watch", json={}, headers={"origin": "https://evil.test"}).status_code == 400
 
@@ -226,3 +228,86 @@ def test_negation_or_unsupported_gets_editable_draft_not_guess():
              proposal(status="unsupported", reason="unsupported_condition", question="I can't watch shipping speed."))
     assert w["status"] == "needs_detail" and w["question"]["text"] == "I can't watch shipping speed."
     assert w["draft"]["status"] == "unsupported" and w["proof_hash"] is None
+
+
+WINNER = dict(OFFER, seller="gid://seller/winner", seller_name="Galactic Toys", listing="gid://variant/w",
+              item_cents=8495, stock="in_stock")
+LIVE_RUN = {"run_id": "run_live", "goal": {"watch_words": ""}, "target": {"bound": True},
+            "result": {"winners": [WINNER], "near_miss": None, "rejected": [{"offer": OFFER, "reason": "sold_out"}]}}
+
+
+def raw(**kw):
+    base = {"reason": "ok", "status": "ready", "candidate": 0, "mode": "restock", "op": "lt", "cents": CAP,
+            "cap_evidence": "under $25", "binding_evidence": "x", "blockers": [], "question": ""}
+    return {"proposal": {**base, **kw}, "receipt": {"job": "watch_rule", "model": "fake-in-test", "id": "t", "ms": 0}}
+
+
+TWO_PART = raw(status="clarify", reason="ambiguous_target", candidate=None,
+               question="Do you want to track Galactic Toys, and should I notify you only on a restock or whenever?")
+
+
+def test_bug009_this_seller_binds_single_winner_without_question():
+    seen = {}
+
+    def fake(img, cmd, cands):
+        seen["cands"] = cands
+        return TWO_PART
+    w = watch.create(LIVE_RUN, "Notify me when this seller restocks under $25", compile=fake, image=b"jpeg")
+    assert w["status"] == "preview_only" and w["question"] is None and w["proof_hash"]
+    assert w["rule"]["seller"] == WINNER["seller"] and w["rule"]["mode"] == "restock" and w["rule"]["op"] == "lt"
+    assert w["scope_sentence"] == "Watching Galactic Toys for a restock below $25.00"
+    assert [c.get("server_bound") for c in seen["cands"]] == [True, None]  # Carbon is told the binding
+
+
+def test_explicit_words_beat_carbon_draft():
+    for prop in (raw(mode="becomes_eligible", op="lte", cents=3000), raw(candidate=1),
+                 raw(status="clarify", reason="missing_budget", candidate=None, cents=None)):
+        w = watch.create(dict(LIVE_RUN, run_id="run_" + digest_of(prop)), "Notify me when this seller restocks under $25",
+                         compile=lambda i, c, k, p=prop: p, image=b"jpeg")
+        assert w["status"] == "preview_only" and w["question"] is None
+        assert w["rule"] == {"seller": WINNER["seller"], "variant": WINNER["listing"], "mode": "restock", "op": "lt",
+                             "cents": CAP}
+
+
+def digest_of(value):
+    return str(abs(hash(json.dumps(value, sort_keys=True))))
+
+
+def test_bug014_bound_choice_not_asked_again():
+    w = watch.create(dict(LIVE_RUN, run_id="run_014"), "ping me when it drops under $30",
+                     compile=lambda *a: raw(status="clarify", reason="ambiguous_target", candidate=None, cents=3000,
+                                            question="Do you want to track the skillet?"), image=b"jpeg")
+    assert w["status"] == "preview_only" and w["rule"]["mode"] == "becomes_eligible" and w["rule"]["cents"] == 3000
+
+
+def test_real_hard_constraint_still_stops():
+    w = watch.create(dict(LIVE_RUN, run_id="run_hc"), "Notify me when this seller restocks under $25 with 2-day shipping",
+                     compile=lambda *a: raw(status="unsupported", reason="unsupported_condition", candidate=None,
+                                            question="I can't watch delivery speed."), image=b"jpeg")
+    assert w["status"] == "needs_detail" and w["question"]["text"] == "I can't watch delivery speed."
+
+
+def test_tied_sellers_one_question_about_store():
+    other = dict(WINNER, seller="gid://seller/b", seller_name="Brick Shop", listing="gid://variant/b")
+    run = dict(LIVE_RUN, run_id="run_tie", result={"winners": [WINNER, other], "near_miss": None, "rejected": []})
+    w = watch.create(run, "Notify me when this seller restocks under $25", compile=lambda *a: TWO_PART, image=b"jpeg")
+    assert w["status"] == "needs_detail" and w["question"]["text"] == "Which store should I watch: Galactic Toys or Brick Shop?"
+    w = watch.create(run, "Notify me when Brick Shop restocks under $25", compile=lambda *a: TWO_PART, image=b"jpeg")
+    assert w["status"] == "preview_only" and w["rule"]["seller"] == "gid://seller/b"
+
+
+def test_attach_keeps_unknown_keys_and_pause_syncs_run(monkeypatch):
+    import app.store as store
+    runs = {}
+    monkeypatch.setattr(store, "get_run", lambda rid: json.loads(json.dumps(runs[rid])) if rid in runs else None)
+    monkeypatch.setattr(store, "save_run", lambda run: runs.__setitem__(run["run_id"], run))
+    w = make("Notify me when this seller restocks under $25")
+    runs["run_test"] = dict(RUN, watch=w)
+    ch = {"status": "no_counterexample", "simulation": True}
+    assert watch.attach(w["watch_id"], "challenge", ch)["challenge"] == ch
+    assert watch.get(w["watch_id"])["challenge"] == ch and runs["run_test"]["watch"]["challenge"] == ch
+    assert watch.run_id_of(w["watch_id"]) == "run_test"
+    p = watch.pause(w["watch_id"])
+    watch.sync_run(p)
+    assert p["challenge"] == ch and runs["run_test"]["watch"]["status"] == "paused"
+    assert make("Notify me when this seller restocks under $25")["challenge"] == ch  # idempotent create keeps it

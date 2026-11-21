@@ -200,3 +200,24 @@ def get_image(run_id: str) -> bytes | None   # the cleaned JPEG of that run
 | `GET /`, `/proof` | — | `app/web/index.html`, `app/web/proof.html`; `app/web/*` is served at `/static/*` |
 Errors: 400 unsupported input, 404 unknown/foreign id, 409 stale revision, 413 too large, 429 budget.
 Error bodies are `{"error": {"code", "message"}}` with safe text only.
+
+## 7. Decision 1 listing screen, caution, runner-up, sandbox challenge (lead, 16:08 ET)
+One Decisions API forward pass scores EVERY candidate listing against the photo. It orders, prunes and annotates;
+it never grants identity on its own (model confidence alone never creates identity — section 0 still rules).
+```python
+# app/models/__init__.py — MODELS
+def screen(image: bytes, target: dict, listings: list[dict]) -> dict
+#  ONE call to gemini-decision-1: input = the photo + one text part with {"target": {...}, "listings": [{"i": 0, "title", "seller", "condition"}, …]}
+#  and one yes/no question per listing: "Is listing i the exact same sellable product as the buyer's pictured item —
+#  same brand, model or set number, edition and pack size?" (max 60 listings per call).
+#  {"scores": [{"index": int, "p_same": float, "confidence": float}],
+#   "receipt": {"job": "screen", "model": "gemini-decision-1", "id": None, "ms": int, "questions": int}}
+#  inspect()'s decision dict also carries "probabilities": {"single": float, "multiple": float, "other": float}.
+```
+Run JSON additions — all optional; a lane writes them only from real calls and the UI renders them only when present:
+- `decision.probabilities` — the gate's calibrated per-choice probabilities.
+- `Offer.screen_p` — Decision 1's probability that this listing is the pictured item (winners, rejected, leads).
+- `result.screen` — `{"model": "gemini-decision-1", "listings": int, "ms": int, "note": str}`.
+- `question.options[].p` — for a choice question, the highest `screen_p` among that catalog product's listings; options are ordered by it.
+- `result.runner_up` (Offer) and `result.caution` `{code: "price_outlier", sentence, median_cents, eligible_sellers, percent_below}`.
+- `watch.challenge` — `{"status": "running"|"no_counterexample"|"counterexample"|"unavailable", "sandbox": "google-hosted", "environment_id", "interaction_id", "attempts", "replayed_locally": bool, "sentence", "simulation": true}` written by the optional Managed Agent lane (`app/optional/`, `POST /api/watch/{id}/challenge`).

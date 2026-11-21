@@ -3,6 +3,7 @@ import importlib
 import logging
 import secrets
 import subprocess
+import time
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
@@ -131,6 +132,9 @@ async def answer_search(run_id: str, request: Request):
         answer = {"question": question, "text": text}
     run["revision"] += 1
     run.update(question=None, state="searching", error=None)
+    now_ms = int(time.time() * 1000)
+    if run.get("_ended_ms") and run.get("_started_ms"):  # the wait for the buyer's answer is not working time
+        run["_started_ms"] += max(0, now_ms - run["_ended_ms"])
     run["_ended_ms"] = None
     store.save_run(run)
     pipeline.resume(run_id, answer)
@@ -154,7 +158,7 @@ for _name in ("app.models", "app.merchants.shop", "app.merchants.chains", "app.m
     except Exception as exc:  # a lane that is not importable is reported, never faked
         LANES[_name] = False
         LOG.warning("lane %s not loaded: %s", _name, type(exc).__name__)
-for _name in ("app.watch.routes", "app.evidence.routes"):
+for _name in ("app.watch.routes", "app.evidence.routes", "app.optional.routes"):
     try:
         app.include_router(importlib.import_module(_name).router)
         LANES[_name] = True

@@ -24,14 +24,14 @@ Written on November 21 before the application was assembled, then committed as t
 
 - `app/`: the HTTP surface, pipeline and run storage (`main.py`, `pipeline.py`, `store.py`, `contracts.py`,
   `config.py`); the model lane (`app/models/`, the corrected live boundary to the Interactions and Decisions APIs,
-  binding with deterministic corroboration, the two-model listing check, local barcode decode); the commerce lanes
+  binding with deterministic corroboration, the listing check (two versions, both kept), local barcode decode); the commerce lanes
   (`app/merchants/shop.py` for the Shop catalog, `chains.py` for the merchant's own storefront, `compare.py` for
   fan-out and the shopper-facing result, `ranking.py` for tiered identity on top of the reference rules); the
   watch lane (`app/watch/`); the evaluation evidence route (`app/evidence/`).
 - `app/web/`: the browser app (capture, progress, result, evidence drawer, watch, proof page).
 - `tests/`: offline tests for each lane.
-- `eval/draw.py`, `run_pairs.py`, `summarize.py`, `report.py`, `interim.py`, `failures.py` and `eval/results/`:
-  the frozen draw, the real paired run and its results.
+- `eval/draw.py`, `run_pairs.py`, `summarize.py`, `report.py`, `interim.py`, `failures.py`, `diagnose.py`, `eval/e2e/` and
+  `eval/results/`: the frozen draws, the real evaluation runs, the failure analysis and their results.
 - `docs/`, `README.md`, `scripts/`.
 
 The identity design changed during integration because of what the live Shop catalog returned at the event (no GTIN

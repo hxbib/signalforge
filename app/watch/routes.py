@@ -75,9 +75,17 @@ def pause_watch(watch_id: str, request: Request):
     if denied:
         return denied
     try:
-        return watch.pause(watch_id)
+        doc = watch.pause(watch_id)
     except watch.WatchError as err:
         return _error(err.status, err.code, err.message)
+    watch.sync_run(doc)
+    return doc
+
+
+@router.get("/api/watch/{watch_id}")
+def get_watch(watch_id: str, request: Request):
+    doc, denied = _watch_for(request, watch_id)
+    return denied or doc
 
 
 @router.post("/api/watch/{watch_id}/whatif")

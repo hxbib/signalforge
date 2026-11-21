@@ -1,0 +1,264 @@
+{
+ "draw": "B (held-out)",
+ "frozen_at": 1795294919,
+ "frozen_at_iso": "2026-11-21T21:01:59+0000",
+ "code_sha": "6fc87117da0e163d68852441a119e511daa7829a",
+ "seed": "294e9214059df5e7f61f59d9a866385f52223a58b90c393c759b858224b04f74",
+ "seed_rule": "sha256 of eval/results/pairs-v1.json",
+ "sampler": "eval/draw_b.py: eval/bench.py sample rule (10 pos + 10 neg per category) on pools minus draw A pair ids",
+ "corpus": "WDC Product Data Corpus v2, non-normalized gold standard (Peeters, Primpeli, Bizer)",
+ "corpus_sources": {
+  "computers": "https://data.dws.informatik.uni-mannheim.de/largescaleproductcorpus/data/v2_nonnorm/goldstandards/computers_gs.json.gz",
+  "cameras": "https://data.dws.informatik.uni-mannheim.de/largescaleproductcorpus/data/v2_nonnorm/goldstandards/cameras_gs.json.gz"
+ },
+ "corpus_sha256": {
+  "computers": "481647e337ae5edbc00bddd801e6a89f669d9cdec2f3178a53fed8628bb68a9d",
+  "cameras": "9001747fa3829b22af3b68245399be6648c3712470b2aa997b2c6e35c3c50ca8"
+ },
+ "disjoint_from": "freeze.json (draw A)",
+ "inputs_sha256": "69e609c877e96c159db0faab954943ebcb9f2af89660765bc7b29edccd8a9057",
+ "gold_sha256": "a7db92bbc276beb886d5c67332aa093e0e9132322e6c5a4b79eeb1c043b205ad",
+ "n": 40,
+ "cases": [
+  {
+   "id": "b-pair-01",
+   "packet_sha": "dec2ae28b34327f624461b10a15184679dd20330e9f7cd1d123032cd356c6e3e",
+   "category": "cameras",
+   "wdc_pair_id": "158032#15552592"
+  },
+  {
+   "id": "b-pair-02",
+   "packet_sha": "8892cadf5db3df16d482e4495107fd7e1b743d45426cb92192953978047839b7",
+   "category": "cameras",
+   "wdc_pair_id": "15482392#16810018"
+  },
+  {
+   "id": "b-pair-03",
+   "packet_sha": "bce3f8df9b5d4b1657b2e3ba3704470626526b7697c9e7ba00a6016a9dfef85b",
+   "category": "computers",
+   "wdc_pair_id": "7685605#13408654"
+  },
+  {
+   "id": "b-pair-04",
+   "packet_sha": "3d76c9c33becb75219707a59008ac10d7f9a2d05fe99a24018b3305abdb553dc",
+   "category": "computers",
+   "wdc_pair_id": "7703549#1457786"
+  },
+  {
+   "id": "b-pair-05",
+   "packet_sha": "47885d6e638fc45aa599f22c54be18e2edfcf787a2e073ba305eed6e4509933a",
+   "category": "computers",
+   "wdc_pair_id": "5925762#7373528"
+  },
+  {
+   "id": "b-pair-06",
+   "packet_sha": "107700cb098f8b559d84c313f89968c594070785fe632d6b4232b94bf9c9c5ec",
+   "category": "cameras",
+   "wdc_pair_id": "3432970#3692182"
+  },
+  {
+   "id": "b-pair-07",
+   "packet_sha": "7f138693926dd7bb5d925913def6c362b7b85b4aeb717a6269752eebe968869b",
+   "category": "computers",
+   "wdc_pair_id": "6179192#1546919"
+  },
+  {
+   "id": "b-pair-08",
+   "packet_sha": "26bbcafb17d78e01675cabc3a7b861ec24cd037a847dc474fde92c884e6c97dc",
+   "category": "computers",
+   "wdc_pair_id": "15786433#11086374"
+  },
+  {
+   "id": "b-pair-09",
+   "packet_sha": "f4d259cf7b0e38a2b40baccc95d2070f4377ac8da3ae41943bcea29b000ebda3",
+   "category": "cameras",
+   "wdc_pair_id": "5712523#17557325"
+  },
+  {
+   "id": "b-pair-10",
+   "packet_sha": "a956fc786f54c1ec70f0ca179deecdb80aad1e3548a7666557d73bb32f4e38b0",
+   "category": "cameras",
+   "wdc_pair_id": "16783767#2193504"
+  },
+  {
+   "id": "b-pair-11",
+   "packet_sha": "02c40c6ac69a52f8658ec53b04d02536979c3d7d7280b4ad0e01066fe67db11d",
+   "category": "computers",
+   "wdc_pair_id": "12870503#5286105"
+  },
+  {
+   "id": "b-pair-12",
+   "packet_sha": "097fc60089441ca764d8561f675bc42c0ee45f322e6a3534f0174ee2e67ba427",
+   "category": "computers",
+   "wdc_pair_id": "403680#9153628"
+  },
+  {
+   "id": "b-pair-13",
+   "packet_sha": "3abfb3e9720892fa7c0b5cb49b6526f5993533cc7a69e3655d8535b380a143d3",
+   "category": "computers",
+   "wdc_pair_id": "3959870#754970"
+  },
+  {
+   "id": "b-pair-14",
+   "packet_sha": "7a5dfc06c984e55d7955f9acd67a884a8958afaefdd43aba2fd8067b6a82a536",
+   "category": "cameras",
+   "wdc_pair_id": "334319#9625896"
+  },
+  {
+   "id": "b-pair-15",
+   "packet_sha": "dfc62d4260131f66d50e09ce925f7cd00a3f1d0d7f5772122de2f8498a1bde56",
+   "category": "computers",
+   "wdc_pair_id": "624792#8806489"
+  },
+  {
+   "id": "b-pair-16",
+   "packet_sha": "afa08df63fd730e703cccbedbd7a720f4ff60119005bf92ff052c338631e3b76",
+   "category": "computers",
+   "wdc_pair_id": "1220565#8415690"
+  },
+  {
+   "id": "b-pair-17",
+   "packet_sha": "628b4fe7511b643debabd3b4bd661db4e21554f11dee5decf82fc374c4d7dd2b",
+   "category": "cameras",
+   "wdc_pair_id": "10633151#17557274"
+  },
+  {
+   "id": "b-pair-18",
+   "packet_sha": "f9bc43f7354f2baa7968cffb7d1aca316b0a4769d954ba04333b1c8008d1f52e",
+   "category": "computers",
+   "wdc_pair_id": "4196824#4686619"
+  },
+  {
+   "id": "b-pair-19",
+   "packet_sha": "9082fdd1add1e8799f1d09a83ec83b24f6b297a37298533b227b69f49f2d90e1",
+   "category": "cameras",
+   "wdc_pair_id": "14899970#13204304"
+  },
+  {
+   "id": "b-pair-20",
+   "packet_sha": "753565bcd1ae796b6d0ffc265ad20c0c4f13013204c948feee46abee46be78fd",
+   "category": "cameras",
+   "wdc_pair_id": "2198128#3705669"
+  },
+  {
+   "id": "b-pair-21",
+   "packet_sha": "1108296f5fa82e522c688c0be029fcc5b5881727e90d7aacc39f9c220bafce6e",
+   "category": "cameras",
+   "wdc_pair_id": "17115507#2507055"
+  },
+  {
+   "id": "b-pair-22",
+   "packet_sha": "c6146f7b55dee956e1698a0c48a41390a426f1cf2783322727185125b34b9599",
+   "category": "cameras",
+   "wdc_pair_id": "7039592#16418231"
+  },
+  {
+   "id": "b-pair-23",
+   "packet_sha": "9cd5808cd5a3da73847457b3f5fa1742360c3000ec7283ef13daacf744fbe8ae",
+   "category": "computers",
+   "wdc_pair_id": "8935499#14833053"
+  },
+  {
+   "id": "b-pair-24",
+   "packet_sha": "dc9a8126771b1b6e6ba2cce484dca7a72a7d93da1175e6a7be84f9fdae94109d",
+   "category": "computers",
+   "wdc_pair_id": "2108362#8138613"
+  },
+  {
+   "id": "b-pair-25",
+   "packet_sha": "4519a5f70e55782ce987478f462b6eb97fd5280ac0f925d7e619199cd3728652",
+   "category": "computers",
+   "wdc_pair_id": "3418034#12565434"
+  },
+  {
+   "id": "b-pair-26",
+   "packet_sha": "8650490e3c94e933313ffcf089b229dc9f864bbb1a274812e4697a6c9377fc54",
+   "category": "cameras",
+   "wdc_pair_id": "4543586#9840928"
+  },
+  {
+   "id": "b-pair-27",
+   "packet_sha": "cbfdf02f427a305251b29c1a2fd36c1aa223fa3221529c74a0f9de9d3e61c08d",
+   "category": "cameras",
+   "wdc_pair_id": "5225361#10525286"
+  },
+  {
+   "id": "b-pair-28",
+   "packet_sha": "67a809aa653c6fbea84a980d4471aa31c123666c43593f4b462380b91b9b1e9d",
+   "category": "cameras",
+   "wdc_pair_id": "13905161#3043249"
+  },
+  {
+   "id": "b-pair-29",
+   "packet_sha": "dc50ce63f60620c44f2f07121d8a141e597c89c3e610371f6fd9184dee216e04",
+   "category": "cameras",
+   "wdc_pair_id": "11949216#14839612"
+  },
+  {
+   "id": "b-pair-30",
+   "packet_sha": "fed0f1d778e91f4d6aa688991fbf8a055608ade014de0b76d2996458f0646eb3",
+   "category": "computers",
+   "wdc_pair_id": "1491045#3167651"
+  },
+  {
+   "id": "b-pair-31",
+   "packet_sha": "9d623ae669b7ee306d08ae5b540deab79aa81e48654164985d99d06d102320b1",
+   "category": "computers",
+   "wdc_pair_id": "15882782#235116"
+  },
+  {
+   "id": "b-pair-32",
+   "packet_sha": "2cc2942dc42b1ffe76aa5a0b2350f522fad57059c73700db8bd1fb3ba6631d91",
+   "category": "cameras",
+   "wdc_pair_id": "1571041#16293002"
+  },
+  {
+   "id": "b-pair-33",
+   "packet_sha": "dc699ba0ae16c5abf361def5a85fe67df40106847030cc7e0c8e9a03c2ca453c",
+   "category": "cameras",
+   "wdc_pair_id": "15265349#4624542"
+  },
+  {
+   "id": "b-pair-34",
+   "packet_sha": "5728de12ecd4ac96b681b3d9f53cc304754628832d3b8f124b1b411f8a4df1dd",
+   "category": "computers",
+   "wdc_pair_id": "15811361#11928695"
+  },
+  {
+   "id": "b-pair-35",
+   "packet_sha": "7c8f6ad43b7048a23e14bf0d0dc6322ed4693767c634c420e7d3ca0caaf6477d",
+   "category": "computers",
+   "wdc_pair_id": "2357586#10442864"
+  },
+  {
+   "id": "b-pair-36",
+   "packet_sha": "ea08aee3b65d79ddc00dfc01114a636ca2af5d2c3741994fa7c35c5a844e12a6",
+   "category": "computers",
+   "wdc_pair_id": "4629011#7576687"
+  },
+  {
+   "id": "b-pair-37",
+   "packet_sha": "8b59ec3b71b8412f049ee6295c0c688b05f5f4efa397f9f4630a269801efafd8",
+   "category": "cameras",
+   "wdc_pair_id": "11949216#10200879"
+  },
+  {
+   "id": "b-pair-38",
+   "packet_sha": "c07aec26353bc8c2cfe1891785e5a32532997ee4577eb90265e60751c731ced9",
+   "category": "computers",
+   "wdc_pair_id": "72675#139789"
+  },
+  {
+   "id": "b-pair-39",
+   "packet_sha": "752a60f80d4bdad12d411817899497a43c1304193723f3a6ae03da65c9bece4e",
+   "category": "cameras",
+   "wdc_pair_id": "11490536#15841498"
+  },
+  {
+   "id": "b-pair-40",
+   "packet_sha": "6d9b5484e0d3477737ead91dab8ca5adda70feeb07dcfac9f7026a4804307561",
+   "category": "cameras",
+   "wdc_pair_id": "13107466#15251616"
+  }
+ ]
+}

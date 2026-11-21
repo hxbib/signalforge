@@ -60,10 +60,11 @@ export function safeUrl(value) {
 
 export function money(cents, currency) {
   if (typeof cents !== 'number' || !Number.isFinite(cents)) return null;
+  if (typeof currency !== 'string' || !currency) return `${(cents / 100).toFixed(2)} (currency not stated)`;
   try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(cents / 100);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
   } catch {
-    return `${(cents / 100).toFixed(2)} ${currency || ''}`.trim();
+    return `${(cents / 100).toFixed(2)} ${currency}`;
   }
 }
 
@@ -107,4 +108,32 @@ export function errorText(r, fallback) {
   const msg = (b && b.error && b.error.message) || (b && b.detail && b.detail.error && b.detail.error.message) ||
     (b && typeof b.detail === 'string' ? b.detail : null);
   return msg || `${fallback} (HTTP ${r ? r.status : '—'})`;
+}
+
+export function prob(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value.toFixed(2) : null;
+}
+
+const PROB_ORDER = ['single', 'multiple', 'other'];
+
+export function probBar(probs, threshold) {
+  if (!probs || typeof probs !== 'object' || Array.isArray(probs)) return null;
+  const keys = [...PROB_ORDER.filter((k) => typeof probs[k] === 'number'),
+    ...Object.keys(probs).filter((k) => !PROB_ORDER.includes(k) && typeof probs[k] === 'number')];
+  const total = keys.reduce((sum, k) => sum + Math.max(0, probs[k]), 0);
+  if (!keys.length || !(total > 0)) return null;
+  const text = keys.map((k) => `${words(k)} ${probs[k].toFixed(2)}`).join(' · ');
+  const hasTick = typeof threshold === 'number' && threshold > 0 && threshold < 1;
+  return h('div', { class: 'pbar-wrap' },
+    h('div', { class: 'pbar', role: 'img', 'aria-label': `Decision 1 probabilities: ${text}${hasTick ? `; pass threshold ${threshold.toFixed(2)}` : ''}` },
+      keys.map((k, i) => h('span', { class: `pseg pseg-${i}`, style: `width:${(Math.max(0, probs[k]) / total * 100).toFixed(2)}%` })),
+      hasTick ? h('span', { class: 'ptick', style: `left:${(threshold * 100).toFixed(2)}%` }) : null),
+    h('p', { class: 'pbar-legend' }, text, hasTick ? ` · threshold ${threshold.toFixed(2)}` : ''));
+}
+
+export function screenChip(offer) {
+  const value = offer && prob(offer.screen_p);
+  if (!value) return null;
+  const label = 'Decision 1 probability that this listing is the pictured item';
+  return h('span', { class: 'screen-chip', title: label, 'aria-label': `${label}: ${value}` }, `Decision 1 · ${value}`);
 }

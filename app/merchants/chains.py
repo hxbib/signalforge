@@ -7,8 +7,12 @@ Shopper-triggered only. Text in responses is data, never instructions.
 from __future__ import annotations
 
 import hashlib
+import http.client
+import ipaddress
 import json
 import re
+import socket
+import ssl
 import sys
 import threading
 import time
@@ -75,7 +79,70 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         raise urllib.error.HTTPError(req.full_url, code, "redirect blocked", headers, fp)
 
 
-_opener = urllib.request.build_opener(_NoRedirect)
+_opener = urllib.request.build_opener(_NoRedirect)  # kept for compatibility; fetches use _open below
+_getaddrinfo = socket.getaddrinfo                     # tests swap this for a DNS fake
+_BAD_SUFFIX = (".internal", ".local", ".localhost", ".localdomain", ".home.arpa", ".lan", ".corp", ".intranet")
+
+
+class Refused(Exception):
+    """Host is not a public merchant host."""
+
+
+def _public_ip(ip: str) -> bool:
+    try:
+        a = ipaddress.ip_address(ip.split("%", 1)[0])
+    except ValueError:
+        return False
+    if isinstance(a, ipaddress.IPv6Address) and a.ipv4_mapped:
+        a = a.ipv4_mapped
+    return not (a.is_loopback or a.is_private or a.is_link_local or a.is_multicast or a.is_reserved
+                or a.is_unspecified or not a.is_global)
+
+
+def _resolve(host: str) -> str:
+    """Resolve host; every returned address must be public. Returns the address to connect to."""
+    try:
+        infos = _getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+    except (socket.gaierror, OSError, UnicodeError):
+        raise Refused("host does not resolve")
+    ips = [i[4][0] for i in infos if i and len(i) > 4 and i[4]]
+    if not ips:
+        raise Refused("host does not resolve")
+    if not all(_public_ip(ip) for ip in ips):
+        raise Refused("host resolves to a non-public address")
+    v4 = [ip for ip in ips if ":" not in ip]
+    return (v4 or ips)[0]
+
+
+class _PinnedHTTPS(http.client.HTTPSConnection):
+    """HTTPS to a pre-validated address; TLS SNI + certificate checked against the hostname."""
+
+    def __init__(self, host, ip, timeout):
+        super().__init__(host, 443, timeout=timeout, context=ssl.create_default_context())
+        self._ip = ip
+
+    def connect(self):
+        sock = socket.create_connection((self._ip, 443), self.timeout)
+        try:
+            peer = sock.getpeername()[0]
+            if not _public_ip(peer):          # re-validate after connect
+                raise Refused("connected address is not public")
+            self.sock = self._context.wrap_socket(sock, server_hostname=self.host)
+        except BaseException:
+            sock.close()
+            raise
+
+
+def _open(host: str, ip: str, path: str):
+    """-> (status, body) for one GET; body read is capped at MAX_BYTES + 1. Never follows redirects."""
+    conn = _PinnedHTTPS(host, ip, TIMEOUT_S)
+    try:
+        conn.request("GET", path, headers={"User-Agent": UA, "Accept": "application/json", "Host": host})
+        r = conn.getresponse()
+        body = r.read(MAX_BYTES + 1) if r.status == 200 else b""
+        return r.status, body
+    finally:
+        conn.close()
 
 
 def _valid_gtin(v) -> str | None:
@@ -102,7 +169,14 @@ def _parse(url: str):
     if u.scheme != "https" or u.username or u.password or (u.port not in (None, 443)):
         return None
     host = (u.hostname or "").lower()
-    if not _HOST.match(host):
+    if not _HOST.match(host) or host.endswith(_BAD_SUFFIX) or host in ("localhost",):
+        return None
+    try:
+        ipaddress.ip_address(host)
+        return None                           # IP-literal hosts are never merchant storefronts
+    except ValueError:
+        pass
+    if host.rsplit(".", 1)[-1].isdigit():
         return None
     m = _HANDLE.match(u.path)
     if not m:
@@ -135,19 +209,21 @@ def _fetch(host: str, handle: str) -> dict:
         read_at = int(time.time())
         res = {"ok": False, "doc": None, "error": "", "read_at": read_at, "ms": 0, "hash": None}
         try:
-            req = urllib.request.Request(key, headers={"User-Agent": UA, "Accept": "application/json"})
-            with _opener.open(req, timeout=TIMEOUT_S) as r:
-                final = urllib.parse.urlsplit(r.geturl())
-                if final.scheme != "https" or (final.hostname or "").lower() != host:
-                    raise ValueError("redirected to another host")
-                body = r.read(MAX_BYTES + 1)
-                if len(body) > MAX_BYTES:
-                    raise ValueError("response larger than 1 MB")
+            ip = _resolve(host)
+            status, body = _open(host, ip, f"{handle}.js")
+            if 300 <= status < 400:
+                raise urllib.error.HTTPError(key, status, "redirect blocked", None, None)
+            if status != 200:
+                raise urllib.error.HTTPError(key, status, "error", None, None)
+            if len(body) > MAX_BYTES:
+                raise ValueError("response larger than 1 MB")
             res["hash"] = hashlib.sha256(body).hexdigest()[:16]
             doc = json.loads(body.decode("utf-8"))
             if not isinstance(doc, dict) or not isinstance(doc.get("variants"), list):
                 raise ValueError("not a storefront product document")
             res["ok"], res["doc"] = True, doc
+        except Refused as e:
+            res["refused"], res["error"] = True, str(e)
         except urllib.error.HTTPError as e:
             res["error"] = f"HTTP {e.code}" + (" (redirect blocked)" if 300 <= e.code < 400 else "")
         except (TimeoutError, OSError) as e:
@@ -178,11 +254,16 @@ def _read(quote: dict):
             "not an https storefront /products/<handle> URL", None, None
     host, handle, vid_url = p
     dom = (quote.get("seller_domain") or "").lower()
+    if dom and not (host == dom or host.endswith("." + dom) or dom.endswith("." + host)):
+        return "not_permitted", None, _receipt(host, int(time.time()), 0, None), \
+            f"URL host {host} is not the catalog seller host {dom}", None, None
     vid = _variant_id(quote, vid_url)
     if not vid:
         return "not_permitted", None, _receipt(host, int(time.time()), 0, None), "no variant id in listing or URL", None, None
     res = _fetch(host, handle)
     rec = _receipt(host, res["read_at"], res["ms"], res["hash"])
+    if res.get("refused"):
+        return "not_permitted", None, rec, f"storefront {host} refused: {res['error']}", None, None
     if not res["ok"]:
         return "unavailable", None, rec, f"storefront {host}: {res['error']}", None, None
     doc = res["doc"]

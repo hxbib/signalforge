@@ -1,4 +1,4 @@
-import { $, h, fill, icon, safeUrl, money, clock, duration, words, postJson, errorText } from './dom.js';
+import { $, h, fill, icon, safeUrl, money, clock, duration, words, postJson, errorText, prob, probBar, screenChip } from './dom.js';
 
 export const TERMINAL = new Set(['complete', 'partial', 'needs_detail', 'unavailable']);
 
@@ -89,12 +89,30 @@ function winnerCard(offer, many) {
           icon(offer.stock === 'in_stock' ? 'check' : 'dash'), stockLabel(offer.stock)),
         confirmedLine(offer),
         basis ? h('li', { class: 'fact' }, icon('check'), `Same item: ${basis}`) : null,
+        prob(offer.screen_p) ? h('li', { class: 'fact fact-chip' }, screenChip(offer)) : null,
         h('li', { class: 'fact' }, icon('dash'), h('span', null, 'Price read ', read || 'at an unrecorded time',
           offer.source ? ` from ${SOURCE[offer.source] || words(offer.source)}` : '')),
       ),
     ),
     cta(offer, `Open at ${sellerName(offer)}`),
   );
+}
+
+function caution(c) {
+  const sentence = c && typeof c.sentence === 'string' ? c.sentence.trim() : '';
+  if (!sentence) return null;
+  return h('p', { class: 'caution', role: 'note' }, icon('alert'), h('span', null, sentence));
+}
+
+function runnerUp(offer) {
+  if (!offer || typeof offer !== 'object') return null;
+  const price = money(offer.item_cents, offer.currency);
+  if (!price) return null;
+  const url = safeUrl(offer.url);
+  const name = sellerName(offer);
+  return h('p', { class: 'runner-up' }, 'Next verified offer: ', h('strong', null, price), ' at ',
+    url ? h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, name, icon('out'),
+      h('span', { class: 'visually-hidden' }, ' (opens the merchant in a new tab)')) : name);
 }
 
 function itemView(view) {
@@ -119,8 +137,10 @@ export function renderOffer(root, run) {
   fill(root,
     price && winners.length ? h('p', { class: 'price' }, price) : null,
     result.basis_label && winners.length ? h('p', { class: 'basis' }, result.basis_label) : null,
+    caution(result.caution),
     many ? h('p', { class: 'tie-note' }, `${winners.length} sellers are tied at this price — listed in no particular order.`) : null,
     winners.length ? h('ul', { class: `winners${many ? ' winners-tied' : ''}` }, winners.map((o) => winnerCard(o, many))) : null,
+    runnerUp(result.runner_up),
     checked && winners.length ? h('p', { class: 'checked' }, 'Stores checked at ', checked) : null,
     itemView(result.item_price_view),
   );
@@ -131,9 +151,10 @@ export function renderIdentity(root, run) {
   if (!t || (!t.bound && !t.name && !t.title && !t.brand && !t.mpn)) { root.replaceChildren(); return; }
   const first = run.result && run.result.winners && run.result.winners[0];
   const img = first && safeUrl(first.image_url);
-  const name = t.name || t.title || 'Unnamed item';
+  const name = (t.bound ? t.title || t.name : t.name || t.title) || 'Unnamed item';
   const basis = t.identity_basis ? TARGET_BASIS[t.identity_basis] || words(t.identity_basis) : null;
   const details = Array.isArray(t.variant_details) ? t.variant_details.filter(Boolean) : [];
+  const photoRead = t.bound ? [t.name && t.name !== name ? t.name : null, ...details].filter(Boolean) : [];
   fill(root, h('div', { class: `identity${t.bound ? '' : ' identity-open'}` },
     img ? h('img', { class: 'identity-img', src: img, alt: `Merchant image for ${name}`, referrerpolicy: 'no-referrer',
       onerror: (e) => { e.target.hidden = true; } }) : null,
@@ -144,10 +165,12 @@ export function renderIdentity(root, run) {
         t.brand ? h('div', null, h('dt', null, 'Brand'), h('dd', null, t.brand)) : null,
         t.mpn ? h('div', null, h('dt', null, 'Model'), h('dd', null, t.mpn)) : null,
         h('div', null, h('dt', null, 'GTIN'), h('dd', { class: t.gtin ? '' : 'unknown' }, t.gtin || 'none published')),
-        details.length ? h('div', null, h('dt', null, 'Variant'), h('dd', null, details.join(' · '))) : null,
+        details.length && !t.bound ? h('div', null, h('dt', null, 'Variant'), h('dd', null, details.join(' · '))) : null,
       ),
       t.bound && basis ? h('p', { class: 'identity-basis' }, icon('check'), h('span', null, `Identified by ${basis}`,
         t.identity_source ? ` · ${t.identity_source}` : '')) : null,
+      photoRead.length ? h('p', { class: 'identity-photo' }, h('span', { class: 'identity-photo-label' }, 'Read from the photo'),
+        ' ', photoRead.join(' · ')) : null,
     ),
   ));
 }
@@ -161,13 +184,14 @@ export function renderAssumptions(root, run) {
   );
 }
 
-export function renderProgress(list, rows) {
+export function renderProgress(list, rows, decision) {
   const seen = new Set();
   rows.forEach((row, i) => {
     const id = `p-${row.id ?? i}`;
     seen.add(id);
     let li = Array.from(list.children).find((n) => n.dataset.key === id);
-    const sig = JSON.stringify(row);
+    const probs = row.id === 'gate' && decision && decision.probabilities ? decision.probabilities : null;
+    const sig = JSON.stringify([row, probs, probs && decision.threshold]);
     if (li && li.dataset.sig === sig) return;
     const fresh = !li;
     if (fresh) {
@@ -183,7 +207,8 @@ export function renderProgress(list, rows) {
       h('span', { class: 'step-mark' }, mark),
       h('span', { class: 'step-body' },
         h('span', { class: 'step-label' }, row.label || words(row.id)),
-        row.detail ? h('span', { class: 'step-detail' }, row.detail) : null),
+        row.detail ? h('span', { class: 'step-detail' }, row.detail) : null,
+        probs ? probBar(probs, decision.threshold) : null),
       h('span', { class: 'step-ms' }, row.status === 'running' ? 'running' : row.status === 'failed' ? `failed${row.ms != null ? ` · ${duration(row.ms)}` : ''}`
         : row.status === 'skipped' ? 'skipped' : duration(row.ms)),
     );
@@ -204,17 +229,37 @@ function offerLine(offer, sentence, cls, tag) {
     offer && offer.title ? h('p', { class: 'line-title' }, offer.title) : null,
     tag ? h('p', { class: 'line-tag' }, tag) : null,
     sentence ? h('p', { class: 'line-why' }, sentence) : null,
+    offer && prob(offer.screen_p) ? h('p', { class: 'line-screen' }, screenChip(offer)) : null,
   );
 }
 
-const leadLine = (o) => offerLine(o, typeof o.lead_reason === 'string' ? words(o.lead_reason) : '', 'line line-lead', 'Unverified — not checked');
+function groupLeads(leads, result) {
+  const groups = new Map();
+  for (const o of leads) {
+    if (!o || typeof o !== 'object') continue;
+    const key = JSON.stringify([o.seller || o.seller_name, o.title, o.item_cents, o.currency]);
+    const g = groups.get(key);
+    if (g) g.count += 1;
+    else groups.set(key, { offer: o, count: 1 });
+  }
+  const floor = result && Array.isArray(result.winners) && result.winners.length && typeof result.price_cents === 'number' ? result.price_cents : null;
+  const list = [...groups.values()];
+  for (const g of list) {
+    g.cheaper = floor !== null && typeof g.offer.item_cents === 'number' && g.offer.item_cents < floor
+      && typeof g.offer.currency === 'string' && g.offer.currency === result.currency;
+  }
+  return [...list.filter((g) => g.cheaper), ...list.filter((g) => !g.cheaper)];
+}
+
+const leadLine = (g) => offerLine(g.offer, typeof g.offer.lead_reason === 'string' ? words(g.offer.lead_reason) : '', 'line line-lead',
+  `${g.cheaper ? 'Priced below the verified offer, but unverified' : 'Unverified'} — not checked${g.count > 1 ? ` · ${g.count} identical listings` : ''}`);
 
 export function renderWhy(root, run) {
   const result = run.result;
   if (!result) { root.replaceChildren(); return; }
   const near = result.near_miss;
   const rejected = Array.isArray(result.rejected) ? result.rejected : [];
-  const leads = Array.isArray(result.leads) ? result.leads : [];
+  const leads = groupLeads(Array.isArray(result.leads) ? result.leads : [], result);
   const parts = [];
 
   if (near || rejected.length) {
@@ -231,16 +276,27 @@ export function renderWhy(root, run) {
     ));
   }
   if (leads.length) {
+    const shown = Math.max(3, leads.filter((g) => g.cheaper).length);
     parts.push(h('section', { class: 'panel leads', 'aria-labelledby': 'leads-title' },
       h('h2', { id: 'leads-title' }, 'Unverified leads — not checked'),
       h('p', { class: 'leads-note' }, 'Found during discovery. Identity, price and stock were not verified, so none of these were ranked.'),
-      h('ul', { class: 'lines' }, leads.slice(0, 3).map(leadLine)),
-      leads.length > 3 ? h('details', { class: 'leads-more' },
-        h('summary', null, `${leads.length - 3} more unverified lead${leads.length - 3 === 1 ? '' : 's'}`),
-        h('ul', { class: 'lines' }, leads.slice(3).map(leadLine))) : null,
+      h('ul', { class: 'lines' }, leads.slice(0, shown).map(leadLine)),
+      leads.length > shown ? h('details', { class: 'leads-more' },
+        h('summary', null, `${leads.length - shown} more unverified lead${leads.length - shown === 1 ? '' : 's'}`),
+        h('ul', { class: 'lines' }, leads.slice(shown).map(leadLine))) : null,
     ));
   }
   fill(root, parts);
+}
+
+function screenLine(sc) {
+  if (!sc || typeof sc !== 'object') return null;
+  const hasCount = typeof sc.listings === 'number';
+  return h('p', { class: 'screen-line' },
+    h('strong', null, 'Decision 1'),
+    hasCount ? ` screened ${sc.listings} listing${sc.listings === 1 ? '' : 's'} in one forward pass` : ' listing screen',
+    typeof sc.ms === 'number' ? ` · ${duration(sc.ms)}` : '',
+    sc.note ? ` — ${sc.note}` : '');
 }
 
 export function renderCoverage(root, run) {
@@ -256,6 +312,7 @@ export function renderCoverage(root, run) {
       h('strong', null, n(c.sellers_seen)), ' sellers seen · ',
       h('strong', null, n(c.sellers_eligible)), ' eligible',
       checked ? [' · checked ', checked] : null),
+    screenLine(run.result && run.result.screen),
     sources.length ? h('ul', { class: 'sources' }, sources.map((s) => {
       const ok = s.status === 'ok';
       const bits = [];
@@ -303,7 +360,12 @@ export function renderQuestion(root, run, actions) {
   const titleId = 'question-title';
   let body;
   if (q.kind === 'choice' && Array.isArray(q.options) && q.options.length) {
-    const buttons = q.options.map((o) => h('button', { type: 'button', class: 'btn choice' }, o.label || o.id));
+    const buttons = q.options.map((o, i) => h('button', { type: 'button', class: 'btn choice' },
+      h('span', { class: 'choice-label' }, o.label || o.id),
+      prob(o.p) ? h('span', { class: 'choice-meta' },
+        h('span', { class: 'screen-chip', title: 'Decision 1 probability that this product is the pictured item',
+          'aria-label': `Decision 1 probability that this product is the pictured item: ${prob(o.p)}` }, `Decision 1 · ${prob(o.p)}`),
+        i === 0 && o.p >= 0.75 ? h('span', { class: 'choice-likely' }, 'most likely') : null) : null));
     buttons.forEach((b, i) => b.addEventListener('click', () => answer({ choice: q.options[i].id }, buttons)));
     body = h('div', { class: 'choices', role: 'group', 'aria-labelledby': titleId }, buttons);
   } else {

@@ -17,7 +17,8 @@ def jpeg(size=(400, 300), color=(200, 200, 200)):
 
 def visual(**over):
     base = {"name": "Brick Set", "barcode": "", "brand": "Acme", "part_number": "AB-1234", "variant_details": [],
-            "query": "acme ab-1234", "target_count": "one", "focus_box": [], "focus_words": "", "evidence": ["box"]}
+            "query": "acme ab-1234", "target_count": "one", "focus_box": [], "focus_words": "",
+            "evidence": ["'AB-1234' printed on the box front"]}
     return {**base, **over}
 
 
@@ -147,6 +148,8 @@ def test_bind_scan_overrides_low_gate(monkeypatch):
 
 @pytest.mark.parametrize("seen, gate_result, anchor, scan", [
     (visual(part_number=""), decision(), ANCHOR, None),                       # confidence alone, no identifier
+    (visual(evidence=["black toy car", "blue flame parts"]), decision(), ANCHOR, None),   # number not quoted as print
+    (visual(evidence=["set AB-12345 on the lid"]), decision(), ANCHOR, None),  # a longer number is not a quote of it
     (visual(part_number="AB-123"), decision(), ANCHOR, None),                 # prefix is not an exact token
     (visual(brand="Other"), decision(), ANCHOR, None),                        # brand mismatch
     (visual(), decision(False, "single", 0.6), ANCHOR, None),                 # gate did not pass
@@ -190,10 +193,48 @@ def verdict(v="match", left="AB-1234", right="AB-1234"):
     return {"verdict": v, "left_quote": left, "right_quote": right, "explanation": "same model"}
 
 
-def test_pair_match_needs_both_models_and_verbatim_quotes(monkeypatch):
-    calls = Calls(monkeypatch, [verdict(), verdict()])
+def test_pair_v2_is_one_carbon_call_with_verified_quotes(monkeypatch):
+    calls = Calls(monkeypatch, [verdict()])
     out = models.pair(LEFT, RIGHT)
-    assert out["verdict"] == "match"
+    assert out["verdict"] == "match" and out["version"] == models.PAIR_VERSION == "v2-carbon-verified-quotes"
+    assert [(r["job"], r["model"]) for r in out["receipts"]] == [("pair_verdict", "gemini-4-carbon")]
+    assert calls.jobs == [("pair_verdict", "gemini-4-carbon")]
+
+
+def test_pair_v2_different(monkeypatch):
+    Calls(monkeypatch, [verdict("different")])
+    assert models.pair(LEFT, RIGHT)["verdict"] == "different"
+
+
+@pytest.mark.parametrize("answer, expected", [
+    (verdict(left="acme   ab-1234", right="BRICK SET,\nnew in box"), "match"),      # whitespace + case normalised
+    (verdict(right="Acme AB-1234 ... new in box"), "match"),                        # ellipsis: every fragment present
+    (verdict(right="Acme AB-1234 \u2026 new in box"), "match"),
+    (verdict(left="Acme ... AB-1234"), "match"),                                    # fragments may sit in different fields
+    (verdict(right="Acme AB-1234 ... sealed"), "abstain"),                          # one fragment is not in the listing
+    (verdict(right="ZZ-9999"), "abstain"),                                          # quote is not in the listing
+    (verdict(left="new in box"), "abstain"),                                        # quote belongs to the other side
+    (verdict(left=""), "abstain"),                                                  # missing quote
+    (verdict(right="  ...  "), "abstain"),                                          # nothing but an ellipsis
+    (verdict("different", right="AB-9999"), "abstain"),                             # 'different' needs real quotes too
+    (verdict("abstain"), "abstain"),
+])
+def test_pair_v2_quote_verification(monkeypatch, answer, expected):
+    Calls(monkeypatch, [answer])
+    out = models.pair(LEFT, RIGHT)
+    assert out["verdict"] == expected and len(out["receipts"]) == 1
+
+
+def test_pair_v2_failure_propagates(monkeypatch):
+    Calls(monkeypatch, [models.ModelCallError("pair_verdict", "gemini-4-carbon", "ServerError 503: unavailable")])
+    with pytest.raises(models.ModelCallError):
+        models.pair(LEFT, RIGHT)
+
+
+def test_pair_v1_match_needs_both_models_and_verbatim_quotes(monkeypatch):
+    calls = Calls(monkeypatch, [verdict(), verdict()])
+    out = models.pair_v1(LEFT, RIGHT)
+    assert out["verdict"] == "match" and out["version"] == "v1-neon-extract-carbon-verdict"
     assert [(r["job"], r["model"]) for r in out["receipts"]] == [("pair_extract", "gemini-4-neon"),
                                                                   ("pair_verdict", "gemini-4-carbon")]
     assert calls.jobs == [("pair_extract", "gemini-4-neon"), ("pair_verdict", "gemini-4-carbon")]
@@ -205,15 +246,15 @@ def test_pair_match_needs_both_models_and_verbatim_quotes(monkeypatch):
     (verdict(left=""), verdict()),                         # missing quote
     (verdict("abstain"), verdict("abstain")),
 ])
-def test_pair_abstains(monkeypatch, first, second):
+def test_pair_v1_abstains(monkeypatch, first, second):
     Calls(monkeypatch, [first, second])
-    out = models.pair(LEFT, RIGHT)
+    out = models.pair_v1(LEFT, RIGHT)
     assert out["verdict"] == "abstain" and len(out["receipts"]) == 2
 
 
-def test_pair_different(monkeypatch):
+def test_pair_v1_different(monkeypatch):
     Calls(monkeypatch, [verdict("different"), verdict("different")])
-    assert models.pair(LEFT, RIGHT)["verdict"] == "different"
+    assert models.pair_v1(LEFT, RIGHT)["verdict"] == "different"
 
 
 # ---- scan / watch / io ---------------------------------------------------------------------------------------
@@ -263,10 +304,98 @@ def test_wire_schema_is_self_contained():
 
 def test_model_call_error_is_safe(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "secret-value-123")
-    message = model_io.safe_message(RuntimeError("bad key secret-value-123 rejected"))
-    assert "secret-value-123" not in message and "RuntimeError" in message
-    err = models.ModelCallError("view", "gemini-4-neon", message)
-    assert (err.job, err.model, err.safe_message) == ("view", "gemini-4-neon", message)
+    detail = model_io.detail_message(RuntimeError("bad key secret-value-123 rejected"))
+    assert "secret-value-123" not in detail and "RuntimeError" in detail
+    err = models.ModelCallError("view", "gemini-4-neon", "sentence", detail, 12)
+    assert (err.job, err.model, err.safe_message, err.detail, err.ms) == ("view", "gemini-4-neon", "sentence", detail, 12)
+
+
+def test_shopper_message_never_carries_sdk_text():
+    class APITimeoutError(Exception):
+        pass
+
+    class RateLimitError(Exception):
+        status_code = 429
+
+    class ServerError(Exception):
+        status_code = 503
+
+    raw = "Request timed out. This is a client-side timeout. You can increase the timeout by setting the `timeout` argument"
+    for exc in (APITimeoutError(raw), RateLimitError("quota for project 123"), ServerError("backend trace xyz"),
+                ValueError("1 validation error for Visual"), RuntimeError("anything else")):
+        sentence = model_io.safe_message(exc)
+        assert type(exc).__name__ not in sentence and str(exc) not in sentence and "`" not in sentence
+        assert sentence.endswith(".") and len(sentence) < 90
+    assert "too long" in model_io.safe_message(APITimeoutError(raw))
+    assert "busy" in model_io.safe_message(RateLimitError("x"))
+
+
+def test_failed_call_reports_sentence_detail_and_elapsed(monkeypatch):
+    from deal_models import Pair
+
+    class APITimeoutError(Exception):
+        pass
+
+    class Boom:
+        def create(self, **body):
+            raise APITimeoutError("Request timed out. This is a client-side timeout.")
+
+    monkeypatch.setattr(model_io, "clients", lambda: (type("C", (), {"interactions": Boom()})(), None))
+    with pytest.raises(models.ModelCallError) as err:
+        model_io.structured("bind", "gemini-4-carbon", "instruction", Pair, model_io.text_part({}))
+    assert err.value.safe_message == "The model service took too long to answer. Please try again."
+    assert "APITimeoutError" in err.value.detail and isinstance(err.value.ms, int)
+
+
+# ---- screen (one Decision 1 pass over every listing) ---------------------------------------------------------
+ROWS = [{"title": "Acme AB-1234 Brick Set", "seller_name": "Shop A", "condition": "new"},
+        {"title": "Acme AB-9999 Other Set", "seller": "Shop B", "condition": "new"}]
+
+
+def fake_yes_no(seen):
+    def run(job, data, questions):
+        seen.append((job, data, questions))
+        return {key: {"p": 0.9 if key in ("listing_0", "claim_mpn") else 0.1, "confidence": 0.9} for key in questions}, 321
+    return run
+
+
+def test_screen_is_one_call_with_a_question_per_listing_and_claim(monkeypatch):
+    seen = []
+    monkeypatch.setattr(models, "yes_no", fake_yes_no(seen))
+    out = models.screen(jpeg(), {"brand": "Acme", "mpn": "AB-1234"}, ROWS, {"mpn": "AB-1234", "brand": ""})
+    assert len(seen) == 1
+    job, data, questions = seen[0]
+    assert job == "screen" and [p["type"] for p in data] == ["image", "text"]
+    assert list(questions) == ["listing_0", "listing_1", "claim_mpn"]
+    assert "Is listing 1 the exact same sellable product" in questions["listing_1"]
+    assert "'AB-1234' visibly printed" in questions["claim_mpn"]
+    assert '"seller": "Shop B"' in data[1]["text"] and '"i": 1' in data[1]["text"]
+    assert out["scores"] == [{"index": 0, "p_same": 0.9, "confidence": 0.9}, {"index": 1, "p_same": 0.1, "confidence": 0.9}]
+    assert out["printed"] == {"mpn": {"p": 0.9, "confidence": 0.9}, "brand": None}
+    assert out["receipt"] == {"job": "screen", "model": "gemini-decision-1", "id": None, "ms": 321, "questions": 3}
+
+
+def test_screen_scores_at_most_sixty_and_says_so(monkeypatch):
+    seen = []
+    monkeypatch.setattr(models, "yes_no", fake_yes_no(seen))
+    out = models.screen(jpeg(), {}, [ROWS[0]] * 75)
+    assert len(out["scores"]) == 60 and out["receipt"]["questions"] == 60 and out["receipt"]["not_scored"] == 15
+    assert out["printed"] == {"mpn": None, "brand": None}
+
+
+def test_screen_with_nothing_to_ask_makes_no_call(monkeypatch):
+    seen = []
+    monkeypatch.setattr(models, "yes_no", fake_yes_no(seen))
+    assert models.screen(jpeg(), {}, []) == {"scores": [], "printed": {"mpn": None, "brand": None}, "receipt": None}
+    assert not seen
+
+
+def test_screen_failure_propagates(monkeypatch):
+    def boom(job, data, questions):
+        raise models.ModelCallError("screen", "gemini-decision-1", "The model service is busy right now.")
+    monkeypatch.setattr(models, "yes_no", boom)
+    with pytest.raises(models.ModelCallError):
+        models.screen(jpeg(), {}, ROWS)
 
 
 # ---- retention of interactions at the model service -----------------------------------------------------------

@@ -44,6 +44,21 @@ not a score, and its model outputs can differ from the scored run.
   frozen packets and reported beside v1 with each run's code SHA. Otherwise v1 is the result and the change stays a
   documented proposal. No other tuning on these labels.
 
-## Status of the change
-- Not landed by 16:01 ET, which left no time to run v2 before the 16:05 ET proof cutoff. **v1 is the reported result.** The
-  quote-check change remains a documented proposal and has not been measured. No v2 numbers exist.
+## Status of the change (what really happened)
+- 16:01 ET: the lead decided to act on the v1 numbers. On draw A the single Carbon call scored better than the two-model
+  check with the same zero false accepts, and took about half the latency. Pair v2 (`PAIR_VERSION
+  "v2-carbon-verified-quotes"`) makes the live listing check one Gemini 4 Carbon call followed by the deterministic
+  verbatim-quote check, with the class-2 fix above (whitespace-normalised, fragment-wise on `...`/`…`). MODELS landed
+  it at 16:02 and kept `app.models.pair_v1`. This change does two things at once: it drops the Neon stage, and it
+  fixes the quote check. It is still the one change; we did no other tuning.
+- **v2 on draw A is IN-SAMPLE.** The change was chosen after seeing v1 on these same packets. Only the system arm was
+  re-run; the v1 baseline arm stands and was not re-run. Results are in `eval/results/pairs-v2.json`.
+- **Held-out check.** To judge the change on data that did not suggest it, we drew 40 new pairs (draw B). Same strata,
+  seed = sha256 of `eval/results/pairs-v1.json`, disjoint from draw A, frozen to `eval/results/freeze-b.json` before
+  any call. Both arms ran on it. Results are in `eval/results/pairs-b-v2.json`.
+- The outcomes, with each run's code SHA, are in `eval/RESULTS.md`, which `eval/report.py` generates from those files,
+  including a generated plain reading. On every run so far, the system listing check equals or trails the single call
+  on correctness, and neither arm has made a false accept. Read the listing-check result that way. The app's edge
+  is not measured here; it is measured by the separate blind end-to-end benchmark (`e2e`).
+- Bug 007 (rate-limit sleeps counted as latency) is fixed in `eval/run_pairs.py`. `ms` now covers the final attempt
+  only and `wall_ms` is kept separately. v1 had zero 429 retries, so v1 latency was unaffected.

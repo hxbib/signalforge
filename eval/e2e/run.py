@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -25,13 +26,15 @@ os.environ.setdefault("SF_STORE_INTERACTIONS", "delete")
 
 from pydantic import BaseModel  # noqa: E402
 
+import app.models as models  # noqa: E402
 from app import pipeline, store  # noqa: E402
 from app.contracts import new_run, public  # noqa: E402
 from app.merchants import chains, ranking, shop  # noqa: E402
 from app.models import io  # noqa: E402
 from live_smoke import clean_image  # noqa: E402
 
-import score  # noqa: E402
+import e2e_score as score  # noqa: E402
+import e2e_summary as summarize  # noqa: E402
 
 RESULTS = ROOT / "eval" / "results"
 FREEZE = RESULTS / "e2e-freeze.json"
@@ -40,6 +43,8 @@ SUMMARY_OUT = RESULTS / "e2e-summary.json"
 PHOTOS = ROOT / "private" / "e2e"
 JOURNAL = PHOTOS / "journal-v1.jsonl"   # private: start/done events + raw replies for failure analysis
 BASELINE_JOB = "e2e_baseline"
+BOARD = ROOT / "coord" / "BOARD.md"     # team coordination log, not published
+LANDED = "pair v2 landed"
 
 INSTRUCTION = (
     "A shopper shows a photo of one product they want to buy. data.candidates is a list of store listings, each with "
@@ -68,8 +73,12 @@ def _log(event: dict) -> None:
         f.write(json.dumps(event, ensure_ascii=False) + "\n")
 
 
+_LIMIT = re.compile(r"\b429\b|RESOURCE_EXHAUSTED")
+
+
 def _rate_limited(text: str) -> bool:
-    return "429" in text or "RESOURCE_EXHAUSTED" in text
+    """Error and progress *text* only; never timing numbers (a duration such as 4292 ms is not a 429)."""
+    return bool(_LIMIT.search(text or ""))
 
 
 def _on_rate_limit() -> None:
@@ -130,14 +139,15 @@ def _confirm(offer: dict | None) -> str | None:
 def run_case(case: dict, raw: bytes, journal: bool = True) -> dict:
     image = clean_image(raw)
     gold = case["gold_upid"]
-    started = int(time.time())
+    started, wall = int(time.time()), time.monotonic()
     private = {"event": "detail", "case_id": case["case_id"]}
 
     try:
         doc, sys_ms = system_arm(image)
         sys_out = score.system_outcome(doc, gold)
         private["system"] = {k: doc.get(k) for k in ("state", "target", "decision", "question", "error", "progress")}
-        if _rate_limited(json.dumps([doc.get("error"), doc.get("progress")])):
+        if _rate_limited(" | ".join([str((doc.get("error") or {}).get("message") or "")]
+                                    + [str(row.get("detail") or "") for row in doc.get("progress") or []])):
             _on_rate_limit()
     except Exception as e:
         sys_out, sys_ms = {"outcome": "error", "reasons": [f"exception:{type(e).__name__}"], "offer": None}, None
@@ -160,7 +170,8 @@ def run_case(case: dict, raw: bytes, journal: bool = True) -> dict:
         validity = score.offer_validity(out["offer"], _confirm(out["offer"]))
         arms[name] = score.arm_record(out, validity, score.cheapest_code(out, ref), ms)
     record = {"case_id": case["case_id"], "query": case["query"], "gold_upid": gold, "sellers": case.get("sellers"),
-              "started_at": started, "baseline_after_system_s": arm_gap_s,
+              "started_at": started, "wall_ms": round((time.monotonic() - wall) * 1000),
+              "baseline_after_system_s": arm_gap_s,
               "baseline_candidates": len(rows), "gold_in_candidates": any(r.get("product") == gold for r in rows),
               "reference": {"status": ref["status"], "eligible": ref["eligible"]}, "arms": arms}
     if journal:
@@ -171,7 +182,7 @@ def run_case(case: dict, raw: bytes, journal: bool = True) -> dict:
 def crashed(case: dict, why: str) -> dict:
     err = {"outcome": "error", "reasons": [why], "offer": None, "cheapest": "not_applicable", "ms": None}
     return {"case_id": case["case_id"], "query": case["query"], "gold_upid": case["gold_upid"],
-            "sellers": case.get("sellers"), "started_at": None, "baseline_after_system_s": None,
+            "sellers": case.get("sellers"), "started_at": None, "wall_ms": None, "baseline_after_system_s": None,
             "baseline_candidates": 0, "gold_in_candidates": False,
             "reference": {"status": "unavailable", "eligible": 0}, "arms": {"system": dict(err), "baseline": dict(err)}}
 
@@ -189,27 +200,26 @@ def _interim(done: list[dict]) -> str:
     return f"after {s['n']} cases: system {arm(s['arms']['system'])}; baseline {arm(s['arms']['baseline'])}"
 
 
-def write_outputs(freeze: dict, records: list[dict], code_sha: str, complete: bool) -> None:
+def _git(*args: str) -> str:
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
+
+
+def provenance() -> dict:
+    """What version of the system the arms ran on. The tree is shared and may carry uncommitted changes."""
+    landed = LANDED in BOARD.read_text() if BOARD.is_file() else None
+    return {"code_sha": _git("rev-parse", "HEAD"), "tree_dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
+            "pair_version": getattr(models, "PAIR_VERSION", None), "pair_v2_note_seen_at_start": landed,
+            "arms_started_at": int(time.time())}
+
+
+def write_outputs(freeze: dict, records: list[dict], prov: dict, complete: bool) -> None:
     order = {c["case_id"]: i for i, c in enumerate(freeze["cases"])}
     records = sorted(records, key=lambda r: order[r["case_id"]])
-    CASES_OUT.write_text(json.dumps({"run": "v1", "generated_at": int(time.time()), "code_sha": code_sha,
-                                     "freeze_seed": freeze["seed"], "complete": complete, "cases": records}, indent=1) + "\n")
+    head = {"generated_at": int(time.time()), **prov, "code_sha_at_end": _git("rev-parse", "HEAD"),
+            "freeze_seed": freeze["seed"], "models": {"baseline": [io.CARBON], "system": [io.NEON, io.DECISION, io.CARBON]}}
+    CASES_OUT.write_text(json.dumps({"run": "v1", **head, "complete": complete, "cases": records}, indent=1) + "\n")
     if complete:
-        summary = {"generated_at": int(time.time()), "code_sha": code_sha, "freeze_seed": freeze["seed"],
-                   "models": {"baseline": [io.CARBON], "system": [io.NEON, io.DECISION, io.CARBON]},
-                   **score.summarize(records), "notes": NOTES}
-        SUMMARY_OUT.write_text(json.dumps(summary, indent=1) + "\n")
-
-
-NOTES = [
-    "Blind draw: 30 product-family queries fixed first, one catalog product per query picked by a RNG seeded with the code SHA, frozen before any arm ran. Every frozen case is in the denominator; none was dropped, re-drawn or re-run.",
-    "Gold is the Shop catalog product id of the drawn product. The same physical item can exist under another catalog product id; an answer bound to such a duplicate is counted as a false accept here.",
-    "The photos are the merchants' own catalog images. Many show no printed model number, so the full system is expected to stop and ask one question; zero follow-up answers were given, so those cases count as abstained.",
-    "The baseline is handed the listing rows of the draw query (which normally contain the gold product); the full system has to find the product in the whole catalog from the photo alone.",
-    "Cheapest-valid agreement is circular for the full system: the reference winner is computed by the same deterministic evaluator (app.merchants.ranking.evaluate) the system uses, over the gold product's rows. For the system it tests binding and lane wiring; for the baseline it tests constraint-following.",
-    "An invalid offer is an answered offer that is not new / in stock / USD on its own row, or whose merchant storefront disagreed on price or stock when re-read at scoring time (storefront_mismatch).",
-    "A system run that ended 'unavailable' with an error is counted as an error, not as an abstention.",
-]
+        summarize.main()
 
 
 def main(argv: list[str]) -> int:
@@ -219,7 +229,8 @@ def main(argv: list[str]) -> int:
         print(json.dumps(rec, indent=1))
         return 0
     freeze = json.loads(FREEZE.read_text())
-    code_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
+    prov = provenance()
+    print("provenance:", json.dumps(prov), flush=True)
     records, started = {}, set()
     if JOURNAL.exists():
         for line in JOURNAL.read_text().splitlines():
@@ -247,11 +258,11 @@ def main(argv: list[str]) -> int:
             records[rec["case_id"]] = rec
             print(_line(rec), flush=True)
             print(_interim(list(records.values())), flush=True)
-            write_outputs(freeze, list(records.values()), code_sha, complete=False)
+            write_outputs(freeze, list(records.values()), prov, complete=False)
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         list(pool.map(work, todo))
-    write_outputs(freeze, list(records.values()), code_sha, complete=len(records) == len(freeze["cases"]))
+    write_outputs(freeze, list(records.values()), prov, complete=len(records) == len(freeze["cases"]))
     print(f"wrote {CASES_OUT.name} and {SUMMARY_OUT.name}: {len(records)} of {len(freeze['cases'])} cases")
     return 0
 

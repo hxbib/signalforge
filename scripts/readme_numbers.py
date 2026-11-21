@@ -1,4 +1,4 @@
-"""Insert the evaluation numbers into README.md from eval/results/summary.json. No hand-typed numbers.
+"""Insert the evaluation numbers into README.md from eval/results/summary.json (and e2e-summary.json). No hand-typed numbers.
 
   python scripts/readme_numbers.py            rewrite the block between the EVAL markers
   python scripts/readme_numbers.py --check    exit 1 if README.md differs from what the file says
@@ -9,45 +9,108 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SUMMARY = ROOT / "eval" / "results" / "summary.json"
+E2E = ROOT / "eval" / "results" / "e2e-summary.json"
 README = ROOT / "README.md"
 START, END = "<!-- EVAL:START (written by scripts/readme_numbers.py; do not edit by hand) -->", "<!-- EVAL:END -->"
-ARMS = (("baseline", "Baseline: one Gemini 4 Carbon call"),
-        ("full", "System: Neon extraction + Carbon verdict + agreement + verbatim-quote check"))
+ARM_NAMES = {"baseline": "Baseline: one Gemini 4 Carbon call", "full": "System listing check", "system": "SignalForge full system"}
 
 
-def _arm_row(label, a):
+def _v(value):
+    return "unknown" if value is None else str(value)
+
+
+def _pair_row(label, arm, a):
     lat = a.get("latency") or {}
-    return (f'| {label} | {a["correct"]}/{a["n"]} | {a["wrong"]} | {a["abstained"]} | {a["errors"]} | '
-            f'{a["false_accepts"]}/{a["actual_negatives"]} | {a["false_rejects"]}/{a["actual_positives"]} | '
-            f'{lat.get("median_ms", "unknown")} | {lat.get("p90_ms", "unknown")} |')
+    return (f'| {label} | {arm} | {_v(a.get("correct"))}/{_v(a.get("n"))} | {_v(a.get("wrong"))} | {_v(a.get("abstained"))} | '
+            f'{_v(a.get("errors"))} | {_v(a.get("false_accepts"))}/{_v(a.get("actual_negatives"))} | '
+            f'{_v(lat.get("median_ms"))} | {_v(lat.get("p90_ms"))} |')
+
+
+def _freeze(name, f):
+    if not f:
+        return None
+    return (f'- Draw {name}: {_v(f.get("n"))} pairs, frozen {_v(f.get("frozen_at_iso"))} before any arm ran on it, seed '
+            f'`{_v(f.get("seed"))[:12]}`' + (f' ({f["seed_rule"]})' if f.get("seed_rule") else "") + ".")
+
+
+def _pairs(summary):
+    out = [f'**Experiment A: {summary.get("experiment", "listing identity on WDC v2 product pairs")}** '
+           "An abstention or an error counts as incorrect.", ""]
+    out += [line for line in (_freeze("A", summary.get("freeze")), _freeze("B", summary.get("freeze_b"))) if line]
+    out += ["", "| Run | Arm | Correct | Wrong answers | Abstained | Runtime errors | False matches / actual different | Median ms | p90 ms |",
+            "|---|---|---|---|---|---|---|---|---|"]
+    for v in summary.get("versions") or []:
+        label = v.get("label") or v.get("version") or v.get("name")
+        ran = v.get("arms_run") or list(v.get("arms") or {})
+        for key in ("baseline", "full"):
+            if key not in (v.get("arms") or {}):
+                continue
+            name = ARM_NAMES[key] + (f' (`{v["system_arm"]}`)' if key == "full" and v.get("system_arm") else "")
+            if key not in ran:
+                name += f' (from {v.get("baseline_source", "an earlier run, not re-run")})'
+            out.append(_pair_row(f'{label}, code `{_v(v.get("code_sha"))[:7]}`', name, v["arms"][key]))
+    out.append("")
+    for v in summary.get("versions") or []:
+        p = v.get("paired")
+        if p:
+            out.append(f'- {v.get("label") or v.get("version")}: paired on the same pairs, both correct {_v(p.get("both"))}, only the '
+                       f'baseline {_v(p.get("baseline_only"))}, only the system {_v(p.get("full_only"))}, neither {_v(p.get("neither"))}.')
+    if summary.get("reading"):
+        out += ["", "Reading written by `eval/summarize.py`:", ""] + [f"- {line}" for line in summary["reading"]]
+    if summary.get("latency_note"):
+        out += ["", f'Latency: {summary["latency_note"]}.']
+    return out
+
+
+def _e2e(e):
+    if not e:
+        return ["**End-to-end benchmark (photo in, offer out):** not yet measured; `eval/results/e2e-summary.json` does not exist."]
+    n = e.get("n")
+    out = [f'**End-to-end benchmark (photo in, offer out):** {_v(n)} catalog photos drawn blind before any arm ran, blank note, no '
+           f'follow-up answer given, run `{_v(e.get("run"))}`, code `{_v(e.get("code_sha"))[:7]}`' +
+           (" plus uncommitted changes" if e.get("tree_dirty") else "") +
+           f', listing check `{_v(e.get("pair_version"))}`. Protocol: `eval/e2e/README.md`.', "",
+           "| Arm | Correct product | Wrong product | Stopped without an answer | Errors | Invalid offers / answered | "
+           "Cheapest agrees with reference | Median ms |", "|---|---|---|---|---|---|---|---|"]
+    for key in ("system", "baseline"):
+        a = (e.get("arms") or {}).get(key)
+        if a:
+            out.append(f'| {ARM_NAMES[key]} | {_v(a.get("correct"))}/{_v(n)} | {_v(a.get("false_accepts"))}/{_v(n)} | '
+                       f'{_v(a.get("abstained"))}/{_v(n)} | {_v(a.get("errors"))}/{_v(n)} | {_v(a.get("invalid_offers"))}/{_v(a.get("answered"))} | '
+                       f'{_v(a.get("cheapest_agreement"))}/{_v(n)} | {_v(a.get("median_ms"))} |')
+    if e.get("reading"):
+        out += ["", "Reading written by the benchmark's own script (`eval/e2e`):", ""] + [f"- {line}" for line in e["reading"]]
+    d = e.get("diagnostic") or {}
+    if d.get("system_abstention_codes") and not e.get("reading"):
+        out += ["", "Post-hoc diagnostic (changes no score): why the full system stopped: " +
+                ", ".join(f"`{k}` x{v}" for k, v in sorted(d["system_abstention_codes"].items())) + "."]
+    sc = e.get("screen")
+    if sc:
+        out += ["", f'**Decision 1 listing screen, calibration on the same {_v(sc.get("cases"))} cases** (run `{_v(sc.get("run"))}`, '
+                    f'`{_v(sc.get("model"))}`, one call per case): {_v(sc.get("judgments"))} listing judgments '
+                    f'({_v(sc.get("positives"))} positive, {_v(sc.get("negatives"))} negative), {_v(sc.get("error_cases"))} failed calls, '
+                    f'ROC AUC {_v(sc.get("roc_auc"))}, Brier {_v(sc.get("brier"))}, top-scored listing is the drawn product in '
+                    f'{_v(sc.get("top1_positive_cases"))}/{_v(sc.get("cases_with_positive"))} cases that had one.', "",
+                "| Threshold | True accepts | False accepts | Missed | Precision | Recall | False-accept rate |", "|---|---|---|---|---|---|---|"]
+        out += [f'| p >= {_v(t.get("threshold"))} | {_v(t.get("tp"))} | {_v(t.get("fp"))} | {_v(t.get("fn"))} | {_v(t.get("precision"))} | '
+                f'{_v(t.get("recall"))} | {_v(t.get("false_accept_rate"))} |' for t in sc.get("thresholds") or []]
+    return out
 
 
 def block(summary):
     if summary is None:
         return "Not yet measured: `eval/results/summary.json` does not exist, so no number is shown here."
-    f, p, b = summary.get("freeze") or {}, summary["paired"], summary.get("experiment_b") or {}
-    lines = [
-        f'**Experiment A — {summary["experiment"].split(": ", 1)[-1]}.** {summary["n"]} pairs, drawn before either arm ran '
-        f'(frozen {f.get("frozen_at_iso", "unknown")}, seed `{str(f.get("seed", "unknown"))[:7]}`), results version '
-        f'`{summary["latest_version"]}`, code `{summary["code_sha"][:7]}`, models {", ".join("`" + m + "`" for m in summary["model_ids"])}. '
-        "An abstention counts as incorrect.",
+    b = summary.get("experiment_b") or {}
+    e2e, files = summary.get("e2e"), list(summary.get("generated_from", []))
+    if not e2e and E2E.is_file():
+        e2e = json.loads(E2E.read_text())
+    if e2e:
+        files += [name for name in ("e2e-summary.json", "e2e-freeze.json") if name not in files and (E2E.parent / name).is_file()]
+    lines = _pairs(summary) + [""] + _e2e(e2e) + [
         "",
-        "| Arm | Correct | Wrong answers | Abstained | Runtime errors | False matches / actual different | "
-        "False rejections / actual same | Median ms | p90 ms |",
-        "|---|---|---|---|---|---|---|---|---|",
-        *[_arm_row(label, summary["arms"][key]) for key, label in ARMS],
+        f'**Experiment B (five rights-cleared photo-to-offer cases):** status `{b.get("status", "unknown")}`. {b.get("statement", "")}'.rstrip(),
         "",
-        f'Paired on the same {summary["n"]} pairs: both arms correct {p["both"]}, only the baseline correct {p["baseline_only"]}, '
-        f'only the system correct {p["full_only"]}, neither {p["neither"]}.',
-        "",
-        "| Stratum | Baseline correct | Baseline abstained | System correct | System abstained |",
-        "|---|---|---|---|---|",
-        *[f'| {s["stratum"]} | {s["baseline"]["correct"]}/{s["baseline"]["n"]} | {s["baseline"]["abstained"]} | '
-          f'{s["full"]["correct"]}/{s["full"]["n"]} | {s["full"]["abstained"]} |' for s in summary["by_stratum"]],
-        "",
-        f'**Experiment B — five fresh photo-to-offer cases:** status `{b.get("status", "unknown")}`. {b.get("statement", "")}'.rstrip(),
-        "",
-        "Source files: " + ", ".join(f"`eval/results/{name}`" for name in ["summary.json", *summary.get("generated_from", [])]) + ".",
+        "Source files: " + ", ".join(f"`eval/results/{name}`" for name in ["summary.json", *files]) + ".",
     ]
     return "\n".join(lines)
 

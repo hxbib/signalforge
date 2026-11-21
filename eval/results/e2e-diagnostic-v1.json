@@ -1,0 +1,282 @@
+{
+ "generated_at": 1795295399,
+ "run": "v1",
+ "post_hoc": true,
+ "changes_scores": false,
+ "n": 24,
+ "system_abstention_codes": {
+  "gate_did_not_pass": 2,
+  "no_model_number_or_barcode_in_photo": 21
+ },
+ "system_false_accepts": 1,
+ "system_false_accepts_same_model_number_as_gold": 1,
+ "cases": [
+  {
+   "case_id": "e2e-01",
+   "system_outcome": "false_accept",
+   "brand_read": true,
+   "model_number_read": true,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": null,
+   "duplicate_check": {
+    "bound_on_model_number": true,
+    "gold_titles_carry_bound_model_number": true
+   }
+  },
+  {
+   "case_id": "e2e-02",
+   "system_outcome": "abstained",
+   "brand_read": false,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-03",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-04",
+   "system_outcome": "abstained",
+   "brand_read": false,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-05",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-06",
+   "system_outcome": "abstained",
+   "brand_read": false,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-07",
+   "system_outcome": "abstained",
+   "brand_read": false,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-08",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-09",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-10",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-11",
+   "system_outcome": "abstained",
+   "brand_read": false,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-12",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-13",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-14",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-15",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-16",
+   "system_outcome": "abstained",
+   "brand_read": false,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": false,
+   "gate_choice": "other",
+   "question_kind": "text",
+   "abstention_code": "gate_did_not_pass"
+  },
+  {
+   "case_id": "e2e-17",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-18",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-19",
+   "system_outcome": "abstained",
+   "brand_read": false,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-20",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-21",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-22",
+   "system_outcome": "abstained",
+   "brand_read": false,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-23",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": true,
+   "gate_choice": "single",
+   "question_kind": "choice",
+   "abstention_code": "no_model_number_or_barcode_in_photo"
+  },
+  {
+   "case_id": "e2e-24",
+   "system_outcome": "abstained",
+   "brand_read": true,
+   "model_number_read": false,
+   "barcode_read": false,
+   "gate_pass": false,
+   "gate_choice": "single",
+   "question_kind": "text",
+   "abstention_code": "gate_did_not_pass"
+  }
+ ]
+}

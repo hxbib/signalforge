@@ -25,6 +25,25 @@ function playground(rows, note) {
   );
 }
 
+const CHALLENGE = { running: 'Running', no_counterexample: 'No counterexample found', counterexample: 'Counterexample found', unavailable: 'Unavailable' };
+
+function challenge(c) {
+  if (!c || typeof c !== 'object') return null;
+  const bits = [];
+  if (c.sandbox) bits.push(`sandbox: ${c.sandbox}`);
+  if (c.environment_id) bits.push(`environment ${c.environment_id}`);
+  if (typeof c.attempts === 'number') bits.push(`${c.attempts} attempt${c.attempts === 1 ? '' : 's'}`);
+  if (typeof c.replayed_locally === 'boolean') bits.push(c.replayed_locally ? 'replayed locally' : 'not replayed locally');
+  return h('div', { class: 'challenge' },
+    h('h3', null, 'Rule challenge'),
+    h('p', { class: 'challenge-top' }, h('span', { class: 'sim-tag' }, 'simulation'),
+      h('strong', null, CHALLENGE[c.status] || words(c.status) || 'Status not reported')),
+    c.sentence ? h('p', { class: 'challenge-sentence' }, c.sentence) : null,
+    bits.length ? h('p', { class: 'challenge-meta' }, bits.join(' · ')) : null,
+    c.interaction_id ? h('p', { class: 'challenge-meta' }, 'Interaction ', h('code', null, String(c.interaction_id))) : null,
+  );
+}
+
 export function renderWatch(root, run, actions) {
   const w = run.watch;
   const offerable = TERMINAL.has(run.state) && run.state !== 'needs_detail' && run.result && run.result.status !== 'needs_identity';
@@ -36,7 +55,7 @@ export function renderWatch(root, run, actions) {
     status.textContent = 'Working…';
     let r;
     try { r = await postJson(path, payload); } catch { r = null; }
-    if (r && r.ok) { actions.refresh(); return; }
+    if (r && r.ok) { actions.refresh(r.body); return; }
     controls.forEach((c) => { c.disabled = false; });
     status.textContent = r ? errorText(r, failText) : 'The server could not be reached. Try again.';
   }
@@ -67,6 +86,16 @@ export function renderWatch(root, run, actions) {
         : h('p', { class: 'watch-q-hint' }, 'Answer in your own words in the box below.'));
   }
 
+  function challengeButton(watch) {
+    const lanes = actions.lanes;
+    if (!lanes || lanes['app.optional.routes'] !== true || typeof watch.watch_id !== 'string') return null;
+    if (watch.challenge && watch.challenge.status === 'running') return null;
+    const btn = h('button', { type: 'button', class: 'btn challenge-btn' },
+      watch.challenge ? 'Challenge this rule again in a hosted sandbox' : 'Challenge this rule in a hosted sandbox');
+    btn.addEventListener('click', () => send(`/api/watch/${encodeURIComponent(watch.watch_id)}/challenge`, {}, [btn], 'The challenge could not be started'));
+    return btn;
+  }
+
   const parts = [h('h2', { id: 'watch-title' }, w ? 'Watch' : 'Want to know when this changes?')];
   if (w) {
     const canPause = (w.status === 'active' || w.status === 'preview_only') && typeof w.pause_url === 'string' && w.pause_url.startsWith('/');
@@ -80,6 +109,8 @@ export function renderWatch(root, run, actions) {
       question(w),
       pause,
       playground(w.playground, w.simulation_note),
+      challenge(w.challenge),
+      challengeButton(w),
     );
   } else {
     parts.push(h('p', { class: 'watch-lede' }, 'In-app only and reversible. Nothing is watched unless you ask.'));

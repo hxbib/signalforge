@@ -107,3 +107,49 @@ def test_frozen_draw_matches_inputs_if_present():
     for r in rows:
         for side in ("left", "right"):
             assert set(r["packet"][side]) <= {"title", "description", "brand", "specTableContent"}
+
+
+def test_v2_in_sample_reuses_v1_baseline_and_heldout_is_labelled(tmp_path):
+    _doc(tmp_path, CASES, "v1")
+    v2 = {"experiment": "A", "name": "pairs-v2", "version": "v2", "draw": "A", "arms_run": ["full"], "code_sha": "b" * 40,
+          "cases": [c for c in CASES if c["arm"] == "full"]}
+    (tmp_path / "pairs-v2.json").write_text(json.dumps(v2))
+    b = {"experiment": "A", "name": "pairs-b-v2", "version": "v2", "draw": "B", "arms_run": ["baseline", "full"],
+         "code_sha": "c" * 40, "cases": [dict(c, id="b-" + c["id"]) for c in CASES]}
+    (tmp_path / "pairs-b-v2.json").write_text(json.dumps(b))
+    (tmp_path / "e2e-summary.json").write_text(json.dumps({"n": 1}))
+    s = summarize.build(tmp_path)
+    names = [v["name"] for v in s["versions"]]
+    assert names == ["pairs-v1", "pairs-v2", "pairs-b-v2"]
+    v2s = s["versions"][1]
+    assert v2s["in_sample"] and not v2s["held_out"] and v2s["baseline_source"].startswith("pairs-v1.json")
+    assert v2s["arms"]["baseline"]["correct"] == 1 and v2s["paired"] is not None
+    assert s["headline_run"] == "pairs-b-v2" and s["versions"][2]["held_out"]
+    assert s["e2e"] == {"n": 1} and "e2e-summary.json" in s["generated_from"]
+    assert len(s["reading"]) == 3
+
+
+def test_heldout_draw_disjoint_if_present():
+    fa, fb = ROOT / "eval" / "results" / "freeze.json", ROOT / "eval" / "results" / "freeze-b.json"
+    if not (fa.exists() and fb.exists()):
+        pytest.skip("no draw B on this machine")
+    a = {c["wdc_pair_id"] for c in json.loads(fa.read_text())["cases"]}
+    b = json.loads(fb.read_text())
+    assert b["n"] == 40 and not (a & {c["wdc_pair_id"] for c in b["cases"]})
+
+
+def test_rate_limit_sleep_excluded_from_ms(monkeypatch):
+    calls = {"n": 0}
+
+    class RL(Exception):
+        safe_message = "ClientError 429 RESOURCE_EXHAUSTED"
+
+    def flaky(packet):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RL()
+        return "match", []
+    monkeypatch.setitem(run_pairs.ARMS, "full", flaky)
+    monkeypatch.setattr(run_pairs.time, "sleep", lambda s: None)
+    rec = run_pairs.run_one({"id": "pair-01", "task": "pair", "packet": {"left": {"title": "a"}, "right": {"title": "b"}}}, "full")
+    assert rec["answer"] == "match" and rec["rate_limit_retries"] == 1 and rec["ms"] <= rec["wall_ms"]
