@@ -22,6 +22,7 @@ const TARGET_BASIS = {
   merchant_barcode: 'barcode published by the merchant',
   catalog_product: 'same Shop catalog product',
   model_number: 'brand + model number printed on the item',
+  buyer_choice: 'the catalog product you chose',
 };
 const STOCK = { in_stock: 'In stock', sold_out: 'Sold out', orderable: 'Orderable', unknown: 'Stock unknown' };
 const SOURCE = {
@@ -50,7 +51,7 @@ export function renderHead(run) {
     tone = result && Array.isArray(result.winners) && result.winners.length ? 'verified' : 'quiet';
     eyebrow = run.state === 'complete' ? 'Result' : run.state === 'partial' ? 'Partial result — some coverage is missing'
       : run.state === 'needs_detail' ? 'Waiting on one answer' : 'Unavailable';
-    if (run.state === 'needs_detail' && !result) title = STATE_TITLE.needs_detail;
+    if (run.state === 'needs_detail' && tone === 'quiet') title = STATE_TITLE.needs_detail;
     if (run.state === 'unavailable' && !result) title = STATE_TITLE.unavailable;
   } else if (result && result.headline) {
     eyebrow = `${STATE_TITLE[run.state] || words(run.state)}`;
@@ -120,21 +121,22 @@ export function renderOffer(root, run) {
     result.basis_label && winners.length ? h('p', { class: 'basis' }, result.basis_label) : null,
     many ? h('p', { class: 'tie-note' }, `${winners.length} sellers are tied at this price — listed in no particular order.`) : null,
     winners.length ? h('ul', { class: `winners${many ? ' winners-tied' : ''}` }, winners.map((o) => winnerCard(o, many))) : null,
-    checked ? h('p', { class: 'checked' }, 'Stores checked at ', checked) : null,
+    checked && winners.length ? h('p', { class: 'checked' }, 'Stores checked at ', checked) : null,
     itemView(result.item_price_view),
   );
 }
 
 export function renderIdentity(root, run) {
   const t = run.target;
-  if (!t) { root.replaceChildren(); return; }
+  if (!t || (!t.bound && !t.name && !t.title && !t.brand && !t.mpn)) { root.replaceChildren(); return; }
   const first = run.result && run.result.winners && run.result.winners[0];
   const img = first && safeUrl(first.image_url);
   const name = t.name || t.title || 'Unnamed item';
   const basis = t.identity_basis ? TARGET_BASIS[t.identity_basis] || words(t.identity_basis) : null;
   const details = Array.isArray(t.variant_details) ? t.variant_details.filter(Boolean) : [];
   fill(root, h('div', { class: `identity${t.bound ? '' : ' identity-open'}` },
-    img ? h('img', { class: 'identity-img', src: img, alt: `Merchant image for ${name}`, loading: 'lazy', referrerpolicy: 'no-referrer' }) : null,
+    img ? h('img', { class: 'identity-img', src: img, alt: `Merchant image for ${name}`, referrerpolicy: 'no-referrer',
+      onerror: (e) => { e.target.hidden = true; } }) : null,
     h('div', { class: 'identity-text' },
       h('p', { class: 'identity-kicker' }, t.bound ? 'Exact product' : 'Read from the photo — not bound to one exact product'),
       h('h2', { class: 'identity-name' }, name),
@@ -318,7 +320,8 @@ export function renderQuestion(root, run, actions) {
     h('p', { class: 'eyebrow' }, 'One question'),
     h('h2', { id: titleId }, q.text || 'One detail is needed'),
     body, status,
-    run.result ? h('p', { class: 'q-foot' }, 'The result so far stays usable if you skip this.') : null,
+    run.result && Array.isArray(run.result.winners) && run.result.winners.length
+      ? h('p', { class: 'q-foot' }, 'The result so far stays usable if you skip this.') : null,
   ));
 }
 

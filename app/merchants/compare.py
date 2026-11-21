@@ -18,7 +18,10 @@ from buyer import amount
 MAX_CONFIRM_MERCHANTS = 12
 CONFIRM_WORKERS = 6
 MAX_PAIR_CALLS = 6
-PAIR_WORKERS = 2
+PAIR_WORKERS = 6
+CONFIRM_PHASE_S = 9.0          # merchant confirms and listing checks run side by side, each with its own cap
+PAIR_PHASE_S = 9.0
+PAIR_LATE = "identity check did not finish in time"
 
 HEADLINE_MANY = "Lowest verified among the stores checked"
 HEADLINE_ONE = "One verified offer"
@@ -112,21 +115,27 @@ def _fragment(reason, row):
         "used or condition not confirmed as new"
 
 
-def _run_parallel(fn, jobs, workers, timeout):
-    """Run fn(job) concurrently; return {index: ("ok", value) | ("error", exc_name) | ("timeout", None)}."""
-    out = {}
+def _start(fn, jobs, workers):
+    """Submit fn(job) for every job right away; returns (executor, futures) or (None, {})."""
     if not jobs:
-        return out
+        return None, {}
     ex = ThreadPoolExecutor(max_workers=max(1, min(workers, len(jobs))))
-    futures = {ex.submit(fn, job): i for i, job in enumerate(jobs)}
-    done, _ = wait(futures, timeout=max(0.0, timeout))
+    return ex, {ex.submit(fn, job): i for i, job in enumerate(jobs)}
+
+
+def _collect(ex, futures, until):
+    """Wait until the monotonic time `until`; return {index: ("ok", v) | ("error", name) | ("timeout", None)}."""
+    out = {}
+    if ex is None:
+        return out
+    done, _ = wait(futures, timeout=max(0.0, until - time.monotonic()))
     for fut, i in futures.items():
         if fut in done:
             exc = fut.exception()
             out[i] = ("error", type(exc).__name__) if exc else ("ok", fut.result())
         else:
             out[i] = ("timeout", None)
-    ex.shutdown(wait=False, cancel_futures=True)
+    ex.shutdown(wait=False, cancel_futures=True)   # a slow lane never blocks the result
     return out
 
 
@@ -148,9 +157,11 @@ def _default_pair():
 
 # ---------------------------------------------------------------- main entry
 
-def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=None, pair=None):
+def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=None, pair=None,
+                   catalog_ms=None):
     started = time.monotonic()
     deadline = started + deadline_s
+    clock_given = as_of is not None
     as_of = int(time.time()) if as_of is None else as_of
     confirm = confirm if confirm is not None else _default_confirm()
     pair = pair if pair is not None else _default_pair()
@@ -175,7 +186,7 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
             r.pop("identity_basis", None)
             leads.append((r, "Not the bound catalog product and the listing title does not carry the brand and exact model number"))
 
-    # ---- b. merchant confirmation, shared deadline, cheapest merchants first
+    # ---- b + c. merchant confirms and two-model listing checks start together
     to_check = cluster + candidates
     by_seller = {}
     for r in to_check:
@@ -186,11 +197,23 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
     skipped_sellers = order[MAX_CONFIRM_MERCHANTS:]
     jobs = [r for s in chosen for r in by_seller[s]] if confirm else []
     cluster_ids = {id(r) for r in cluster}
-    confirm_budget = max(0.5, deadline_s * 0.5)
-    t_conf = time.monotonic()
-    outcomes = _run_parallel(lambda r: confirm(r, as_of), jobs, CONFIRM_WORKERS,
-                             min(confirm_budget, deadline - time.monotonic()))
-    confirm_ms = int((time.monotonic() - t_conf) * 1000)
+
+    pair_pool = sorted(candidates, key=lambda r: r["item_cents"] if amount(r.get("item_cents")) else 10**12)
+    pair_jobs = pair_pool[:MAX_PAIR_CALLS] if pair else []
+    pair_over = pair_pool[MAX_PAIR_CALLS:] if pair else []
+    target_summary = {"name": target.get("name") or "", "brand": brand, "mpn": mpn,
+                      "variant_details": list(target.get("variant_details") or []), "gtin": given_gtin}
+
+    def listing_fields(r):
+        return {k: r.get(k) for k in ("title", "seller_name", "seller_domain", "sku", "handle", "url") if r.get(k)}
+
+    t_phase = time.monotonic()
+    c_ex, c_fut = _start(lambda r: confirm(r, as_of), jobs, CONFIRM_WORKERS)
+    p_ex, p_fut = _start(lambda r: pair(target_summary, listing_fields(r)), pair_jobs, PAIR_WORKERS)
+    outcomes = _collect(c_ex, c_fut, min(t_phase + CONFIRM_PHASE_S, deadline))
+    confirm_ms = int((time.monotonic() - t_phase) * 1000)
+    pair_out = _collect(p_ex, p_fut, min(t_phase + PAIR_PHASE_S, deadline))
+    pair_ms = int((time.monotonic() - t_phase) * 1000)
 
     receipts = []
     confirmed_by = {}            # (seller, listing) -> ["merchant_api"]
@@ -260,68 +283,54 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
             if _key(q) in published:
                 q["identity_basis"] = None
 
-    # ---- c. model-number candidates
+    # model-number candidates: an agreeing published barcode decides first, else the listing check verdict
     quote_by_key = {_key(q): q for q in merchant_quotes}
-    pair_jobs = []
+    pair_index = {id(r): i for i, r in enumerate(pair_jobs)}
+    over_ids = {id(r) for r in pair_over}
     ranked_candidates = []
+    pair_results = []
     for r in candidates:
         q = quote_by_key.get(_key(r))
         code = q.get("gtin") if q and _valid_gtin(q.get("gtin")) else (r.get("gtin") if _valid_gtin(r.get("gtin")) else None)
+        i = pair_index.get(id(r))
+        kind, value = pair_out.get(i, (None, None)) if i is not None else (None, None)
+        verdict = value.get("verdict") if kind == "ok" and isinstance(value, dict) else None
+        if i is not None:
+            if kind == "ok" and isinstance(value, dict):
+                for rec in value.get("receipts") or []:
+                    receipts.append(dict(rec, seller=r.get("seller"), listing=r.get("listing")))
+            else:
+                receipts.append({"job": "pair", "seller": r.get("seller"), "listing": r.get("listing"),
+                                 "status": kind, "error": value if kind == "error" else None})
+            pair_results.append({"seller": r.get("seller"), "listing": r.get("listing"),
+                                 "verdict": verdict or kind, "error": value if kind == "error" else None})
         if code and run_gtin:
             if same_gtin(code, run_gtin):
                 r["gtin"] = code
                 ranked_candidates.append(r)      # merchant_barcode tier inside evaluate
             else:
                 leads.append((r, "Published barcode differs from the target"))
-            continue
-        pair_jobs.append(r)
-    pair_jobs.sort(key=lambda r: r["item_cents"] if amount(r.get("item_cents")) else 10**12)
-    over = pair_jobs[MAX_PAIR_CALLS:]
-    pair_jobs = pair_jobs[:MAX_PAIR_CALLS] if pair else []
-    for r in over if pair else []:
-        leads.append((r, "Listing check limit reached"))
-    if not pair:
-        for r in candidates:
-            if r not in ranked_candidates and all(r is not x for x, _ in leads):
-                leads.append((r, "Two-model listing check not available"))
-    target_summary = {"name": target.get("name") or "", "brand": brand, "mpn": mpn,
-                      "variant_details": list(target.get("variant_details") or []), "gtin": run_gtin}
-
-    def listing_fields(r):
-        return {k: r.get(k) for k in ("title", "seller_name", "seller_domain", "sku", "handle", "url") if r.get(k)}
-
-    t_pair = time.monotonic()
-    pair_out = _run_parallel(lambda r: pair(target_summary, listing_fields(r)), pair_jobs, PAIR_WORKERS,
-                             deadline - time.monotonic())
-    pair_ms = int((time.monotonic() - t_pair) * 1000)
-    pair_results = []
-    for i, r in enumerate(pair_jobs):
-        kind, value = pair_out[i]
-        verdict = value.get("verdict") if kind == "ok" and isinstance(value, dict) else None
-        if kind == "ok" and isinstance(value, dict):
-            for rec in value.get("receipts") or []:
-                receipts.append(dict(rec, seller=r.get("seller"), listing=r.get("listing")))
-        pair_results.append({"seller": r.get("seller"), "listing": r.get("listing"), "verdict": verdict or kind,
-                             "error": value if kind == "error" else None})
-        if kind != "ok":
-            receipts.append({"job": "pair", "seller": r.get("seller"), "listing": r.get("listing"),
-                             "status": kind, "error": value if kind == "error" else None})
-        if verdict == "match":
+        elif i is not None and verdict == "match":
             r["identity_basis"] = "model_number"
-            q = quote_by_key.get(_key(r))
             if q:
                 q["identity_basis"] = "model_number"
             ranked_candidates.append(r)
-        else:
+        elif i is not None:
             why = {"different": "Listing check found a different item",
                    "abstain": "Listing check could not confirm the same item",
-                   "timeout": "Listing check timed out"}.get(verdict or kind, "Listing check failed")
+                   "timeout": PAIR_LATE}.get(verdict or kind, "Listing check failed")
             leads.append((r, why))
+        elif id(r) in over_ids:
+            leads.append((r, "Listing check limit reached"))
+        else:
+            leads.append((r, "Two-model listing check not available"))
     lead_keys = {_key(r) for r, _ in leads}
 
     # ---- d. rank
     ranked = cluster + ranked_candidates + [q for q in merchant_quotes if _key(q) not in lead_keys] + passthrough
     eff_target = {"upid": upid, "gtin": run_gtin}
+    if not clock_given:
+        as_of = max(as_of, int(time.time()))    # storefront reads happen during the fan-out: judge them after it
     ev = evaluate(eff_target, goal, ranked, as_of)
     # a merchant 'mismatch' without a differing field still must never let the seller win
     if mismatched:
@@ -364,9 +373,10 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
         headline = HEADLINE_MANY
 
     rejected, seen = [], set()
+    eligible_keys = {(e["seller"], e["listing"]) for e in ev["eligible"]}
     for x in ev["excluded"]:
         k = (x["seller"], x["listing"], x["reason"])
-        if k in seen:
+        if k in seen or k[:2] in eligible_keys:   # an older duplicate of an eligible listing is not a rejection
             continue
         seen.add(k)
         row = newest.get((x["seller"], x["listing"])) or next(
@@ -456,16 +466,39 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
         if skipped_sellers:
             parts.append("{} not checked (limit)".format(len(skipped_sellers)))
         m_note = "; ".join(parts)
+    late_pairs = sum(1 for x in pair_results if x["verdict"] == "timeout")
+    failed_pairs = sum(1 for x in pair_results if x["verdict"] == "error")
+    granted = sum(1 for r in ranked_candidates if r.get("identity_basis") == "model_number")
+    if not pair:
+        l_status, l_note = "not_connected", "Listing check not available"
+    elif not pair_jobs:
+        l_status, l_note = "ok", "No model-number candidates to check"
+    else:
+        answered = len(pair_jobs) - late_pairs - failed_pairs
+        l_status = "ok" if answered == len(pair_jobs) and not pair_over else ("failed" if answered == 0 and not late_pairs else "limited")
+        parts = ["{} checked, {} matched".format(len(pair_jobs), granted)]
+        if late_pairs:
+            parts.append("{} did not finish in time".format(late_pairs))
+        if failed_pairs:
+            parts.append("{} failed".format(failed_pairs))
+        if pair_over:
+            parts.append("{} not checked (limit)".format(len(pair_over)))
+        l_note = "; ".join(parts)
+    if m_status == "ok" and (counts.get("timeout") or skipped_sellers) and confirm is not None:
+        m_status = "limited"
     sources = [
         {"id": "shop_catalog", "name": "Shop catalog (shop.dev)", "kind": "catalog",
          "status": "ok" if shop_rows else "limited", "offers": len(shop_rows),
          "eligible": len({e["seller"] for e in ev["eligible"]
                           if any(_key(r) == (e["seller"], e["listing"]) for r in shop_rows)}),
-         "ms": None, "note": "" if shop_rows else "No catalog rows for this item"},
+         "ms": catalog_ms, "note": "" if shop_rows else "No catalog rows for this item"},
         {"id": "merchant_storefronts", "name": "Merchant storefronts", "kind": "merchant", "status": m_status,
          "offers": len(merchant_quotes), "eligible": len({e["seller"] for e in ev["eligible"] if e["seller"] in responded_m}),
          "ms": confirm_ms if jobs else None, "note": m_note,
          "merchants": {"attempted": len(checked), "responded": len(responded_m), **counts}},
+        {"id": "listing_checks", "name": "Two-model listing check (Neon + Carbon)", "kind": "model",
+         "status": l_status, "offers": len(pair_jobs), "eligible": granted,
+         "ms": pair_ms if pair_jobs else None, "note": l_note},
     ]
     attempted = 1 + (1 if jobs else 0)
     responded = (1 if shop_rows else 0) + (1 if responded_m else 0)
@@ -481,6 +514,7 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
             "model_number_granted": sum(1 for r in ranked_candidates if r.get("identity_basis") == "model_number"),
             "leads": len(leads)},
         "pair_checks": pair_results, "pair_ms": pair_ms if pair_jobs else None,
+        "confirm_ms": confirm_ms if jobs else None,
         "elapsed_ms": int((time.monotonic() - started) * 1000),
     })
     return {"result": result, "coverage": coverage, "receipts": receipts, "evaluation": evaluation}

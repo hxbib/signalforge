@@ -2,12 +2,12 @@
 
 Call shapes were checked against the installed SDK:
   stable.interactions.create(model=, input=[{"type":"image","mime_type":,"data":<base64 str>}, {"type":"text","text":}],
-      system_instruction=<str>, store=False, generation_config={"thinking_level": ...},
+      system_instruction=<str>, store=<bool>, generation_config={"thinking_level": ...},
       response_format={"type":"text","mime_type":"application/json","schema":<JSON Schema>})
       -> .id, .output_text, .status
-  beta.decisions.create(model="gemini-decision-1", input=[...same parts...], questions={key: {"type":"choice",
-      "instructions": str, "criteria": {option_id: description}}})
-      -> .answers[key].choice / .confidence / .probabilities   (the response carries NO id field)
+  Measured live: with store=False the service answers with id == "" (there is no interaction to refer to); only a
+  stored interaction has an id. interactions.delete(id=...) removes a stored one (a later get returns 404).
+  RETENTION below selects stateless / delete-after-read / kept.
 http_options timeout is in milliseconds; the per-call `timeout=` argument is in seconds.
 """
 import base64
@@ -23,6 +23,13 @@ from gemini_io import CARBON, DECISION, NEON
 THRESHOLD = 0.75
 STABLE_TIMEOUT_MS = int(os.environ.get("SF_MODEL_TIMEOUT_MS", "45000"))
 BETA_TIMEOUT_MS = int(os.environ.get("SF_DECISION_TIMEOUT_MS", "15000"))
+# Shopper media stays transient unless the operator decides otherwise (SF_STORE_INTERACTIONS):
+#   "0" (default)  stateless call; the service issues no id, so the receipt carries "id": None
+#   "delete"       stored for the duration of the call, deleted right after the output is read; the receipt carries
+#                  the id the service issued and "retained": False (or "retained": True + "delete_error" if the
+#                  delete did not go through)
+#   "1"            stored and kept at the model service; the receipt carries the id and "retained": True
+RETENTION = {"0": "none", "1": "keep", "delete": "delete"}.get(os.environ.get("SF_STORE_INTERACTIONS", "0"), "none")
 # Allowed levels only (never "minimal"); a waiting shopper gets the fast level by default.
 THINKING = {NEON: os.environ.get("SF_NEON_THINKING", "low"), CARBON: os.environ.get("SF_CARBON_THINKING", "low")}
 
@@ -123,20 +130,36 @@ def structured(job, model, instruction, schema, data):
     try:
         stable, _ = clients()
         result = stable.interactions.create(
-            model=model, input=data, system_instruction=instruction, store=False,
+            model=model, input=data, system_instruction=instruction, store=RETENTION != "none",
             generation_config={"thinking_level": THINKING.get(model, "low")},
             response_format={"type": "text", "mime_type": "application/json", "schema": wire_schema(schema)})
+        issued = getattr(result, "id", None) or None
+        kept = _release(stable, issued) if RETENTION != "none" else {}
         text = getattr(result, "output_text", None)
         if not text:
             raise ValueError(f"empty model output (status {getattr(result, 'status', 'unknown')})")
         value = schema.model_validate_json(text)
-        if not getattr(result, "id", None):
-            raise ValueError("interaction returned no id")
+        if RETENTION != "none" and not issued:
+            raise ValueError("stored interaction returned no id")
     except ModelCallError:
         raise
     except Exception as exc:
         raise ModelCallError(job, model, safe_message(exc)) from exc
-    return value, {"job": job, "model": model, "id": result.id, "ms": round((time.monotonic() - start) * 1000)}
+    return value, {"job": job, "model": model, "id": issued, "ms": round((time.monotonic() - start) * 1000), **kept}
+
+
+def _release(stable, issued):
+    """Retention facts for the receipt. In delete mode the stored interaction is removed before anything else."""
+    if RETENTION == "keep" or not issued:
+        return {"retained": bool(issued)}
+    error = None
+    for _ in range(2):
+        try:
+            stable.interactions.delete(id=issued)
+            return {"retained": False}
+        except Exception as exc:
+            error = safe_message(exc)
+    return {"retained": True, "delete_error": error}
 
 
 QUESTION = {"target": {

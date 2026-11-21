@@ -267,3 +267,58 @@ def test_model_call_error_is_safe(monkeypatch):
     assert "secret-value-123" not in message and "RuntimeError" in message
     err = models.ModelCallError("view", "gemini-4-neon", message)
     assert (err.job, err.model, err.safe_message) == ("view", "gemini-4-neon", message)
+
+
+# ---- retention of interactions at the model service -----------------------------------------------------------
+class FakeInteractions:
+    def __init__(self, fail_delete=False):
+        self.created, self.deleted, self.fail_delete = [], [], fail_delete
+
+    def create(self, **body):
+        self.created.append(body)
+        stored = body["store"]
+        return type("R", (), {"id": "v1_fake" if stored else "", "status": "completed",
+                              "output_text": '{"verdict":"abstain","left_quote":"","right_quote":"","explanation":""}'})()
+
+    def delete(self, id):
+        if self.fail_delete:
+            raise RuntimeError("delete refused")
+        self.deleted.append(id)
+
+
+def run_structured(monkeypatch, mode, fail_delete=False):
+    from deal_models import Pair
+    fake = FakeInteractions(fail_delete)
+    monkeypatch.setattr(model_io, "RETENTION", mode)
+    monkeypatch.setattr(model_io, "clients", lambda: (type("C", (), {"interactions": fake})(), None))
+    _, receipt = model_io.structured("pair_verdict", "gemini-4-carbon", "instruction", Pair, model_io.text_part({}))
+    return fake, receipt
+
+
+def test_default_is_stateless():
+    import importlib
+    import os
+    if "SF_STORE_INTERACTIONS" not in os.environ:
+        assert importlib.reload(model_io).RETENTION == "none"
+
+
+def test_stateless_call_stores_nothing_and_has_no_id(monkeypatch):
+    fake, receipt = run_structured(monkeypatch, "none")
+    assert fake.created[0]["store"] is False and not fake.deleted
+    assert receipt["id"] is None and "retained" not in receipt
+
+
+def test_delete_mode_removes_the_interaction_and_keeps_the_issued_id(monkeypatch):
+    fake, receipt = run_structured(monkeypatch, "delete")
+    assert fake.created[0]["store"] is True and fake.deleted == ["v1_fake"]
+    assert receipt["id"] == "v1_fake" and receipt["retained"] is False
+
+
+def test_delete_failure_is_reported_on_the_receipt(monkeypatch):
+    _, receipt = run_structured(monkeypatch, "delete", fail_delete=True)
+    assert receipt["retained"] is True and "delete refused" in receipt["delete_error"]
+
+
+def test_keep_mode_says_retained(monkeypatch):
+    fake, receipt = run_structured(monkeypatch, "keep")
+    assert fake.created[0]["store"] is True and not fake.deleted and receipt["retained"] is True

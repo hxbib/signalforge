@@ -54,9 +54,8 @@ def main():
             if receipt.get("attempt"):
                 summary = f"second look ({'accepted' if seen['recovery']['accepted'] else 'not accepted'}) · " + \
                     (summary if seen["recovery"]["accepted"] else "first reading kept")
-            # the Decisions API response has no id field, so the gate line is ok without one
-            good = bool(receipt["id"]) or receipt["job"] == "gate"
-            ok = line(receipt["job"], receipt["model"], good, summary, receipt["id"], receipt["ms"]) and ok
+            # a completed, validated call is ok; an id exists only for a stored interaction (never for a decision)
+            ok = line(receipt["job"], receipt["model"], True, summary, receipt["id"], receipt["ms"]) and ok
     try:
         goal = models.parse_goal(image, args.note)
     except Exception as exc:
@@ -64,7 +63,7 @@ def main():
     else:
         intent, receipt = goal["intent"], goal["receipt"]
         summary = f"{intent['operation']} · {intent['basis']} · {intent['fulfillment']} · market {intent['market']}"
-        ok = line("goal", receipt["model"], bool(receipt["id"]), summary, receipt["id"], receipt["ms"]) and ok
+        ok = line("goal", receipt["model"], True, summary, receipt["id"], receipt["ms"]) and ok
     return 0 if ok else 1
 
 

@@ -197,6 +197,20 @@ def test_routes(monkeypatch):
     assert c.post(f"/api/watch/{w['watch_id']}/pause").json()["status"] == "paused"
     assert c.post("/api/watch/w_nope/pause").status_code == 404
     assert c.post("/api/search/run_nope/watch", json={}).status_code == 404
+    assert c.post("/api/search/run_test/watch", json={}, headers={"origin": "https://evil.test"}).status_code == 400
+
+    api = FastAPI()
+    api.include_router(routes.router)
+
+    @api.middleware("http")
+    async def session(request, call_next):
+        request.state.session = request.headers.get("x-session", "")
+        return await call_next(request)
+    monkeypatch.setattr(store, "owner", lambda rid: "alice" if rid == "run_test" else None)
+    c = TestClient(api)
+    assert c.post("/api/search/run_test/watch", json={}, headers={"x-session": "mallory"}).status_code == 404
+    assert c.post(f"/api/watch/{w['watch_id']}/pause", headers={"x-session": "mallory"}).status_code == 404
+    assert c.post(f"/api/watch/{w['watch_id']}/pause", headers={"x-session": "alice"}).status_code == 200
 
 
 def test_any_store_never_silently_single_store():

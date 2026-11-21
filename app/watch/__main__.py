@@ -1,4 +1,4 @@
-"""python -m app.watch demo "<buyer words>" [--run RUN_ID] [--hand-draft MODE:OP:CENTS]
+"""python -m app.watch demo "<buyer words>" [--run RUN_ID] [--runs-db PATH] [--hand-draft MODE:OP:CENTS]
 
 Uses a stored run (the given one, else the latest run with a verified offer). With no stored run it uses a
 clearly labelled development fixture with no price and a blank image. The rule is compiled by a real
@@ -12,11 +12,12 @@ import sys
 import app.watch as watch
 
 
-def _latest_run():
+def _latest_run(path=None, run_id=None):
     from app.config import DB_PATH
     try:
-        conn = sqlite3.connect(DB_PATH)
-        rows = conn.execute("SELECT doc, image FROM runs ORDER BY updated_at DESC LIMIT 50").fetchall()
+        conn = sqlite3.connect(f"file:{path or DB_PATH}?mode=ro", uri=True)
+        rows = conn.execute("SELECT doc, image FROM runs WHERE ?='' OR run_id=? ORDER BY updated_at DESC LIMIT 50",
+                            (run_id or "", run_id or "")).fetchall()
         conn.close()
     except sqlite3.Error:
         return None, None
@@ -54,19 +55,16 @@ def main():
     ap.add_argument("command")
     ap.add_argument("--run")
     ap.add_argument("--hand-draft")
+    ap.add_argument("--runs-db", help="read the run (read-only) from this SQLite file instead of SF_DB")
     args = ap.parse_args()
     if args.hand_draft:
         import os
         os.environ["SF_DB"] = ":memory:"  # a hand-built draft is never persisted
-    if args.run:
-        from app import store
-        run, image = store.get_run(args.run), store.get_image(args.run)
-        if run is None:
-            sys.exit(f"unknown run {args.run}")
-    else:
-        run, image = _latest_run()
-        if run is None:
-            run, image = _fixture()
+    run, image = _latest_run(args.runs_db, args.run)
+    if run is None and args.run:
+        sys.exit(f"unknown run {args.run} or it has no verified offer")
+    if run is None:
+        run, image = _fixture()
     try:
         doc = watch.create(run, args.command, compile=_hand(args.hand_draft) if args.hand_draft else None,
                            image=image)

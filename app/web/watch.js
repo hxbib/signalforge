@@ -27,7 +27,8 @@ function playground(rows, note) {
 
 export function renderWatch(root, run, actions) {
   const w = run.watch;
-  if (!w && !(TERMINAL.has(run.state) && run.result)) { root.replaceChildren(); return; }
+  const offerable = TERMINAL.has(run.state) && run.state !== 'needs_detail' && run.result && run.result.status !== 'needs_identity';
+  if (!w && !offerable) { root.replaceChildren(); return; }
   const status = h('p', { class: 'watch-msg', role: 'status' });
 
   async function send(path, payload, controls, failText) {
@@ -68,11 +69,11 @@ export function renderWatch(root, run, actions) {
 
   const parts = [h('h2', { id: 'watch-title' }, w ? 'Watch' : 'Want to know when this changes?')];
   if (w) {
-    const canPause = (w.status === 'active') && typeof w.pause_url === 'string' && w.pause_url.startsWith('/');
-    const pause = canPause ? h('button', { type: 'button', class: 'btn' }, 'Undo — pause this watch') : null;
+    const canPause = (w.status === 'active' || w.status === 'preview_only') && typeof w.pause_url === 'string' && w.pause_url.startsWith('/');
+    const pause = canPause ? h('button', { type: 'button', class: 'btn' }, w.status === 'active' ? 'Undo — pause this watch' : 'Pause this preview') : null;
     if (pause) pause.addEventListener('click', () => send(w.pause_url, {}, [pause], 'The watch was not paused'));
     parts.push(
-      h('p', { class: 'watch-scope' }, w.scope_sentence || 'No scope sentence was returned for this watch.'),
+      w.scope_sentence ? h('p', { class: 'watch-scope' }, w.scope_sentence) : null,
       h('p', { class: `watch-status watch-${w.status}` }, h('span', { class: 'badge' }, STATUS[w.status] || words(w.status)),
         w.origin ? h('span', { class: 'watch-origin' }, w.origin === 'buyer' ? 'Started by your tap' : `Origin: ${words(w.origin)}`) : null),
       w.preview_reason ? h('p', { class: 'watch-reason' }, w.preview_reason) : null,

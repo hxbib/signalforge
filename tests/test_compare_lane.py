@@ -217,17 +217,74 @@ class CompareLane(unittest.TestCase):
         self.assertEqual(pair.calls, [])
         self.assertEqual(r["leads"][0]["seller_name"], "Outside")
 
-    def test_candidate_with_agreeing_barcode_skips_pair(self):
+    def test_agreeing_barcode_outranks_listing_check(self):
         cand = row("outside", 1999, product="gid://shopify/p/other", title="Acme X100")
-        pair = pair_says("different")
+        pair = pair_says("different")      # runs concurrently with the confirm; the barcode decides
         r = run([row("alpha", 2999), cand], pair=pair)["result"]
-        self.assertEqual(pair.calls, [])
         self.assertEqual((r["winners"][0]["seller_name"], r["winners"][0]["identity_basis"]), ("Outside", "merchant_barcode"))
 
     def test_malformed_confirm_answer_counts_as_failed(self):
         out = run_comparison(TARGET, ITEM, [row("alpha", 2999)], as_of=NOW, confirm=lambda q, a: None, pair=None)
         self.assertEqual(out["coverage"]["sources"][1]["merchants"]["failed"], 1)
         self.assertEqual(out["result"]["winners"][0]["confirmed_by"], [])
+
+    def test_confirm_and_pair_run_side_by_side(self):
+        def slow_pair(target, listing):
+            time.sleep(0.6)
+            return {"verdict": "match", "receipts": []}
+        cands = [row("c%d" % i, 1000 + i, product="gid://shopify/p/other", title="Acme X100 widget") for i in range(6)]
+        t0 = time.monotonic()
+        out = run([row("alpha", 2999)] + cands, pair=slow_pair,
+                  confirm=confirming(barcode=None, delay={"Alpha": 0.6}))
+        self.assertLess(time.monotonic() - t0, 1.1)       # 6 checks at once, alongside the confirm
+        lc = out["coverage"]["sources"][2]
+        self.assertEqual((lc["id"], lc["status"], lc["offers"], lc["eligible"]), ("listing_checks", "ok", 6, 6))
+        self.assertIsInstance(lc["ms"], int)
+        self.assertIsInstance(out["coverage"]["sources"][1]["ms"], int)
+
+    def test_late_listing_check_stays_lead(self):
+        def late_pair(target, listing):
+            time.sleep(3.0)
+            return {"verdict": "match", "receipts": []}
+        cand = row("late", 1999, product="gid://shopify/p/other", title="Acme X100 widget")
+        t0 = time.monotonic()
+        out = run([row("alpha", 2999), cand], pair=late_pair, deadline_s=1.0, confirm=confirming(barcode=None))
+        self.assertLess(time.monotonic() - t0, 2.0)
+        r = out["result"]
+        self.assertEqual(r["winners"][0]["seller_name"], "Alpha")
+        self.assertEqual(r["leads"][0]["lead_reason"], "identity check did not finish in time")
+        lc = out["coverage"]["sources"][2]
+        self.assertEqual(lc["status"], "limited")
+        self.assertIn("1 did not finish in time", lc["note"])
+
+    def test_listing_check_cap_and_cheapest_first(self):
+        pair = pair_says("abstain")
+        cands = [row("c%d" % i, 2000 - i, product="gid://shopify/p/other", title="Acme X100") for i in range(8)]
+        out = run([row("alpha", 2999)] + cands, pair=pair, confirm=confirming(barcode=None))
+        self.assertEqual(len(pair.calls), 6)
+        self.assertNotIn("C0", {c["seller_name"] for c in pair.calls})   # the two dearest are not checked
+        self.assertIn("2 not checked (limit)", out["coverage"]["sources"][2]["note"])
+
+    def test_merchant_read_after_clock_is_not_stale(self):
+        """bug 003: a confirm that reads after run start must not be called stale, nor the winner rejected."""
+        now = int(time.time())
+        cat = row("alpha", 1000, read_at=now)
+
+        def conf(q, as_of):
+            time.sleep(1.1)
+            m = dict(q, source="merchant_api", read_at=int(time.time()), gtin=UPC, sku="X")
+            return {"status": "confirmed", "quote": m, "receipt": {"source": "merchant_api", "read_at": m["read_at"]}, "note": ""}
+        out = run_comparison(TARGET, ITEM, [cat], confirm=conf, pair=None)
+        r = out["result"]
+        self.assertEqual([w["seller_name"] for w in r["winners"]], ["Alpha"])
+        self.assertEqual(r["winners"][0]["confirmed_by"], ["merchant_api"])
+        self.assertEqual(r["rejected"], [])
+
+    def test_stale_catalog_duplicate_of_eligible_listing_not_rejected(self):
+        out = run([row("alpha", 2999, read_at=NOW - 500)])     # fresh merchant read stands; old catalog read dropped
+        r = out["result"]
+        self.assertEqual([w["seller_name"] for w in r["winners"]], ["Alpha"])
+        self.assertEqual(r["rejected"], [])
 
 
 if __name__ == "__main__":

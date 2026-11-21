@@ -40,8 +40,9 @@ export function renderEvidence(shell, body, run) {
       models.map((m) => [words(m.job), m.model, code(m.id), duration(m.ms)])));
   }
   if (sources.length) {
-    parts.push(table('Source receipts', ['Source', 'Tool / host', 'Read at', 'Response hash'],
-      sources.map((s) => [words(s.source), s.tool || s.url_host, clock(s.read_at), code(s.response_hash)])));
+    parts.push(table('Source receipts', ['Source', 'Tool / host', 'Status', 'Read at', 'Time', 'Response hash'],
+      sources.map((s) => [words(s.source || s.job), s.tool || s.url_host, [words(s.status), s.error ? ` — ${s.error}` : ''].join('') || null,
+        clock(s.read_at), duration(s.ms) || null, code(s.response_hash)])));
   }
   if (rejected.length) {
     parts.push(table('Rejection reasons', ['Seller', 'Reason code', 'In words'],

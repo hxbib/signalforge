@@ -148,7 +148,7 @@ function render(run) {
   sync('question', [run.question, run.state, run.revision], () => renderQuestion($('#question'), run, actions));
   renderProgress($('#progress'), run.progress || []);
   $('#elapsed').textContent = typeof run.elapsed_ms === 'number'
-    ? `${done ? 'Finished in' : 'Running for'} ${(run.elapsed_ms / 1000).toFixed(1)} s` : '';
+    ? `${!done ? 'Running for' : run.state === 'needs_detail' ? 'Ran for' : 'Finished in'} ${(run.elapsed_ms / 1000).toFixed(1)} s` : '';
   sync('why', result && [result.near_miss, result.rejected, result.leads], () => renderWhy($('#why'), run));
   sync('coverage', run.coverage, () => renderCoverage($('#coverage'), run));
   sync('watch', [run.watch, run.state, result && result.status, run.revision], () => renderWatch($('#watch'), run, actions));

@@ -152,7 +152,8 @@ main { flex: 1; display: flex; flex-direction: column; width: 100%; }
 .seller-pre { display: block; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 2px; }
 .listing-title { color: var(--muted); font-size: .92rem; margin-top: 2px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .facts { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 10px; font-size: .95rem; color: var(--soft); }
-.fact { display: inline-flex; align-items: center; gap: 6px; }
+.fact { display: inline-flex; align-items: flex-start; gap: 6px; }
+.fact .icon, .identity-basis .icon { margin-top: .22em; }
 .fact-yes { color: var(--ink); font-weight: 700; }
 .fact-yes .icon { color: var(--accent); }
 .cta { white-space: nowrap; min-height: 54px; font-size: 1.05rem; max-width: 100%; }
@@ -169,7 +170,7 @@ main { flex: 1; display: flex; flex-direction: column; width: 100%; }
 .ids dt { color: var(--muted); font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
 .ids dd { font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .ids dd.unknown { font-weight: 500; color: var(--muted); }
-.identity-basis { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--soft); font-size: .95rem; }
+.identity-basis { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; color: var(--soft); font-size: .95rem; }
 .identity-basis .icon { color: var(--accent); }
 
 #assumptions:not(:empty) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 18px; }
@@ -348,3 +349,12 @@ td { font-variant-numeric: tabular-nums; }
 }
 .sims-more { margin-top: 8px; }
 .sims-more .sims { margin-top: 8px; }
+
+@media (min-width: 620px) {
+  .winners-tied { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.winners-tied .winner { grid-template-columns: minmax(0, 1fr); padding: 14px 16px; align-content: space-between; }
+.winners-tied .seller { font-size: 1.2rem; }
+.winners-tied .listing-title { -webkit-line-clamp: 1; }
+.winners-tied .facts { font-size: .88rem; gap: 2px 14px; margin-top: 8px; }
+.winners-tied .cta { min-height: 44px; font-size: .95rem; width: 100%; white-space: normal; text-align: center; }
