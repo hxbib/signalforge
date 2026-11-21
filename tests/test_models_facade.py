@@ -295,11 +295,15 @@ def run_structured(monkeypatch, mode, fail_delete=False):
     return fake, receipt
 
 
-def test_default_is_stateless():
+def test_retention_switch(monkeypatch):
     import importlib
-    import os
-    if "SF_STORE_INTERACTIONS" not in os.environ:
-        assert importlib.reload(model_io).RETENTION == "none"
+    try:
+        for value, mode in (("0", "none"), ("delete", "delete"), ("1", "keep")):
+            monkeypatch.setenv("SF_STORE_INTERACTIONS", value)
+            assert importlib.reload(model_io).RETENTION == mode
+    finally:
+        monkeypatch.undo()
+        importlib.reload(model_io)
 
 
 def test_stateless_call_stores_nothing_and_has_no_id(monkeypatch):

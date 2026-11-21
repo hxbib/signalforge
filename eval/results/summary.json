@@ -1,0 +1,293 @@
+{
+ "generated_at": 1795294871,
+ "generated_from": [
+  "pairs-v1.json",
+  "baskets-gap.json"
+ ],
+ "experiment": "A: WDC v2 product-pair identity (independent public gold)",
+ "code_sha": "6cf119452e542c3959106a0ec6431847bbc3900e",
+ "model_ids": [
+  "gemini-4-carbon",
+  "gemini-4-neon"
+ ],
+ "n": 40,
+ "arms": {
+  "baseline": {
+   "n": 40,
+   "correct": 34,
+   "wrong": 0,
+   "abstained": 6,
+   "errors": 0,
+   "answered": 34,
+   "false_accepts": 0,
+   "actual_negatives": 20,
+   "false_rejects": 0,
+   "actual_positives": 20,
+   "precision_on_answered": 1.0,
+   "latency": {
+    "median_ms": 4516,
+    "p90_ms": 6382,
+    "mean_ms": 5125,
+    "max_ms": 24651
+   },
+   "rate_limit_retries": 0
+  },
+  "full": {
+   "n": 40,
+   "correct": 30,
+   "wrong": 0,
+   "abstained": 10,
+   "errors": 0,
+   "answered": 30,
+   "false_accepts": 0,
+   "actual_negatives": 20,
+   "false_rejects": 0,
+   "actual_positives": 20,
+   "precision_on_answered": 1.0,
+   "latency": {
+    "median_ms": 10779,
+    "p90_ms": 14174,
+    "mean_ms": 11433,
+    "max_ms": 20086
+   },
+   "rate_limit_retries": 0
+  }
+ },
+ "paired": {
+  "both": 30,
+  "baseline_only": 4,
+  "full_only": 0,
+  "neither": 6
+ },
+ "by_stratum": [
+  {
+   "stratum": "cameras/different",
+   "baseline": {
+    "n": 10,
+    "correct": 10,
+    "abstained": 0,
+    "errors": 0,
+    "false_accepts": 0
+   },
+   "full": {
+    "n": 10,
+    "correct": 10,
+    "abstained": 0,
+    "errors": 0,
+    "false_accepts": 0
+   }
+  },
+  {
+   "stratum": "cameras/match",
+   "baseline": {
+    "n": 10,
+    "correct": 6,
+    "abstained": 4,
+    "errors": 0,
+    "false_accepts": 0
+   },
+   "full": {
+    "n": 10,
+    "correct": 5,
+    "abstained": 5,
+    "errors": 0,
+    "false_accepts": 0
+   }
+  },
+  {
+   "stratum": "computers/different",
+   "baseline": {
+    "n": 10,
+    "correct": 10,
+    "abstained": 0,
+    "errors": 0,
+    "false_accepts": 0
+   },
+   "full": {
+    "n": 10,
+    "correct": 10,
+    "abstained": 0,
+    "errors": 0,
+    "false_accepts": 0
+   }
+  },
+  {
+   "stratum": "computers/match",
+   "baseline": {
+    "n": 10,
+    "correct": 8,
+    "abstained": 2,
+    "errors": 0,
+    "false_accepts": 0
+   },
+   "full": {
+    "n": 10,
+    "correct": 5,
+    "abstained": 5,
+    "errors": 0,
+    "false_accepts": 0
+   }
+  }
+ ],
+ "latest_version": "v1",
+ "versions": [
+  {
+   "name": "pairs-v1",
+   "version": "v1",
+   "code_sha": "6cf119452e542c3959106a0ec6431847bbc3900e",
+   "freeze_code_sha": "0e6fbd26c1283ffd9c0749587d423e4e8ff58f34",
+   "started_at": 1795294161,
+   "finished_at": 1795294497,
+   "n": 40,
+   "model_ids": [
+    "gemini-4-carbon",
+    "gemini-4-neon"
+   ],
+   "arms": {
+    "baseline": {
+     "n": 40,
+     "correct": 34,
+     "wrong": 0,
+     "abstained": 6,
+     "errors": 0,
+     "answered": 34,
+     "false_accepts": 0,
+     "actual_negatives": 20,
+     "false_rejects": 0,
+     "actual_positives": 20,
+     "precision_on_answered": 1.0,
+     "latency": {
+      "median_ms": 4516,
+      "p90_ms": 6382,
+      "mean_ms": 5125,
+      "max_ms": 24651
+     },
+     "rate_limit_retries": 0
+    },
+    "full": {
+     "n": 40,
+     "correct": 30,
+     "wrong": 0,
+     "abstained": 10,
+     "errors": 0,
+     "answered": 30,
+     "false_accepts": 0,
+     "actual_negatives": 20,
+     "false_rejects": 0,
+     "actual_positives": 20,
+     "precision_on_answered": 1.0,
+     "latency": {
+      "median_ms": 10779,
+      "p90_ms": 14174,
+      "mean_ms": 11433,
+      "max_ms": 20086
+     },
+     "rate_limit_retries": 0
+    }
+   },
+   "paired": {
+    "both": 30,
+    "baseline_only": 4,
+    "full_only": 0,
+    "neither": 6
+   },
+   "by_stratum": [
+    {
+     "stratum": "cameras/different",
+     "baseline": {
+      "n": 10,
+      "correct": 10,
+      "abstained": 0,
+      "errors": 0,
+      "false_accepts": 0
+     },
+     "full": {
+      "n": 10,
+      "correct": 10,
+      "abstained": 0,
+      "errors": 0,
+      "false_accepts": 0
+     }
+    },
+    {
+     "stratum": "cameras/match",
+     "baseline": {
+      "n": 10,
+      "correct": 6,
+      "abstained": 4,
+      "errors": 0,
+      "false_accepts": 0
+     },
+     "full": {
+      "n": 10,
+      "correct": 5,
+      "abstained": 5,
+      "errors": 0,
+      "false_accepts": 0
+     }
+    },
+    {
+     "stratum": "computers/different",
+     "baseline": {
+      "n": 10,
+      "correct": 10,
+      "abstained": 0,
+      "errors": 0,
+      "false_accepts": 0
+     },
+     "full": {
+      "n": 10,
+      "correct": 10,
+      "abstained": 0,
+      "errors": 0,
+      "false_accepts": 0
+     }
+    },
+    {
+     "stratum": "computers/match",
+     "baseline": {
+      "n": 10,
+      "correct": 8,
+      "abstained": 2,
+      "errors": 0,
+      "false_accepts": 0
+     },
+     "full": {
+      "n": 10,
+      "correct": 5,
+      "abstained": 5,
+      "errors": 0,
+      "false_accepts": 0
+     }
+    }
+   ]
+  }
+ ],
+ "experiment_b": {
+  "experiment": "B",
+  "status": "not_run",
+  "recorded_at": 1795293540,
+  "statement": "The five-case photo-to-offer check (eval/seal_baskets.py; baseline basket_answer(packet, False) vs system basket_answer(packet, True)) was not run: rights-cleared merchant evidence for five preregistered cases could not be assembled before the 16:05 ET proof cutoff. No case, price or score was substituted.",
+  "missing": [
+   "A sampling frame from an authorized merchant or manufacturer catalog whose terms grant retention and offsite model-evaluation rights. The shop.dev catalog is used shopper-triggered with a short eligibility window; spec/RETAILERS.md forbids feeding restricted external offer data to an evaluation job, and no source in the registry records an evaluation right.",
+   "Five rights-cleared product images (merchant-licensed or the team's own new capture of each drawn item).",
+   "A human operator adjudication pass of all five cases (GTIN/model, pack, seller, stock, basis, fulfillment, amount, fees) against the independent source before either arm runs.",
+   "Sealed cases.jsonl with source_rights and gold_evidence per case (eval/seal_baskets.py refuses to seal without them)."
+  ],
+  "what_exists": "Experiment A (independent WDC v2 pairs) measures the identity check the live app uses for tier model_number. End-to-end live runs are timed by the app itself and are not reported here."
+ },
+ "freeze": {
+  "frozen_at": 1795293437,
+  "frozen_at_iso": "2026-11-21T20:37:17+0000",
+  "code_sha": "0e6fbd26c1283ffd9c0749587d423e4e8ff58f34",
+  "seed": "0e6fbd26c1283ffd9c0749587d423e4e8ff58f34",
+  "corpus": "WDC Product Data Corpus v2, non-normalized gold standard (Peeters, Primpeli, Bizer)",
+  "corpus_sha256": {
+   "computers": "481647e337ae5edbc00bddd801e6a89f669d9cdec2f3178a53fed8628bb68a9d",
+   "cameras": "9001747fa3829b22af3b68245399be6648c3712470b2aa997b2c6e35c3c50ca8"
+  },
+  "inputs_sha256": "01352cb92d3b2f43e5813a7a04207d0829e4e2b1be11bdfdb658247371302058",
+  "gold_sha256": "222dba3d72b21a03cdab6a61c50ae5b31b425e6e96c9072c5dc6ddbe114fce94",
+  "n": 40
+ }
+}

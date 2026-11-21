@@ -343,7 +343,9 @@ td { font-variant-numeric: tabular-nums; }
 .proof .evidence .kv { margin-top: 10px; }
 
 @media (min-width: 861px) {
+  .below { grid-template-rows: auto 1fr; }
   .below > #why { grid-column: 1; grid-row: 1 / span 2; }
+  .below > #watch { align-self: start; }
   .below > #coverage, .below > #watch { grid-column: 2; }
   .below > #why:empty ~ #coverage, .below > #why:empty ~ #watch { grid-column: auto; }
 }
@@ -358,3 +360,13 @@ td { font-variant-numeric: tabular-nums; }
 .winners-tied .listing-title { -webkit-line-clamp: 1; }
 .winners-tied .facts { font-size: .88rem; gap: 2px 14px; margin-top: 8px; }
 .winners-tied .cta { min-height: 44px; font-size: .95rem; width: 100%; white-space: normal; text-align: center; }
+
+.leads-more { margin-top: 8px; }
+.leads-more summary { font-weight: 600; color: var(--soft); }
+
+.proof > *, .proof .panel, .arms > * { min-width: 0; }
+.proof .panel { overflow-wrap: anywhere; }
+.proof td, .proof th { overflow-wrap: normal; white-space: nowrap; }
+.proof .evidence { overflow-x: auto; }
+.metrics dd { white-space: nowrap; }
+.metrics dd .kv dd { white-space: nowrap; }

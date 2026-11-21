@@ -6,6 +6,7 @@ really happened: every progress row, receipt and number in a run comes from a ca
 import importlib
 import logging
 import sys
+import threading
 import time
 import traceback
 import uuid
@@ -13,10 +14,14 @@ from concurrent.futures import ThreadPoolExecutor
 
 from app import store
 from app.config import GATE_THRESHOLD
-from app.contracts import BASIS_LABEL, offer_view
+from app.contracts import BASIS_LABEL, WORKING, offer_view
 
 LOG = logging.getLogger("signalforge.pipeline")
 _runs = ThreadPoolExecutor(max_workers=8, thread_name_prefix="run")
+_write = threading.Lock()
+RUN_LIMIT_S = 90.0
+TIMEOUT_MESSAGE = "This search took longer than 90 seconds and was stopped. Please try again."
+INTERRUPTED_MESSAGE = "This search was interrupted by a server restart. Please try again."
 
 BASIS_WORDS = {
     "barcode": "barcode on the item matches",
@@ -57,12 +62,13 @@ class Steps:
         self._t: dict[str, float] = {}
 
     def save(self) -> None:
-        current = store.get_run(self.run["run_id"])
-        if current is None or current["revision"] != self.revision:
-            raise Superseded()
-        if current.get("watch") and not self.run.get("watch"):
-            self.run["watch"] = current["watch"]
-        store.save_run(self.run)
+        with _write:
+            current = store.get_run(self.run["run_id"])
+            if current is None or current["revision"] != self.revision or current.get("_closed") == self.revision:
+                raise Superseded()
+            if current.get("watch") and not self.run.get("watch"):
+                self.run["watch"] = current["watch"]
+            store.save_run(self.run)
 
     def _row(self, sid: str, label: str | None = None) -> dict:
         for row in self.run["progress"]:
@@ -79,18 +85,66 @@ class Steps:
 
     def end(self, sid: str, status: str, detail: str = "", ms: int | None = None) -> None:
         row = self._row(sid)
-        if ms is None and sid in self._t:
+        if ms is None and sid in self._t and status != "skipped":
             ms = round((time.monotonic() - self._t[sid]) * 1000)
         row.update(status=status, detail=detail, ms=ms)
         self.save()
 
 
 def start(run_id: str) -> None:
-    _runs.submit(_guard, run_id, None)
+    _submit(run_id, None)
 
 
 def resume(run_id: str, answer: dict) -> None:
-    _runs.submit(_guard, run_id, answer)
+    _submit(run_id, answer)
+
+
+def _submit(run_id: str, answer: dict | None) -> None:
+    run = store.get_run(run_id)
+    if run is None:
+        return
+    timer = threading.Timer(RUN_LIMIT_S, _expire, (run_id, run["revision"]))
+    timer.daemon = True
+    timer.start()
+    _runs.submit(_guard, run_id, answer, timer)
+
+
+def _close(run: dict, code: str, message: str) -> None:
+    """Stop a run that can no longer finish: the real reason is shown, nothing is filled in."""
+    for row in run.get("progress") or []:
+        if row.get("status") == "running":
+            row["status"] = "failed"
+            row["detail"] = row.get("detail") or message
+    run["state"] = "unavailable"
+    run["question"] = None
+    run["error"] = {"code": code, "message": message}
+    run["_ended_ms"] = _now_ms()
+    run["_closed"] = run["revision"]
+
+
+def _expire(run_id: str, revision: int) -> None:
+    """Wall-clock guard: a revision still working after RUN_LIMIT_S is closed; its late worker can no longer write."""
+    try:
+        with _write:
+            run = store.get_run(run_id)
+            if run is None or run["revision"] != revision or run.get("state") not in WORKING:
+                return
+            _close(run, "timeout", TIMEOUT_MESSAGE)
+            store.save_run(run)
+        print(f"[pipeline] run {run_id} stopped by the {RUN_LIMIT_S:.0f} s guard", file=sys.stderr)
+    except Exception:
+        traceback.print_exc(limit=4, file=sys.stderr)
+
+
+def recover_interrupted() -> int:
+    """At server start: runs left in a working state by a dead process are closed, never left spinning."""
+    count = 0
+    with _write:
+        for run in store.working_runs():
+            _close(run, "interrupted", INTERRUPTED_MESSAGE)
+            store.save_run(run)
+            count += 1
+    return count
 
 
 def _classify(exc: Exception) -> tuple[str, str]:
@@ -107,7 +161,15 @@ def _classify(exc: Exception) -> tuple[str, str]:
     return "internal", f"Unexpected {type(exc).__name__} while working on this photo."
 
 
-def _guard(run_id: str, answer: dict | None) -> None:
+def _guard(run_id: str, answer: dict | None, timer: threading.Timer | None = None) -> None:
+    try:
+        _work(run_id, answer)
+    finally:
+        if timer is not None:
+            timer.cancel()
+
+
+def _work(run_id: str, answer: dict | None) -> None:
     run = store.get_run(run_id)
     image = store.get_image(run_id)
     if run is None or image is None:
@@ -126,10 +188,14 @@ def _guard(run_id: str, answer: dict | None) -> None:
         code, message = _classify(exc)
         print(f"[pipeline] run {run_id} failed: {code}: {type(exc).__name__}", file=sys.stderr)
         traceback.print_exc(limit=6, file=sys.stderr)
-        for row in run["progress"]:
-            if row["status"] == "running":
+        running = [row for row in run["progress"] if row["status"] == "running"]
+        named = getattr(exc, "job", None) if any(row["id"] == getattr(exc, "job", None) for row in running) else None
+        for row in running:
+            if named is None or row["id"] == named:
                 row["status"] = "failed"
                 row["detail"] = row["detail"] or message
+            else:
+                row["status"] = "skipped"
         run["state"] = "unavailable"
         run["error"] = {"code": code, "message": message}
         run["_ended_ms"] = _now_ms()
@@ -185,13 +251,30 @@ def _empty_result(rows: list[dict], status: str) -> dict:
             "leads": [offer_view(r) for r in rows[:8]]}
 
 
+def _catalog_calls(receipts: list[dict]) -> tuple[int, int]:
+    """(calls made, calls failed) to the Shop catalog, from the receipts of the calls that really happened."""
+    calls = [r for r in receipts if r.get("source", "shop_catalog") == "shop_catalog"]
+    return len(calls), sum(1 for r in calls if r.get("status") == "failed")
+
+
+def _catalog_status(made: int, failed: int) -> tuple[str, str]:
+    if not failed:
+        return "ok", ""
+    return ("failed" if failed >= made else "limited"), f"{failed} of {made} catalog calls failed"
+
+
 def _catalog_coverage(rows: list[dict], receipts: list[dict]) -> dict:
     ms = sum(r.get("ms") or 0 for r in receipts) or None
     sellers = len({r.get("seller") for r in rows if r.get("seller")})
-    return {"attempted": 1, "responded": 1, "sellers_seen": sellers, "sellers_eligible": 0,
+    status, note = _catalog_status(*_catalog_calls(receipts))
+    return {"attempted": 1, "responded": 0 if status == "failed" else 1, "sellers_seen": sellers, "sellers_eligible": 0,
             "checked_at": int(time.time()),
-            "sources": [{"id": "shop_catalog", "name": "Shop catalog (shop.dev)", "kind": "catalog", "status": "ok",
-                         "offers": len(rows), "eligible": 0, "ms": ms, "note": ""}]}
+            "sources": [{"id": "shop_catalog", "name": "Shop catalog (shop.dev)", "kind": "catalog", "status": status,
+                         "offers": len(rows), "eligible": 0, "ms": ms, "note": note}]}
+
+
+def _degraded(coverage: dict | None) -> bool:
+    return any(s.get("status") in ("failed", "timeout", "limited") for s in (coverage or {}).get("sources") or [])
 
 
 def _fresh(run: dict, image: bytes, steps: Steps) -> None:
@@ -200,12 +283,27 @@ def _fresh(run: dict, image: bytes, steps: Steps) -> None:
     run.update(state="reading", question=None, result=None, coverage=None, error=None, target=None, decision=None,
                goal=None, progress=[], receipts={"models": [], "sources": []})
     run["assumptions"] = [a for a in run["assumptions"] if not a["id"].startswith("scoped_")]
-    steps.start("view", "Gemini 4 Neon read the photo")
-    steps.start("gate", "Gemini Decision 1 checked the target")
-    steps.start("goal", "Gemini 4 Carbon read the request")
+    steps.start("view", "Gemini 4 Neon reads the photo")
+    steps.start("gate", "Gemini Decision 1 checks the target is clear")
+    steps.start("goal", "Gemini 4 Carbon reads the request")
     with ThreadPoolExecutor(max_workers=1) as pool:
         goal_job = pool.submit(models.parse_goal, image, note)
-        seen = models.inspect(image, note)
+        try:
+            seen = models.inspect(image, note)
+        except Exception as exc:
+            job = getattr(exc, "job", None)
+            failed = job if job in ("view", "gate") else "view"
+            steps.end(failed, "failed", _classify(exc)[1])
+            steps.end("gate" if failed == "view" else "view", "skipped")
+            try:
+                parsed = goal_job.result()
+            except Exception as goal_exc:
+                steps.end("goal", "failed", _classify(goal_exc)[1])
+            else:
+                run["goal"] = parsed["intent"]
+                run["receipts"]["models"].append(parsed["receipt"])
+                steps.end("goal", "done", _goal_detail(parsed["intent"]), parsed["receipt"].get("ms"))
+            raise
         visual, decision = seen["visual"], dict(seen["decision"])
         decision.setdefault("threshold", GATE_THRESHOLD)
         receipts = {r.get("job"): r for r in seen.get("receipts", [])}
@@ -244,7 +342,7 @@ def _identify(run: dict, image: bytes, steps: Steps, ctx: dict, chosen: str | No
     visual, decision, scan = ctx["visual"], ctx["decision"], ctx.get("scan")
     shop = _lane("app.merchants.shop")
     run["state"] = "searching"
-    steps.start("identity", "Catalog identity evidence from shop.dev")
+    steps.start("identity", "Shop catalog identity evidence")
     try:
         found = shop.anchors_for(visual, image)
     except Exception as exc:
@@ -256,7 +354,7 @@ def _identify(run: dict, image: bytes, steps: Steps, ctx: dict, chosen: str | No
     if not anchors:
         run["result"] = _empty_result(rows, "no_verified_offer")
         run["coverage"] = _catalog_coverage(rows, run["receipts"]["sources"])
-        run["state"] = "complete"
+        run["state"] = "partial" if _degraded(run["coverage"]) else "complete"
         return
     if chosen is not None:
         anchor = next((a for a in anchors if a.get("upid") == chosen), None)
@@ -265,7 +363,7 @@ def _identify(run: dict, image: bytes, steps: Steps, ctx: dict, chosen: str | No
             steps.end("bind", "failed", "That product is no longer in the catalog results")
             run["result"] = _empty_result(rows, "needs_identity")
             run["coverage"] = _catalog_coverage(rows, run["receipts"]["sources"])
-            run["state"] = "complete"
+            run["state"] = "partial" if _degraded(run["coverage"]) else "complete"
             return
         steps.end("bind", "done", f"{anchor.get('title')} · {BASIS_WORDS['buyer_choice']}")
         _compare(run, steps, ctx, anchor, "buyer_choice", rows)
@@ -281,7 +379,7 @@ def _identify(run: dict, image: bytes, steps: Steps, ctx: dict, chosen: str | No
         run["state"] = "needs_detail"
         return
     models = _lane("app.models")
-    steps.start("bind", "Gemini 4 Carbon bound the exact product")
+    steps.start("bind", "Gemini 4 Carbon binds the exact product")
     bound = models.bind(image, run["note"], anchors, visual, decision, scan)
     receipt = bound.get("receipt") or {}
     if receipt:
@@ -316,9 +414,17 @@ def _compare(run: dict, steps: Steps, ctx: dict, anchor: dict, basis: str, rows:
                      "identity_basis": basis, "bound": True}
     run["state"] = "verifying"
     run["question"] = None
-    steps.start("offers", "Merchants checked")
+    steps.start("offers", "Merchant offers verified")
+    made, failed = _catalog_calls(run["receipts"]["sources"])
     out = compare.run_comparison(target, {"basis": "item", "fulfillment": "online_us"}, rows)
     coverage = out.get("coverage") or {}
+    if failed:
+        status, note = _catalog_status(made, failed)
+        for source in coverage.get("sources") or []:
+            if source.get("id") == "shop_catalog":
+                if source.get("status") == "ok":
+                    source["status"] = status
+                source["note"] = "; ".join(x for x in (source.get("note"), note) if x)
     run["result"], run["coverage"] = out.get("result"), coverage
     run["_evaluation"] = out.get("evaluation")
     for receipt in out.get("receipts") or []:
@@ -328,17 +434,19 @@ def _compare(run: dict, steps: Steps, ctx: dict, anchor: dict, basis: str, rows:
         run["target"]["gtin"] = found_gtin
     steps.end("offers", "done",
               f"{coverage.get('sellers_seen', 0)} sellers seen · {coverage.get('sellers_eligible', 0)} eligible")
-    degraded = any(s.get("status") in ("failed", "timeout", "limited") for s in coverage.get("sources") or [])
-    run["state"] = "partial" if (degraded or ctx.get("scoped")) else "complete"
+    final = "partial" if (_degraded(coverage) or ctx.get("scoped")) else "complete"
     if intent.get("operation") == "compare_and_watch" and (intent.get("watch_words") or "").strip():
+        # the result is already saved and visible; the state turns terminal only once the watch step has answered,
+        # so a polling browser also receives the watch
         steps.start("watch", "Watch request checked")
         try:
-            watch = _lane("app.watch").create(run, intent["watch_words"])
+            watch = _lane("app.watch").create({**run, "state": final}, intent["watch_words"])
         except Exception as exc:
             steps.end("watch", "failed", _classify(exc)[1])
         else:
             run["watch"] = watch
             steps.end("watch", "done", watch.get("scope_sentence") or watch.get("status") or "")
+    run["state"] = final
 
 
 def _answered(run: dict, image: bytes, steps: Steps, answer: dict) -> None:

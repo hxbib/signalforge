@@ -1,0 +1,257 @@
+{
+ "seed": "caf5b8f8661aa63f223a1bbedc1d2dd9138b2bf9",
+ "code_sha": "caf5b8f8661aa63f223a1bbedc1d2dd9138b2bf9",
+ "created_at": 1795294791,
+ "target_cases": 24,
+ "queries": [
+  "building set",
+  "board game",
+  "action figure",
+  "phone charger",
+  "power bank",
+  "wireless headphones",
+  "usb-c cable",
+  "mechanical keyboard",
+  "insulated water bottle",
+  "tumbler",
+  "nonstick frying pan",
+  "chef knife",
+  "pour over coffee maker",
+  "face moisturizer",
+  "hardcover novel",
+  "jigsaw puzzle",
+  "dog toy",
+  "yoga mat",
+  "notebook",
+  "backpack",
+  "bluetooth speaker",
+  "desk lamp",
+  "sunscreen",
+  "running socks",
+  "cast iron skillet",
+  "card game",
+  "cat treats",
+  "fountain pen",
+  "camping lantern",
+  "electric toothbrush"
+ ],
+ "cases": [
+  {
+   "case_id": "e2e-01",
+   "query": "building set",
+   "gold_upid": "gid://shopify/p/3EwC6G4sDtRpi6Wass45Pf",
+   "sellers": 1,
+   "image_sha256": "98a7f4ac4ebb9a28142342ce229f4e7a5e4d4dd2def5afce3d945eccbcc2ab38",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-02",
+   "query": "board game",
+   "gold_upid": "gid://shopify/p/7rZiZOrVF3kToZK2hsg7Rs",
+   "sellers": 10,
+   "image_sha256": "0ae96cd8b6f064905387f67b9575e472e513cade8fe90dea830f07de4e9acdad",
+   "candidates": 10,
+   "pick_tries": 2
+  },
+  {
+   "case_id": "e2e-03",
+   "query": "action figure",
+   "gold_upid": "gid://shopify/p/2eX3uPXxJXnXnmByWL77v2",
+   "sellers": 1,
+   "image_sha256": "f5a1beb24afad478cff5be2ecae9516f846ca8947cab35d7aa37f967fe580395",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-04",
+   "query": "phone charger",
+   "gold_upid": "gid://shopify/p/65JeQKD6RL2Xd6n2sHFzz9",
+   "sellers": 1,
+   "image_sha256": "350e2e1306a852433bb006b5280a7d9a21334e6449b2c3139a469aa99fd569be",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-05",
+   "query": "power bank",
+   "gold_upid": "gid://shopify/p/2AXR7W3ArDCre1tutQBnCB",
+   "sellers": 1,
+   "image_sha256": "7e33e099d6910d36d3d8e8ae3b3f279cbaf375154e66e282f02efef54a76cd5d",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-06",
+   "query": "wireless headphones",
+   "gold_upid": "gid://shopify/p/23bCHNQ4exQeaqeqUdkZei",
+   "sellers": 1,
+   "image_sha256": "6638f44939ae27694edc92491543677aaf033a29d15248ef337c2de3e56b3257",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-07",
+   "query": "usb-c cable",
+   "gold_upid": "gid://shopify/p/3fw7mi1QJ4ISVZ7z9dPUwH",
+   "sellers": 1,
+   "image_sha256": "376f5ecd5cd0f18e154844eef1bef3b63c001e12a9f8bebb79beb97b2b1379a6",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-08",
+   "query": "mechanical keyboard",
+   "gold_upid": "gid://shopify/p/5OS7FuVEdzWVAhAmyRuSOr",
+   "sellers": 1,
+   "image_sha256": "e237c3556c99d39fc2ac14df53565367341fc4fc7df0a84eaf03e16317d7674f",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-09",
+   "query": "insulated water bottle",
+   "gold_upid": "gid://shopify/p/52gow3FTgSM3iYFPQ5q43f",
+   "sellers": 1,
+   "image_sha256": "132e10984b79cf1d55ab9944f41d8f83f09ae324131c9e1e7bedf3fa15359d32",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-10",
+   "query": "tumbler",
+   "gold_upid": "gid://shopify/p/3ZemO87J3BOf54YP7p8pXZ",
+   "sellers": 1,
+   "image_sha256": "815f063ffa4544ee0af71b0019a304eadf6b88fa943c941b535781c3301658a5",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-11",
+   "query": "nonstick frying pan",
+   "gold_upid": "gid://shopify/p/40zFO1avHTSojt13usQZAY",
+   "sellers": 3,
+   "image_sha256": "3e61a33ac79af62746c82eb4cb618a7e52ace145ddba4bda49c723d06e6ff80e",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-12",
+   "query": "chef knife",
+   "gold_upid": "gid://shopify/p/2EiffKbipYPEuTbVPMb5nq",
+   "sellers": 1,
+   "image_sha256": "56ec4c9cd9fa494f75640f31a1aa16cccf0795ff98e2c9d54b38e6c5f30ac9e2",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-13",
+   "query": "pour over coffee maker",
+   "gold_upid": "gid://shopify/p/5cVA7zYYDNjCRR2UQJ0YQG",
+   "sellers": 2,
+   "image_sha256": "088194f2679f573430593e4b855eba8efb7c13481ff15681301961b7aba445b7",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-14",
+   "query": "face moisturizer",
+   "gold_upid": "gid://shopify/p/5kfU3O2usZ89v9y8Ly11TO",
+   "sellers": 10,
+   "image_sha256": "3fb59a905315512f8f86a2e0af29528446a601226c7e75e111f508efa63c9362",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-15",
+   "query": "hardcover novel",
+   "gold_upid": "gid://shopify/p/7n0bo5Jgyn2cxST71OSj9C",
+   "sellers": 1,
+   "image_sha256": "def281878c0a54a168339b574819541165547413efaffbd35e450544efb23479",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-16",
+   "query": "jigsaw puzzle",
+   "gold_upid": "gid://shopify/p/6wQUCgpGkrVgU7gq8Prsrq",
+   "sellers": 7,
+   "image_sha256": "aa852f69e11000ed3ed6b9891ddb6e445e39c445566d4d2027a2962e4029e5c9",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-17",
+   "query": "dog toy",
+   "gold_upid": "gid://shopify/p/6TnHEjpgiXH0BFwr7qiS5V",
+   "sellers": 2,
+   "image_sha256": "d474c1a5d04bab67afcbe55ea92828429629822fade8c8f0328b3ac8f73480ed",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-18",
+   "query": "yoga mat",
+   "gold_upid": "gid://shopify/p/tX1srx7qs6NVVDKjS6zCU",
+   "sellers": 9,
+   "image_sha256": "bfa43b9dcb8d6d8699f1fec368cb4cad088a706d837d6961652a3b9f9e40bd1e",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-19",
+   "query": "notebook",
+   "gold_upid": "gid://shopify/p/4OsEFQvDujseVbtNYzRwdI",
+   "sellers": 3,
+   "image_sha256": "2eb4a283965523a00109ab02a3cb9ff0577a6a7a5e661ae404ee0800da696b76",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-20",
+   "query": "backpack",
+   "gold_upid": "gid://shopify/p/6mDNHE0MyTGwU1aVc1Gjeb",
+   "sellers": 1,
+   "image_sha256": "342df84966528daf9460ad788f122a2fc7de282f73bc5e88727c05d6cd023d07",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-21",
+   "query": "bluetooth speaker",
+   "gold_upid": "gid://shopify/p/2cdHAtdujP1fEKJvw302lw",
+   "sellers": 2,
+   "image_sha256": "b6cabef94f9c73c03c6e472f5c32ef234712ab7d376396aab8dfb1e011b4d35b",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-22",
+   "query": "desk lamp",
+   "gold_upid": "gid://shopify/p/1RrIrwhjIDYqACldQzpHWg",
+   "sellers": 10,
+   "image_sha256": "fc96e0868d948e7bbc34012160e2a5a87c6aaeb665f0716e8ac2d4179b5d424e",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-23",
+   "query": "sunscreen",
+   "gold_upid": "gid://shopify/p/VFhwa1rJ8dBDfOblxfccD",
+   "sellers": 1,
+   "image_sha256": "bfcfc9e08c0966e73ac2bd7207b307d1f4d96a5c32f690673490c9b21660a195",
+   "candidates": 10,
+   "pick_tries": 1
+  },
+  {
+   "case_id": "e2e-24",
+   "query": "running socks",
+   "gold_upid": "gid://shopify/p/Y675JaYcz8R0lIRsF6zZn",
+   "sellers": 1,
+   "image_sha256": "dac8808627052309282f7a2b9f99d8c485a6a38fdb51223401acd8a36148aeeb",
+   "candidates": 10,
+   "pick_tries": 1
+  }
+ ],
+ "skipped": []
+}

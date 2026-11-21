@@ -57,6 +57,14 @@ def owner(run_id: str) -> str | None:
     return row[0] if row else None
 
 
+def working_runs() -> list[dict]:
+    """Every run whose stored state is still a working one."""
+    with _lock, _connect() as conn:
+        rows = conn.execute("SELECT doc FROM runs").fetchall()
+    docs = (json.loads(doc) for (doc,) in rows)
+    return [d for d in docs if d.get("state") in ("reading", "searching", "verifying")]
+
+
 def active_runs(session: str | None = None) -> int:
     """Runs still working, started in the last two minutes (older ones are treated as abandoned)."""
     since = int(time.time()) - 120

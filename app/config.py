@@ -25,8 +25,8 @@ WEB_DIR = ROOT / "app" / "web"
 MODEL_IDS = {"view": "gemini-4-neon", "gate": "gemini-decision-1", "goal": "gemini-4-carbon", "bind": "gemini-4-carbon"}
 GATE_THRESHOLD = 0.75
 MAX_UPLOAD_BYTES = 5_000_000
-MAX_ACTIVE_RUNS = 6
-MAX_ACTIVE_RUNS_PER_SESSION = 2
+MAX_ACTIVE_RUNS = 14
+MAX_ACTIVE_RUNS_PER_SESSION = 3
 
 
 def key_present() -> bool:

@@ -17,6 +17,13 @@ LOG = logging.getLogger("signalforge")
 app = FastAPI(title="SignalForge", docs_url=None, redoc_url=None, openapi_url=None)
 
 
+@app.on_event("startup")
+def _recover_interrupted_runs() -> None:
+    count = pipeline.recover_interrupted()
+    if count:
+        LOG.warning("%d interrupted searches closed at startup", count)
+
+
 def _commit() -> str:
     try:
         return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True,

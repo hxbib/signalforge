@@ -533,7 +533,9 @@ def _cli(argv):
               "part_number": target.get("mpn") or "", "barcode": target.get("gtin") or "",
               "variant_details": target.get("variant_details") or [],
               "query": " ".join(x for x in (target.get("brand"), target.get("mpn"), target.get("name")) if x)}
+    t_shop = time.monotonic()
     found = shop.anchors_for(visual, None)
+    catalog_ms = int((time.monotonic() - t_shop) * 1000)
     anchors = found.get("anchors") or []
     if not target.get("upid"):
         pick = next((a for a in anchors if title_carries(a.get("title"), target.get("brand"), target.get("mpn"))), None)
@@ -541,7 +543,7 @@ def _cli(argv):
             target = dict(target, upid=pick["upid"], gtin=target.get("gtin") or pick.get("gtin"))
     print("anchors:", len(anchors), "| rows:", len(found.get("rows") or []), "| bound upid:", target.get("upid"))
     out = run_comparison({**{"upid": None, "gtin": None, "brand": "", "mpn": "", "name": "", "variant_details": []},
-                          **target}, goal, found.get("rows") or [])
+                          **target}, goal, found.get("rows") or [], catalog_ms=catalog_ms)
     r = out["result"]
     print(json.dumps({"result": {k: r[k] for k in ("status", "headline", "price_cents", "currency", "basis_label")},
                       "winners": [(w["seller_name"], w["item_cents"], w["identity_basis"], w["confirmed_by"], w["url"])
@@ -552,6 +554,7 @@ def _cli(argv):
                       "leads": [(x["seller_name"], x["title"][:60], x["lead_reason"]) for x in r["leads"]][:10],
                       "coverage": out["coverage"],
                       "target_gtin": out["evaluation"]["target_gtin"],
+                      "timing_ms": {k: out["evaluation"].get(k) for k in ("confirm_ms", "pair_ms", "elapsed_ms")},
                       "identity_counts": out["evaluation"]["identity_counts"]}, indent=1, default=str))
     return 0
 

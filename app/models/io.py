@@ -23,15 +23,36 @@ from gemini_io import CARBON, DECISION, NEON
 THRESHOLD = 0.75
 STABLE_TIMEOUT_MS = int(os.environ.get("SF_MODEL_TIMEOUT_MS", "45000"))
 BETA_TIMEOUT_MS = int(os.environ.get("SF_DECISION_TIMEOUT_MS", "15000"))
-# Shopper media stays transient unless the operator decides otherwise (SF_STORE_INTERACTIONS):
-#   "0" (default)  stateless call; the service issues no id, so the receipt carries "id": None
+# Retention of each interaction at the model service (SF_STORE_INTERACTIONS). Lead decision 15:53 ET: stored for the
+# event so every receipt carries a real interaction id; the README discloses it.
+#   "1" (default)  stored and kept; the receipt carries the id and "retained": True
 #   "delete"       stored for the duration of the call, deleted right after the output is read; the receipt carries
 #                  the id the service issued and "retained": False (or "retained": True + "delete_error" if the
 #                  delete did not go through)
-#   "1"            stored and kept at the model service; the receipt carries the id and "retained": True
-RETENTION = {"0": "none", "1": "keep", "delete": "delete"}.get(os.environ.get("SF_STORE_INTERACTIONS", "0"), "none")
-# Allowed levels only (never "minimal"); a waiting shopper gets the fast level by default.
-THINKING = {NEON: os.environ.get("SF_NEON_THINKING", "low"), CARBON: os.environ.get("SF_CARBON_THINKING", "low")}
+#   "0"            stateless call; the service issues no id, so the receipt carries "id": None
+RETENTION = {"0": "none", "1": "keep", "delete": "delete"}.get(os.environ.get("SF_STORE_INTERACTIONS", "1"), "keep")
+# generation_config.thinking_level per job. Only "low" | "medium" | "high" | "xhigh" are ever sent ("minimal" is
+# refused here). The values are the lowest level that kept brand / part_number / target_count / the gate outcome
+# correct in the measured table on coord/BOARD.md.
+ALLOWED_LEVELS = ("low", "medium", "high", "xhigh")
+
+
+def _level(name, default):
+    value = os.environ.get(name, default).strip().lower()
+    if value not in ALLOWED_LEVELS:
+        raise ValueError(f"{name} must be one of {', '.join(ALLOWED_LEVELS)}")
+    return value
+
+
+VIEW_THINKING = _level("SF_THINKING_VIEW", "low")          # Gemini 4 Neon reads the photo
+GOAL_THINKING = _level("SF_THINKING_GOAL", "low")          # Gemini 4 Carbon reads the request
+BIND_THINKING = _level("SF_THINKING_BIND", "low")          # Gemini 4 Carbon picks the catalog anchor
+WATCH_THINKING = _level("SF_THINKING_WATCH", "low")        # Gemini 4 Carbon compiles the watch rule
+# The listing check is part of the frozen evaluation protocol: fixed, not overridable from the environment.
+PAIR_EXTRACT_THINKING = "low"
+PAIR_VERDICT_THINKING = "low"
+THINKING_BY_JOB = {"view": VIEW_THINKING, "goal": GOAL_THINKING, "bind": BIND_THINKING, "watch_rule": WATCH_THINKING,
+                   "pair_extract": PAIR_EXTRACT_THINKING, "pair_verdict": PAIR_VERDICT_THINKING}
 
 _lock = threading.Lock()
 _clients = None
@@ -124,14 +145,19 @@ def wire_schema(schema):
     return walk(doc)
 
 
-def structured(job, model, instruction, schema, data):
-    """One native structured-output Interactions call, validated by Pydantic. Returns (value, receipt)."""
+def structured(job, model, instruction, schema, data, thinking=None):
+    """One native structured-output Interactions call, validated by Pydantic. Returns (value, receipt).
+
+    `thinking` overrides the job's level (measurement and evaluation arms); it must be an allowed level."""
+    level = thinking or THINKING_BY_JOB.get(job, "low")
+    if level not in ALLOWED_LEVELS:
+        raise ValueError("unsupported thinking level")
     start = time.monotonic()
     try:
         stable, _ = clients()
         result = stable.interactions.create(
             model=model, input=data, system_instruction=instruction, store=RETENTION != "none",
-            generation_config={"thinking_level": THINKING.get(model, "low")},
+            generation_config={"thinking_level": level},
             response_format={"type": "text", "mime_type": "application/json", "schema": wire_schema(schema)})
         issued = getattr(result, "id", None) or None
         kept = _release(stable, issued) if RETENTION != "none" else {}

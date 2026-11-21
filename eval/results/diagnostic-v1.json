@@ -1,0 +1,152 @@
+{
+ "kind": "post-hoc diagnostic, not a score",
+ "of": "pairs-v1.json system-arm failures",
+ "ran_at": 1795294611,
+ "note": "independent re-run of the same two calls; model outputs can differ from the scored v1 run",
+ "cases": [
+  {
+   "id": "pair-01",
+   "neon_verdict": "match",
+   "carbon_verdict": "match",
+   "quote_ok": {
+    "neon_left": true,
+    "neon_right": true,
+    "carbon_left": true,
+    "carbon_right": true
+   },
+   "rules_fired": []
+  },
+  {
+   "id": "pair-06",
+   "neon_verdict": "match",
+   "carbon_verdict": "abstain",
+   "quote_ok": {
+    "neon_left": true,
+    "neon_right": true,
+    "carbon_left": true,
+    "carbon_right": true
+   },
+   "rules_fired": [
+    "models_disagree",
+    "carbon_abstained"
+   ]
+  },
+  {
+   "id": "pair-09",
+   "neon_verdict": "abstain",
+   "carbon_verdict": "abstain",
+   "quote_ok": {
+    "neon_left": true,
+    "neon_right": true,
+    "carbon_left": true,
+    "carbon_right": true
+   },
+   "rules_fired": [
+    "carbon_abstained"
+   ]
+  },
+  {
+   "id": "pair-11",
+   "neon_verdict": "match",
+   "carbon_verdict": "abstain",
+   "quote_ok": {
+    "neon_left": true,
+    "neon_right": true,
+    "carbon_left": true,
+    "carbon_right": true
+   },
+   "rules_fired": [
+    "models_disagree",
+    "carbon_abstained"
+   ]
+  },
+  {
+   "id": "pair-20",
+   "neon_verdict": "match",
+   "carbon_verdict": "abstain",
+   "quote_ok": {
+    "neon_left": true,
+    "neon_right": true,
+    "carbon_left": true,
+    "carbon_right": true
+   },
+   "rules_fired": [
+    "models_disagree",
+    "carbon_abstained"
+   ]
+  },
+  {
+   "id": "pair-25",
+   "neon_verdict": "match",
+   "carbon_verdict": "match",
+   "quote_ok": {
+    "neon_left": true,
+    "neon_right": false,
+    "carbon_left": true,
+    "carbon_right": true
+   },
+   "rules_fired": [
+    "quote_not_verbatim"
+   ]
+  },
+  {
+   "id": "pair-26",
+   "neon_verdict": "match",
+   "carbon_verdict": "abstain",
+   "quote_ok": {
+    "neon_left": true,
+    "neon_right": true,
+    "carbon_left": true,
+    "carbon_right": true
+   },
+   "rules_fired": [
+    "models_disagree",
+    "carbon_abstained"
+   ]
+  },
+  {
+   "id": "pair-37",
+   "neon_verdict": "match",
+   "carbon_verdict": "match",
+   "quote_ok": {
+    "neon_left": true,
+    "neon_right": true,
+    "carbon_left": false,
+    "carbon_right": false
+   },
+   "rules_fired": [
+    "quote_not_verbatim"
+   ]
+  },
+  {
+   "id": "pair-38",
+   "neon_verdict": "match",
+   "carbon_verdict": "abstain",
+   "quote_ok": {
+    "neon_left": true,
+    "neon_right": true,
+    "carbon_left": true,
+    "carbon_right": true
+   },
+   "rules_fired": [
+    "models_disagree",
+    "carbon_abstained"
+   ]
+  },
+  {
+   "id": "pair-39",
+   "neon_verdict": "match",
+   "carbon_verdict": "abstain",
+   "quote_ok": {
+    "neon_left": true,
+    "neon_right": true,
+    "carbon_left": true,
+    "carbon_right": true
+   },
+   "rules_fired": [
+    "models_disagree",
+    "carbon_abstained"
+   ]
+  }
+ ]
+}

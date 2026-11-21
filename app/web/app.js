@@ -8,6 +8,7 @@ import { renderEvidence } from './drawer.js';
 import { renderWatch } from './watch.js';
 
 const POLL_MS = 1000;
+const STALL_S = 45;
 const view = { capture: $('#capture'), run: $('#run'), shot: $('#shot'), live: $('#live'), conn: $('#conn') };
 const state = { runId: null, run: null, token: 0, timer: null, localUrl: null, announced: null, cache: new Map() };
 
@@ -26,6 +27,8 @@ function reset() {
   state.run = null;
   state.runId = null;
   state.announced = null;
+  state.mark = null;
+  state.markAt = Date.now();
   state.cache.clear();
   view.live.textContent = '';
   view.conn.textContent = '';
@@ -120,7 +123,11 @@ async function poll(token) {
     again();
     return;
   }
-  view.conn.textContent = '';
+  const mark = JSON.stringify([r.body.state, r.body.revision, r.body.progress]);
+  if (mark !== state.mark) { state.mark = mark; state.markAt = Date.now(); }
+  const quiet = Math.round((Date.now() - state.markAt) / 1000);
+  view.conn.textContent = !TERMINAL.has(r.body.state) && quiet >= STALL_S
+    ? `No new step reported for ${quiet} s. Still checking every second — or start a new search.` : '';
   state.run = r.body;
   render(r.body);
   if (!TERMINAL.has(r.body.state)) again();

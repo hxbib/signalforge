@@ -207,6 +207,8 @@ function offerLine(offer, sentence, cls, tag) {
   );
 }
 
+const leadLine = (o) => offerLine(o, typeof o.lead_reason === 'string' ? words(o.lead_reason) : '', 'line line-lead', 'Unverified — not checked');
+
 export function renderWhy(root, run) {
   const result = run.result;
   if (!result) { root.replaceChildren(); return; }
@@ -232,7 +234,10 @@ export function renderWhy(root, run) {
     parts.push(h('section', { class: 'panel leads', 'aria-labelledby': 'leads-title' },
       h('h2', { id: 'leads-title' }, 'Unverified leads — not checked'),
       h('p', { class: 'leads-note' }, 'Found during discovery. Identity, price and stock were not verified, so none of these were ranked.'),
-      h('ul', { class: 'lines' }, leads.map((o) => offerLine(o, typeof o.lead_reason === 'string' ? words(o.lead_reason) : '', 'line line-lead', 'Unverified — not checked'))),
+      h('ul', { class: 'lines' }, leads.slice(0, 3).map(leadLine)),
+      leads.length > 3 ? h('details', { class: 'leads-more' },
+        h('summary', null, `${leads.length - 3} more unverified lead${leads.length - 3 === 1 ? '' : 's'}`),
+        h('ul', { class: 'lines' }, leads.slice(3).map(leadLine))) : null,
     ));
   }
   fill(root, parts);

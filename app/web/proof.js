@@ -113,9 +113,10 @@ function failed(row) {
   return Object.entries(row).some(([k, v]) => v === false && /correct|pass|ok$/.test(k));
 }
 
-function caseTable(caption, rows) {
-  const keys = [];
+function caseTable(caption, rows, only) {
+  let keys = [];
   for (const r of rows) if (isObj(r)) for (const k of Object.keys(r)) if (!keys.includes(k)) keys.push(k);
+  if (only && only.some((k) => keys.includes(k))) keys = only.filter((k) => keys.includes(k));
   if (!keys.length) return tree(rows);
   return h('div', { class: 'table-wrap' }, h('table', null,
     h('caption', null, caption),
@@ -137,7 +138,8 @@ function render(doc) {
   parts.push(h('section', { class: 'panel' },
     h('h2', null, hasArm ? `Where the full system failed — ${failures.length} of ${cases.filter((c) => SYSTEM_KEYS.includes(c.arm)).length} cases`
       : `Failures (${failures.length}${cases.length ? ` of ${cases.length} cases` : ''})`),
-    failures.length ? caseTable('Wrong answers, abstentions scored as wrong, and errors', failures)
+    failures.length ? caseTable('Wrong answers, abstentions scored as wrong, and errors', failures,
+      hasArm ? ['id', 'category', 'gold', 'verdict', 'abstained', 'error', 'ms', 'wdc_pair_id'] : null)
       : h('p', { class: 'proof-lede' }, 'No failing case is marked in the recorded files.')));
   if (cases.length) {
     parts.push(h('details', { class: 'panel evidence' }, h('summary', null, `All ${cases.length} recorded cases`), caseTable('Every case', cases)));
