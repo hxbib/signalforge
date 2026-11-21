@@ -425,3 +425,20 @@ td { font-variant-numeric: tabular-nums; }
 .metrics .metric-block .kv dd { white-space: nowrap; font-weight: 700; text-align: right; }
 .shot-broken img { display: none; }
 .shot-broken::before { content: "This file could not be shown as an image."; display: block; padding: 18px; border: 1.5px dashed var(--line-strong); border-radius: 16px; color: var(--soft); }
+#assumptions:not(:empty) { margin-top: 12px; }
+@media (min-width: 861px) {
+  .run-grid { grid-template-rows: auto 1fr; }
+  .answer { display: contents; }
+  .shot { position: static; grid-column: 1; grid-row: 1; }
+  .shot img { max-height: 52vh; }
+  .run-grid > .answer > .progress-panel { grid-column: 1; grid-row: 2; align-self: start; min-width: 0; }
+  .run-grid > .answer > .result { grid-column: 2; grid-row: 1 / span 2; min-width: 0; }
+}
+#run-title { min-height: 2.12em; }
+.run-block { margin-top: 18px; padding-top: 6px; border-top: 1px solid var(--line); }
+.run-block:first-of-type { border-top: 0; margin-top: 4px; }
+@media (max-width: 860px) {
+  .result { display: flex; flex-direction: column; }
+  .result > #assumptions { order: 9; }
+  .result > .retry { align-self: flex-start; }
+}

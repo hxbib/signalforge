@@ -62,38 +62,53 @@ def _pairs(summary):
     return out
 
 
+def _e2e_row(label, key, a, n, note=""):
+    return (f'| {label} | {ARM_NAMES[key]}{note} | {_v(a.get("correct"))}/{_v(n)} | {_v(a.get("false_accepts"))}/{_v(n)} | '
+            f'{_v(a.get("abstained"))}/{_v(n)} | {_v(a.get("errors"))}/{_v(n)} | {_v(a.get("invalid_offers"))}/{_v(a.get("answered"))} | '
+            f'{_v(a.get("cheapest_agreement"))}/{_v(n)} | {_v(a.get("median_ms"))} |')
+
+
+def _screen(name, sc):
+    out = ["", f'**Decision 1 listing screen, calibration{name}** (run `{_v(sc.get("run"))}`, `{_v(sc.get("model"))}`, one call per case, '
+               f'{_v(sc.get("cases"))} cases): {_v(sc.get("judgments"))} listing judgments ({_v(sc.get("positives"))} positive, '
+               f'{_v(sc.get("negatives"))} negative), {_v(sc.get("error_cases"))} failed calls, ROC AUC {_v(sc.get("roc_auc"))}, '
+               f'Brier {_v(sc.get("brier"))}, top-scored listing is the drawn product in '
+               f'{_v(sc.get("top1_positive_cases"))}/{_v(sc.get("cases_with_positive"))} cases that had one.', "",
+           "| Threshold | True accepts | False accepts | Missed | Precision | Recall | False-accept rate |", "|---|---|---|---|---|---|---|"]
+    return out + [f'| p >= {_v(t.get("threshold"))} | {_v(t.get("tp"))} | {_v(t.get("fp"))} | {_v(t.get("fn"))} | {_v(t.get("precision"))} | '
+                  f'{_v(t.get("recall"))} | {_v(t.get("false_accept_rate"))} |' for t in sc.get("thresholds") or []]
+
+
 def _e2e(e):
     if not e:
         return ["**End-to-end benchmark (photo in, offer out):** not yet measured; `eval/results/e2e-summary.json` does not exist."]
-    n = e.get("n")
-    out = [f'**End-to-end benchmark (photo in, offer out):** {_v(n)} catalog photos drawn blind before any arm ran, blank note, no '
-           f'follow-up answer given, run `{_v(e.get("run"))}`, code `{_v(e.get("code_sha"))[:7]}`' +
-           (" plus uncommitted changes" if e.get("tree_dirty") else "") +
-           f', listing check `{_v(e.get("pair_version"))}`. Protocol: `eval/e2e/README.md`.', "",
-           "| Arm | Correct product | Wrong product | Stopped without an answer | Errors | Invalid offers / answered | "
-           "Cheapest agrees with reference | Median ms |", "|---|---|---|---|---|---|---|---|"]
-    for key in ("system", "baseline"):
-        a = (e.get("arms") or {}).get(key)
-        if a:
-            out.append(f'| {ARM_NAMES[key]} | {_v(a.get("correct"))}/{_v(n)} | {_v(a.get("false_accepts"))}/{_v(n)} | '
-                       f'{_v(a.get("abstained"))}/{_v(n)} | {_v(a.get("errors"))}/{_v(n)} | {_v(a.get("invalid_offers"))}/{_v(a.get("answered"))} | '
-                       f'{_v(a.get("cheapest_agreement"))}/{_v(n)} | {_v(a.get("median_ms"))} |')
-    if e.get("reading"):
-        out += ["", "Reading written by the benchmark's own script (`eval/e2e`):", ""] + [f"- {line}" for line in e["reading"]]
-    d = e.get("diagnostic") or {}
-    if d.get("system_abstention_codes") and not e.get("reading"):
-        out += ["", "Post-hoc diagnostic (changes no score): why the full system stopped: " +
-                ", ".join(f"`{k}` x{v}" for k, v in sorted(d["system_abstention_codes"].items())) + "."]
-    sc = e.get("screen")
-    if sc:
-        out += ["", f'**Decision 1 listing screen, calibration on the same {_v(sc.get("cases"))} cases** (run `{_v(sc.get("run"))}`, '
-                    f'`{_v(sc.get("model"))}`, one call per case): {_v(sc.get("judgments"))} listing judgments '
-                    f'({_v(sc.get("positives"))} positive, {_v(sc.get("negatives"))} negative), {_v(sc.get("error_cases"))} failed calls, '
-                    f'ROC AUC {_v(sc.get("roc_auc"))}, Brier {_v(sc.get("brier"))}, top-scored listing is the drawn product in '
-                    f'{_v(sc.get("top1_positive_cases"))}/{_v(sc.get("cases_with_positive"))} cases that had one.', "",
-                "| Threshold | True accepts | False accepts | Missed | Precision | Recall | False-accept rate |", "|---|---|---|---|---|---|---|"]
-        out += [f'| p >= {_v(t.get("threshold"))} | {_v(t.get("tp"))} | {_v(t.get("fp"))} | {_v(t.get("fn"))} | {_v(t.get("precision"))} | '
-                f'{_v(t.get("recall"))} | {_v(t.get("false_accept_rate"))} |' for t in sc.get("thresholds") or []]
+    runs = e.get("runs") or [{"name": e.get("run"), "label": f'run {_v(e.get("run"))} · draw A', "code_sha": e.get("code_sha"),
+                              "tree_dirty": e.get("tree_dirty"), "pair_version": e.get("pair_version"), "n": e.get("n"),
+                              "arms": e.get("arms"), "reading": e.get("reading")}]
+    out = ["**End-to-end benchmark (photo in, offer out):** catalog photos drawn blind and frozen before any arm ran on them, blank note, "
+           "no follow-up answer given, so a question from the app counts as no answer. Baseline: one Gemini 4 Carbon call handed the "
+           "photo and a list of listings. Protocol: `eval/e2e/README.md`."
+           + (f' Headline run: `{e["headline_run"]}`.' if e.get("headline_run") else ""), "",
+           "| Run | Arm | Correct product | Wrong product | Stopped without an answer | Errors | Invalid offers / answered | "
+           "Cheapest agrees with reference | Median ms |", "|---|---|---|---|---|---|---|---|---|"]
+    for r in runs:
+        kind = "held-out" if r.get("held_out") else "in-sample" if r.get("in_sample") else "first run"
+        label = (f'{_v(r.get("label") or r.get("name"))}{"" if kind == "first run" else f" ({kind})"}, code `{_v(r.get("code_sha"))[:7]}`'
+                 + (" plus uncommitted changes" if r.get("tree_dirty") else "")
+                 + (f', visual_match {"on" if r["visual_match"] else "off"}' if "visual_match" in r else ""))
+        for key in ("system", "baseline"):
+            a = (r.get("arms") or {}).get(key)
+            if a:
+                copied = key == "baseline" and r.get("baseline_source") and "not re-run" in str(r["baseline_source"])
+                out.append(_e2e_row(label, key, a, r.get("n"), f' (from {r["baseline_source"]})' if copied else ""))
+    for r in runs:
+        if r.get("reading"):
+            out += ["", f'Reading of {_v(r.get("label") or r.get("name"))}, written by the benchmark script itself (`eval/e2e`):', ""]
+            out += [f"- {line}" for line in r["reading"]]
+    screens = e.get("screens") or ({"a": e["screen"]} if e.get("screen") else {})
+    for name, sc in screens.items():
+        if sc:
+            out += _screen(f" on draw {str(name).upper()}", sc)
     return out
 
 
@@ -105,7 +120,7 @@ def block(summary):
     if not e2e and E2E.is_file():
         e2e = json.loads(E2E.read_text())
     if e2e:
-        files += [name for name in ("e2e-summary.json", "e2e-freeze.json") if name not in files and (E2E.parent / name).is_file()]
+        files += [name for name in ("e2e-summary.json", "e2e-freeze.json", "e2e-freeze-b.json") if name not in files and (E2E.parent / name).is_file()]
     lines = _pairs(summary) + [""] + _e2e(e2e) + [
         "",
         f'**Experiment B (five rights-cleared photo-to-offer cases):** status `{b.get("status", "unknown")}`. {b.get("statement", "")}'.rstrip(),

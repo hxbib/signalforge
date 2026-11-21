@@ -130,8 +130,10 @@ def summarize_arm(records: list[dict]) -> dict:
 
 def summarize(cases: list[dict]) -> dict:
     """Every case stays in the denominator: n is the number of frozen cases, whatever happened to them."""
-    arms = {arm: summarize_arm([c["arms"][arm] for c in cases]) for arm in ("system", "baseline")}
-    pairs = _count(f"system_{c['arms']['system']['outcome']}__baseline_{c['arms']['baseline']['outcome']}" for c in cases)
+    names = [arm for arm in ("system", "baseline") if cases and arm in cases[0]["arms"]]
+    arms = {arm: summarize_arm([c["arms"][arm] for c in cases]) for arm in names}
+    pairs = _count(f"system_{c['arms']['system']['outcome']}__baseline_{c['arms']['baseline']['outcome']}"
+                   for c in cases) if len(names) == 2 else {}
     return {"n": len(cases), "arms": arms, "paired": pairs,
             "reference_offer_cases": sum((c.get("reference") or {}).get("status") == "winner" for c in cases),
             "gold_in_baseline_candidates": sum(bool(c.get("gold_in_candidates")) for c in cases)}

@@ -172,10 +172,29 @@ def test_bind_model_declines_or_bad_slot(monkeypatch):
     assert out["slot"] is None and out["question"]
 
 
+def test_bind_always_reports_carbons_own_choice(monkeypatch):
+    two = [ANCHOR, {**ANCHOR, "upid": "gid://shopify/p/2", "title": "Acme AB-7777 Other Set", "mpn_tokens": ["AB-7777"]}]
+    Calls(monkeypatch, [choose(0), choose(1), choose(1, "clarify", "Which one?"), choose(None, "unresolved"), choose(9)])
+    bound = models.bind(jpeg(), "", two, visual(), decision())                      # corroborated pick
+    assert (bound["slot"], bound["choice_slot"], bound["choice_action"]) == (0, 0, "choose")
+    refused = models.bind(jpeg(), "", two, visual(), decision())                    # pick fails corroboration
+    assert (refused["slot"], refused["anchor"], refused["basis"]) == (None, None, None)
+    assert (refused["choice_slot"], refused["choice_action"]) == (1, "choose") and refused["question"]
+    asked = models.bind(jpeg(), "", two, visual(), decision())                      # Carbon asks, naming a slot
+    assert (asked["slot"], asked["choice_slot"], asked["choice_action"]) == (None, 1, "clarify")
+    unresolved = models.bind(jpeg(), "", two, visual(), decision())
+    assert (unresolved["slot"], unresolved["choice_slot"], unresolved["choice_action"]) == (None, None, "unresolved")
+    bad = models.bind(jpeg(), "", two, visual(), decision())                        # a slot that is not an anchor
+    assert (bad["slot"], bad["choice_slot"], bad["choice_action"]) == (None, None, "choose")
+    for out in (bound, refused, asked, unresolved, bad):
+        assert set(out) == {"slot", "anchor", "basis", "question", "receipt", "choice_slot", "choice_action"}
+
+
 def test_bind_without_anchors_makes_no_call(monkeypatch):
     calls = Calls(monkeypatch)
     out = models.bind(jpeg(), "", [], visual(), decision())
     assert out["slot"] is None and out["receipt"] is None and out["question"] and not calls.jobs
+    assert out["choice_slot"] is None and out["choice_action"] is None
 
 
 def test_bind_failure_propagates(monkeypatch):

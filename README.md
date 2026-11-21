@@ -21,9 +21,11 @@ A shopper pastes a screenshot, drops a photo or takes one. No typed query, no re
 1. The photo is read for visible evidence: brand, printed model or set number, barcode, variant.
 2. A gate decides whether exactly one target is clear. If it is not, the app tries one automatic closer look and
    otherwise asks one question instead of guessing.
-3. The photo is bound to one exact product that the Shop catalog actually lists. A model picks the candidate;
-   deterministic code then requires a matching barcode, or a matching brand plus printed model number, before the
-   pick counts.
+3. The photo is bound to one exact product that the Shop catalog actually lists. Carbon picks the candidate; code
+   then accepts the pick only on a matching barcode, on a matching brand plus a model number that is really printed
+   in the photo, or when a second, independent judgment agrees: Decision 1 scores every catalog listing against the
+   photo in one pass, and the product Carbon chose must also be the top-scored one, at 0.75 or more and at least
+   0.25 ahead of the next (`visual_match`). Otherwise the app asks one question, with the options ordered by that score.
 4. Sellers of that product are read from the Shop catalog (shop.dev) and each merchant's own storefront is asked to
    confirm the exact variant, price and stock.
 5. Deterministic rules decide which offers qualify (identity, new condition, in stock, USD, unconditional price,
@@ -34,8 +36,9 @@ A shopper pastes a screenshot, drops a photo or takes one. No typed query, no re
    generated counterexample timelines and shown as an in-app watch. Without an authorized merchant feed it is a
    clearly labelled rule preview; nothing is polled.
 
-Models search, read and disambiguate. Merchant facts and executable rules decide. A model's confidence never
-makes a price, a stock state or a product identity on its own.
+Models search, read and disambiguate. Merchant facts and executable rules decide. No model output is ever used as
+a price or a stock state. One model's say-so never creates identity: it takes printed evidence, a merchant barcode,
+the buyer's own choice, or two independent model judgments above a measured threshold.
 
 ## Runtime model jobs
 
@@ -49,11 +52,13 @@ in the application; a failed call is shown as a failure.
 | One automatic second look on a crop when the gate does not pass | `gemini-4-neon` + `gemini-decision-1` | `reference/visual_recovery.py::second_look`, called from `inspect` |
 | Read the request (usually an empty note): compare or compare-and-watch, price basis, fulfillment | `gemini-4-carbon` | `app/models/__init__.py::parse_goal` (`reference/find.py` `INTENT` / `Intent`) |
 | Bind the photo to one catalog product | `gemini-4-carbon`, then deterministic corroboration | `app/models/__init__.py::bind` and `corroborate` |
+| Screen every catalog listing against the photo in ONE pass (a yes/no probability per listing), and check that the brand and model number Neon read are visibly printed | `gemini-decision-1` (Decisions API) | `app/models/__init__.py::screen`, called beside the bind in `app/pipeline.py`. It orders question options, annotates offers (`screen_p`), limits which listing checks are worth running, refuses a model-number bind when the printed number scores below 0.75, and is one of the two judgments behind `visual_match` |
 | Check a listing against the bound product (listing check v2): one Carbon verdict with one decisive quote per side; code then verifies each quote inside its own side (case-folded, whitespace-normalised) and anything unverifiable abstains | `gemini-4-carbon`, then a deterministic quote check | `app/models/__init__.py::pair`, used by `app/merchants/compare.py`. The first version (Neon extracts, Carbon judges, both must agree) is kept as `pair_v1` for the evaluation record |
 | Compile an explicit watch request into a bounded typed rule | `gemini-4-carbon` | `app/models/__init__.py::compile_watch`, used by `app/watch/__init__.py` |
 | Local barcode decode of the focus crop (no model) | zxing-cpp | `app/models/__init__.py::scan` |
 | Offer eligibility and ranking (no model) | deterministic code | `app/merchants/ranking.py::evaluate` |
 | Watch semantics, counterexample timelines, proof hash, alert ledger (no model) | deterministic code | `app/watch/__init__.py` over `reference/autowatch.py`, `proof.py`, `ledger.py`, `core.py` |
+| Optional: try to break a watch rule in a hosted sandbox. Whatever the agent reports is replayed locally through the same evaluator and labelled simulation | Gemini Managed Agent (`gemini-4-neon` inside) | `app/optional/`, `POST /api/watch/{id}/challenge` |
 
 The single boundary to the model service is `app/models/io.py` (`structured` for Neon and Carbon through the
 Interactions API, `gate` for the Decisions API). No custom temperature, top-p or top-k is set; the thinking level
@@ -72,8 +77,10 @@ of every job is `low` by default, and `minimal` is refused.
    │            └─ app.models.parse_goal   Gemini 4 Carbon intent        (in parallel with inspect)
    │            app.models.scan            local barcode decode of the focus crop (zxing-cpp)
    │ searching  app.merchants.shop.anchors_for   shop.dev Shop MCP: text + image search, get_product  ──▶ anchors + seller rows
-   │            app.models.bind            Gemini 4 Carbon picks one anchor ─▶ deterministic corroboration
-   │                                       (barcode equal, or brand + printed model number) ─▶ else ONE question
+   │            app.models.bind            Gemini 4 Carbon picks one anchor ─┐ run side by side
+   │            app.models.screen          Gemini Decision 1 scores every listing against the photo in one pass ─┘
+   │                                       accepted on: barcode equal | brand + printed model number |
+   │                                       visual_match (Carbon's pick is also Decision 1's top product) ─▶ else ONE question
    │ verifying  app.merchants.compare.run_comparison
    │              ├─ app.merchants.chains.confirm   merchant's own storefront: exact variant, price, stock, barcode
    │              ├─ app.models.pair                Carbon listing check + verified quotes (grants the model_number tier only)
@@ -97,6 +104,11 @@ offer counts as "the same item" only through one of three evidence tiers:
 
 Everything else is shown as a **lead** and is never ranked or called verified.
 
+Those tiers decide whether an *offer* is the bound product. The *photo* is bound to a catalog product on one of four
+bases, shown on the result: `barcode`, `model_number`, `buyer_choice` (the shopper answered the question) or
+`visual_match` (thresholds `VISUAL_MATCH_P` and `VISUAL_MATCH_MARGIN` in `app/pipeline.py`; `SF_VISUAL_MATCH=0`
+switches it off and restores the strict printed-evidence behaviour).
+
 ## Run it
 
 Python 3.12.
@@ -115,11 +127,12 @@ zxing-cpp 3.1.1.
 
 Settings (environment): `SF_DB` (SQLite path), `SF_STORE_INTERACTIONS` (see Privacy), `SIGNALFORGE_WATCH_FEED`
 (an authorized merchant feed; without it every watch is a preview), `SF_MODEL_TIMEOUT_MS`, `SF_DECISION_TIMEOUT_MS`,
-`SF_THINKING_VIEW` / `_GOAL` / `_BIND` / `_WATCH` (`low`, `medium`, `high` or `xhigh`).
+`SF_THINKING_VIEW` / `_GOAL` / `_BIND` / `_WATCH` (`low`, `medium`, `high` or `xhigh`), `SF_VISUAL_MATCH` (`0` = off).
 
 HTTP surface (`app/main.py`): `POST /api/search` (multipart `image` up to 5 MB, optional `note`),
 `GET /api/search/{id}`, `POST /api/search/{id}/answer`, `GET /api/search/{id}/proof`, `POST /api/search/{id}/watch`,
-`POST /api/watch/{id}/pause`, `POST /api/watch/{id}/whatif`, `GET /api/proof/eval`, `GET /api/health`. Runs belong to
+`GET /api/watch/{id}`, `POST /api/watch/{id}/pause`, `POST /api/watch/{id}/whatif`, `POST /api/watch/{id}/challenge`,
+`GET /api/proof/eval`, `GET /api/health`. Runs belong to
 the browser session that created them.
 
 ## Evaluation
@@ -155,22 +168,21 @@ Reading written by `eval/summarize.py`:
 
 Latency: ms = the final successful attempt only; HTTP 429 back-off sleeps are excluded (bug 007), wall_ms kept per case.
 
-**End-to-end benchmark (photo in, offer out):** 24 catalog photos drawn blind before any arm ran, blank note, no follow-up answer given, run `v1`, code `6fc8711` plus uncommitted changes, listing check `v2-carbon-verified-quotes`. Protocol: `eval/e2e/README.md`.
+**End-to-end benchmark (photo in, offer out):** catalog photos drawn blind and frozen before any arm ran on them, blank note, no follow-up answer given, so a question from the app counts as no answer. Baseline: one Gemini 4 Carbon call handed the photo and a list of listings. Protocol: `eval/e2e/README.md`. Headline run: `v1`.
 
-| Arm | Correct product | Wrong product | Stopped without an answer | Errors | Invalid offers / answered | Cheapest agrees with reference | Median ms |
-|---|---|---|---|---|---|---|---|
-| SignalForge full system | 0/24 | 1/24 | 23/24 | 0/24 | 0/1 | 0/24 | 14360 |
-| Baseline: one Gemini 4 Carbon call | 20/24 | 0/24 | 4/24 | 0/24 | 1/20 | 12/24 | 4529 |
+| Run | Arm | Correct product | Wrong product | Stopped without an answer | Errors | Invalid offers / answered | Cheapest agrees with reference | Median ms |
+|---|---|---|---|---|---|---|---|---|
+| Draw A, first run: strict printed-evidence identity (the visual_match basis did not exist yet), code `6fc8711` plus uncommitted changes, visual_match off | SignalForge full system | 0/24 | 1/24 | 23/24 | 0/24 | 0/1 | 0/24 | 14360 |
+| Draw A, first run: strict printed-evidence identity (the visual_match basis did not exist yet), code `6fc8711` plus uncommitted changes, visual_match off | Baseline: one Gemini 4 Carbon call | 20/24 | 0/24 | 4/24 | 0/24 | 1/20 | 12/24 | 4529 |
 
-Reading written by the benchmark's own script (`eval/e2e`):
+Reading of Draw A, first run: strict printed-evidence identity (the visual_match basis did not exist yet), written by the benchmark script itself (`eval/e2e`):
 
 - Full system: answered 1 of 24 photos (0 the gold product, 1 another catalog product id), stopped without an answer on 23, 0 errors; 0 of its 1 answered offers were invalid.
 - One-call baseline: answered 20 of 24 (20 the gold product, 0 another product), abstained on 4, 0 errors; 1 of its 20 answered offers were invalid and 12 matched the reference cheapest valid offer.
-- On this sample, with no follow-up answer given, the single model call covered more photos than the full system with no more wrong products; the full system's extra checks bought no measured identity safety here.
-- Why the full system stopped (post-hoc flags, no score changed): gate_did_not_pass x2, no_model_number_or_barcode_in_photo x21. Of its 1 false accepts, 1 bound a model number that the gold product's own catalog titles also carry (the same item under two catalog product ids).
-- Listing screen (one gemini-decision-1 call per photo): 240 listing judgments over 24 cases (22 positive, 218 negative, 0 failed calls), ROC AUC 0.9875; at p >= 0.9 precision 1.0, recall 0.0909, false-accept rate 0.0; at p >= 0.5 precision 0.9375, recall 0.6818; the top-scored listing was the gold product in 19 of 22 cases that had one; median 384 ms per call.
+- False accepts by catalog product id, system: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.
+- False accepts by catalog product id, baseline: 0 strict, of which 0 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.
 
-**Decision 1 listing screen, calibration on the same 24 cases** (run `screen-v1`, `gemini-decision-1`, one call per case): 240 listing judgments (22 positive, 218 negative), 0 failed calls, ROC AUC 0.9875, Brier 0.0325, top-scored listing is the drawn product in 19/22 cases that had one.
+**Decision 1 listing screen, calibration on draw A** (run `screen-v1`, `gemini-decision-1`, one call per case, 24 cases): 240 listing judgments (22 positive, 218 negative), 0 failed calls, ROC AUC 0.9875, Brier 0.0325, top-scored listing is the drawn product in 19/22 cases that had one.
 
 | Threshold | True accepts | False accepts | Missed | Precision | Recall | False-accept rate |
 |---|---|---|---|---|---|---|
@@ -180,7 +192,7 @@ Reading written by the benchmark's own script (`eval/e2e`):
 
 **Experiment B (five rights-cleared photo-to-offer cases):** status `not_run`. The five-case photo-to-offer check (eval/seal_baskets.py; baseline basket_answer(packet, False) vs system basket_answer(packet, True)) was not run: rights-cleared merchant evidence for five preregistered cases could not be assembled before the 16:05 ET proof cutoff. No case, price or score was substituted.
 
-Source files: `eval/results/summary.json`, `eval/results/pairs-v1.json`, `eval/results/pairs-v2.json`, `eval/results/pairs-b-v2.json`, `eval/results/baskets-gap.json`, `eval/results/e2e-summary.json`, `eval/results/e2e-freeze.json`.
+Source files: `eval/results/summary.json`, `eval/results/pairs-v1.json`, `eval/results/pairs-v2.json`, `eval/results/pairs-b-v2.json`, `eval/results/baskets-gap.json`, `eval/results/e2e-summary.json`, `eval/results/e2e-freeze.json`, `eval/results/e2e-freeze-b.json`.
 <!-- EVAL:END -->
 
 How to read it:
@@ -195,29 +207,35 @@ How to read it:
 - Read the table as it is. Where the system arm scores below the baseline, the difference is abstentions. In the
   product an abstention keeps a listing as an unranked lead; a false match would put a wrong item at the top.
 - The end-to-end benchmark runs the whole pipeline on catalog photos drawn blind, with a blank note and no
-  follow-up answer, and compares it with one Carbon call that is handed the photo and a list of listings. **The
-  single call wins it clearly.** The full system stopped and asked a question on almost every photo, because merchant
-  studio photos rarely show a printed model number or barcode and the system refuses to bind an identity without
-  one. In the app the shopper can answer that question with one tap; the benchmark gives no answers, so every
-  question counts as no answer. The photos are catalog images, not shopper snapshots of a box.
-- The Decision 1 listing screen was calibrated on those same cases after the two-arm run. It is a calibration of
-  one more signal, not a re-score of the system arm.
+  follow-up answer, and compares it with one Carbon call that is handed the photo and a list of listings. **In the
+  first run the single call won it clearly**: the full system stopped and asked a question on almost every photo,
+  because merchant studio photos rarely show a printed model number or barcode and that build refused to bind an
+  identity without one. The benchmark gives no answers, so every question counts as no answer.
+- That result is why `visual_match` was added. Any later end-to-end row on draw A is in-sample (the change was made
+  after seeing run v1 on those photos); only a row on the separately frozen draw B is a held-out result. If no such
+  row is in the table, the effect of `visual_match` is not measured.
+- The Decision 1 listing screen was calibrated on the benchmark photos after the two-arm run; its thresholds in the
+  code were chosen from that calibration. It is a calibration of one signal, not a re-score of the system arm.
+- The benchmark photos are catalog images, not shopper snapshots of a box.
 - The public WDC labels may be familiar to a pretrained model.
 
 ## Limitations and failure cases
 
-- **It only answers without a question when the photo shows a printed model number or a barcode.** On blind-drawn
-  catalog photos the full system almost never got that far, while a single model call answered most of them
-  correctly (end-to-end table above). Being this strict cost nearly all coverage on that sample and bought no
-  measured safety there. A box or label photo is the case it is built for; a bare product shot gets a question.
+- **A bare product photo is the weak case.** The first end-to-end run (table above) showed the strict build
+  answering almost none of the blind-drawn catalog photos while a single model call answered most of them correctly.
+  `visual_match` was added in response; read the end-to-end table for what was measured after it, and treat any
+  in-sample row as in-sample. A photo of the box or label, with the model number printed, is the case this build
+  is made for.
+- **`visual_match` binds on two model judgments with no printed evidence.** Its thresholds come from a calibration on
+  a small sample; a wrong bind is possible, and the result card says which basis was used so it can be checked.
 - **"Lowest verified among the stores checked" is not a market-wide claim.** The stores checked are the sellers in
   the Shop catalog cluster for the product and those merchants' own Shopify storefronts. Best Buy, Walmart, Target,
   Amazon, eBay and Google Shopping are not connected (no approved access at the event); see the table below.
 - **Item price only.** USD, before shipping and tax, US online. The catalog provides no shipping, tax, ZIP or pickup
   data, so a request for a delivered total, a ZIP or store pickup is reported as "Not compared" and the run ends
   `partial` with item prices.
-- **No catalog barcode.** Identity rests on the tiers above. An item with no readable brand plus model number and
-  no barcode gets a question, not a guess. A listing whose identity check abstains or runs out of time stays a lead,
+- **No catalog barcode.** Identity rests on the tiers above. An item with no printed model number, no barcode and
+  no clear visual match gets a question, not a guess. A listing whose identity check abstains or runs out of time stays a lead,
   so a genuinely cheaper offer can be left unranked.
 - **The listing check is conservative.** In the first evaluation run every system failure was an abstention on a
   truly matching pair: Carbon abstains when no manufacturer model number is printed, the strict quote check rejected

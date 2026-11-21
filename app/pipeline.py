@@ -5,6 +5,7 @@ really happened: every progress row, receipt and number in a run comes from a ca
 """
 import importlib
 import logging
+import os
 import sys
 import threading
 import time
@@ -24,6 +25,13 @@ MAX_OPTIONS = 5
 SCREEN_LISTINGS = 60
 SCREEN_LIKELY = 0.5
 PRINTED_MIN = 0.75
+VISUAL_MATCH_P = 0.75        # Decision 1 screen probability the best catalog product must reach
+VISUAL_MATCH_MARGIN = 0.25   # and its lead over the next-best product on offer
+
+
+def _visual_match_on() -> bool:
+    """SF_VISUAL_MATCH=0 restores the strict printed-evidence behaviour (no visual_match basis)."""
+    return os.environ.get("SF_VISUAL_MATCH", "1").strip() != "0"
 TIMEOUT_MESSAGE = "This search took longer than 90 seconds and was stopped. Please try again."
 INTERRUPTED_MESSAGE = "This search was interrupted by a server restart. Please try again."
 
@@ -31,6 +39,8 @@ BASIS_WORDS = {
     "barcode": "barcode on the item matches",
     "model_number": "brand and printed model number match the catalog",
     "buyer_choice": "chosen by you",
+    "visual_match": "two independent model judgments agree: Decision 1 scored this catalog product {p:.2f} "
+                    "from the photo and Carbon chose it",
 }
 
 
@@ -488,6 +498,9 @@ def _identify(run: dict, image: bytes, steps: Steps, ctx: dict, chosen: str | No
     if receipt:
         run["receipts"]["models"].append(receipt)
     anchor = bound.get("anchor")
+    slot = bound.get("choice_slot")
+    carbon_pick = anchors[slot] if type(slot) is int and 0 <= slot < len(anchors) else None
+    refused = ""
     if screened is not None:
         best: dict[str, float] = {}
         for row in rows:
@@ -505,8 +518,24 @@ def _identify(run: dict, image: bytes, steps: Steps, ctx: dict, chosen: str | No
             _ask_choice(run, ctx, anchors, rows,
                         "I could not confirm a printed model number on the photo. Is it one of these?")
             return
+        if anchor is None and carbon_pick is not None and _visual_match_on() and decision.get("pass") \
+                and visual.get("target_count") == "one":
+            scored = [a for a in anchors if type(a.get("p")) is float]
+            p_top = scored[0]["p"] if scored else 0.0
+            p_second = scored[1]["p"] if len(scored) > 1 else 0.0
+            margin = round(p_top - p_second, 3)
+            if scored and scored[0] is carbon_pick and p_top >= VISUAL_MATCH_P and margin >= VISUAL_MATCH_MARGIN:
+                words = BASIS_WORDS["visual_match"].format(p=p_top)
+                steps.end("bind", "done", f"{carbon_pick.get('title')} · {words}", receipt.get("ms"))
+                _compare(run, steps, ctx, carbon_pick, "visual_match", rows,
+                         {"screen_p": p_top, "screen_margin": margin})
+                return
+            refused = (f" · visual match not accepted: best catalog product {p_top:.2f}, next {p_second:.2f} "
+                       f"(needs {VISUAL_MATCH_P:.2f} and a {VISUAL_MATCH_MARGIN:.2f} lead)"
+                       + ("" if not scored or scored[0] is carbon_pick else "; Carbon chose a different product"))
     if anchor is None:
-        steps.end("bind", "done", "No exact product could be confirmed from the photo alone", receipt.get("ms"))
+        steps.end("bind", "done", "No exact product could be confirmed from the photo alone" + refused,
+                  receipt.get("ms"))
         _ask_choice(run, ctx, anchors, rows,
                     "I could not confirm the exact product from the photo alone. Is it one of these?")
         return
@@ -548,7 +577,8 @@ def _screened(run: dict, steps: Steps, ctx: dict, job, rows: list[dict]) -> dict
     return out
 
 
-def _compare(run: dict, steps: Steps, ctx: dict, anchor: dict, basis: str, rows: list[dict]) -> None:
+def _compare(run: dict, steps: Steps, ctx: dict, anchor: dict, basis: str, rows: list[dict],
+             evidence: dict | None = None) -> None:
     compare = _lane("app.merchants.compare")
     visual, intent = ctx["visual"], ctx["intent"]
     target = {"upid": anchor.get("upid"),
@@ -558,7 +588,7 @@ def _compare(run: dict, steps: Steps, ctx: dict, anchor: dict, basis: str, rows:
               "variant_details": list(visual.get("variant_details") or [])}
     run["target"] = {**target, "title": anchor.get("title") or "", "evidence": list(visual.get("evidence") or []),
                      "identity_source": anchor.get("identity_source") or "Shop catalog product",
-                     "identity_basis": basis, "bound": True}
+                     "identity_basis": basis, "bound": True, **(evidence or {})}
     run["state"] = "verifying"
     run["question"] = None
     steps.start("offers", "Merchant offers verified")

@@ -16,6 +16,8 @@ const OFFER_BASIS = {
   merchant_barcode: 'barcode published by the merchant',
   catalog_product: 'same Shop catalog product',
   model_number: 'brand + model number in the listing',
+  visual_match: 'two independent model judgments (Decision 1 photo screen and Carbon)',
+  buyer_choice: 'the catalog product you chose',
 };
 const TARGET_BASIS = {
   barcode: 'barcode read from the photo',
@@ -23,6 +25,7 @@ const TARGET_BASIS = {
   catalog_product: 'same Shop catalog product',
   model_number: 'brand + model number printed on the item',
   buyer_choice: 'the catalog product you chose',
+  visual_match: 'two independent model judgments',
 };
 const STOCK = { in_stock: 'In stock', sold_out: 'Sold out', orderable: 'Orderable', unknown: 'Stock unknown' };
 const SOURCE = {
@@ -167,7 +170,12 @@ export function renderIdentity(root, run) {
         h('div', null, h('dt', null, 'GTIN'), h('dd', { class: t.gtin ? '' : 'unknown' }, t.gtin || 'none published')),
         details.length && !t.bound ? h('div', null, h('dt', null, 'Variant'), h('dd', null, details.join(' · '))) : null,
       ),
-      t.bound && basis ? h('p', { class: 'identity-basis' }, icon('check'), h('span', null, `Identified by ${basis}`,
+      t.bound && basis ? h('p', { class: 'identity-basis' }, icon('check'), h('span', null,
+        t.identity_basis === 'visual_match'
+          ? (prob(t.screen_p)
+            ? `Two independent model judgments agree: Decision 1 scored this catalog product ${prob(t.screen_p)} from the photo and Carbon chose it`
+            : 'Two independent model judgments agree: the Decision 1 photo screen and Carbon chose the same catalog product')
+          : `Identified by ${basis}`,
         t.identity_source ? ` · ${t.identity_source}` : '')) : null,
       photoRead.length ? h('p', { class: 'identity-photo' }, h('span', { class: 'identity-photo-label' }, 'Read from the photo'),
         ' ', photoRead.join(' · ')) : null,

@@ -144,19 +144,24 @@ def bind(image: bytes, note: str, anchors: list[dict], visual: dict, decision: d
     from deal_models import CHOOSE, Selection
     none = {"slot": None, "anchor": None, "basis": None}
     anchors = list(anchors or [])[:MAX_ANCHORS]
-    if not anchors:  # nothing to choose from: no model call is made, so there is no receipt
-        return {**none, "question": "Could you show the model number or barcode?", "receipt": None}
+    if not anchors:  # nothing to choose from: no model call is made, so there is no receipt and no choice
+        return {**none, "question": "Could you show the model number or barcode?", "receipt": None,
+                "choice_slot": None, "choice_action": None}
     listed = [{"slot": i, **{k: v for k, v in a.items() if k != "supporting"},
                "supporting": (a.get("supporting") or [])[:3]} for i, a in enumerate(anchors)]
     data = parts(image, note, {"anchors": listed, "visual": visual, "route": decision.get("choice")})
     choice, trace = structured("bind", CARBON, CHOOSE, Selection, data)
-    if choice.action != "choose" or type(choice.slot) is not int or not 0 <= choice.slot < len(anchors):
-        return {**none, "question": choice.question.strip() or "Which item did you mean?", "receipt": trace}
-    anchor = anchors[choice.slot]
+    # What Carbon itself answered, reported on every path: the slot it named (when it is a real anchor slot) and its
+    # action. It is Carbon's pick only when choice_action == "choose"; it is not an identity until corroborated.
+    named = choice.slot if type(choice.slot) is int and 0 <= choice.slot < len(anchors) else None
+    said = {"choice_slot": named, "choice_action": choice.action}
+    if choice.action != "choose" or named is None:
+        return {**none, "question": choice.question.strip() or "Which item did you mean?", "receipt": trace, **said}
+    anchor = anchors[named]
     basis, question = corroborate(anchor, visual, decision, verified_scan)
     if not basis:
-        return {**none, "question": question, "receipt": trace}
-    return {"slot": choice.slot, "anchor": anchor, "basis": basis, "question": "", "receipt": trace}
+        return {**none, "question": question, "receipt": trace, **said}
+    return {"slot": named, "anchor": anchor, "basis": basis, "question": "", "receipt": trace, **said}
 
 
 def _side(value):

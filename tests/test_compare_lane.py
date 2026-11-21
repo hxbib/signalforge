@@ -228,15 +228,15 @@ class CompareLane(unittest.TestCase):
         self.assertEqual(out["coverage"]["sources"][1]["merchants"]["failed"], 1)
         self.assertEqual(out["result"]["winners"][0]["confirmed_by"], [])
 
-    def test_confirm_and_pair_run_side_by_side(self):
+    def test_listing_checks_run_concurrently_after_confirms(self):
         def slow_pair(target, listing):
             time.sleep(0.6)
             return {"verdict": "match", "receipts": []}
         cands = [row("c%d" % i, 1000 + i, product="gid://shopify/p/other", title="Acme X100 widget") for i in range(6)]
         t0 = time.monotonic()
         out = run([row("alpha", 2999)] + cands, pair=slow_pair,
-                  confirm=confirming(barcode=None, delay={"Alpha": 0.6}))
-        self.assertLess(time.monotonic() - t0, 1.1)       # 4 checks at once, alongside the confirm
+                  confirm=confirming(barcode=None, delay={"Alpha": 0.2}))
+        self.assertLess(time.monotonic() - t0, 1.3)       # 4 checks at once (sequential would be 2.4 s)
         lc = out["coverage"]["sources"][2]
         self.assertEqual((lc["id"], lc["status"], lc["offers"], lc["eligible"]), ("listing_checks", "limited", 4, 4))
         self.assertEqual(lc["name"], "Listing check (Gemini 4 Carbon, verified quotes)")
@@ -399,7 +399,7 @@ class CompareLane(unittest.TestCase):
         cand = row("pricey", 3999, product="gid://shopify/p/other", title="Acme X100")
         r = run([row("alpha", 2999), cand], pair=pair, confirm=confirming(barcode=None))["result"]
         self.assertEqual(pair.calls, [])
-        self.assertEqual(r["leads"][0]["lead_reason"], "Not checked: not cheaper than the verified catalog offer")
+        self.assertEqual(r["leads"][0]["lead_reason"], "Not checked: costs more than the verified winner")
         # no eligible cluster offer -> every candidate may be checked
         pair = pair_says("match")
         r = run([row("alpha", 2999, stock="sold_out"), cand], pair=pair,
@@ -415,6 +415,38 @@ class CompareLane(unittest.TestCase):
         self.assertEqual([w["seller_name"] for w in r["winners"]], ["Outside"])
         self.assertEqual(r["winners"][0]["identity_basis"], "merchant_barcode")
         self.assertEqual(r["runner_up"]["seller_name"], "Alpha")
+
+    def test_threshold_is_eligible_winner_after_confirmation(self):
+        """16:16 live shape (LEGO 75375): the cluster's cheapest rows are REJECTED after the storefront disagrees;
+        a model-number candidate cheaper than the verified winner must get the listing check."""
+        conf = confirming(barcode=None, statuses={"Cheap1": "mismatch", "Cheap2": "mismatch"},
+                          overrides={"Cheap1": {"item_cents": 9999}, "Cheap2": {"item_cents": 9999}})
+        cluster = [row("cheap1", 2040), row("cheap2", 5700), row("galactic", 8495), row("b", 8499), row("c", 8999)]
+        cands = [row("eastline", 3050, product="gid://shopify/p/other", title="Acme X100 set", screen_p=0.883),
+                 row("pzdeals", 6999, product="gid://shopify/p/other", title="Acme X100", screen_p=0.769),
+                 row("dear", 9500, product="gid://shopify/p/other", title="Acme X100")]
+        pair = pair_says("match")
+        out = run(cluster + cands, pair=pair, confirm=conf)
+        r = out["result"]
+        self.assertEqual({c["seller_name"] for c in pair.calls}, {"Eastline", "Pzdeals"})
+        self.assertEqual((r["winners"][0]["seller_name"], r["winners"][0]["identity_basis"]), ("Eastline", "model_number"))
+        self.assertEqual(r["runner_up"]["seller_name"], "Pzdeals")
+        c = r["caution"]
+        # eligible sellers: eastline 3050, pzdeals 6999, galactic 8495, b 8499, c 8999 -> median 8495
+        self.assertEqual((c["median_cents"], c["eligible_sellers"], c["percent_below"]), (8495, 5, 64))
+        self.assertEqual({l["seller_name"]: l["lead_reason"] for l in r["leads"]},
+                         {"Dear": "Not checked: costs more than the verified winner"})
+        self.assertEqual({x["offer"]["seller_name"]: x["reason"] for x in r["rejected"]},
+                         {"Cheap1": "conflicting_sources", "Cheap2": "conflicting_sources"})
+
+    def test_no_eligible_offer_checks_cheapest_four(self):
+        cands = [row("c%d" % i, 1000 + i, product="gid://shopify/p/other", title="Acme X100") for i in range(6)]
+        pair = pair_says("abstain")
+        r = run([row("alpha", 2999, stock="sold_out")] + cands, pair=pair,
+                confirm=confirming(barcode=None, overrides={"Alpha": {"stock": "sold_out"}}))["result"]
+        self.assertEqual({c["seller_name"] for c in pair.calls}, {"C0", "C1", "C2", "C3"})
+        reasons = {l["seller_name"]: l["lead_reason"] for l in r["leads"]}
+        self.assertEqual((reasons["C4"], reasons["C5"]), ("Not checked: listing check limit (4) reached",) * 2)
 
 
 if __name__ == "__main__":

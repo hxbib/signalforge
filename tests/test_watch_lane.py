@@ -53,7 +53,7 @@ def test_explicit_phrase_ready_zero_questions_and_proof():
 def test_no_feed_is_preview_only():
     w = make("Notify me when this seller restocks under $25")
     assert w["status"] == "preview_only"
-    assert w["preview_reason"] == watch.PREVIEW_REASON
+    assert w["preview_reason"] == watch.PREVIEW_REASON and w["simulation"] is True
 
 
 def test_vague_words_one_question():
@@ -311,3 +311,25 @@ def test_attach_keeps_unknown_keys_and_pause_syncs_run(monkeypatch):
     watch.sync_run(p)
     assert p["challenge"] == ch and runs["run_test"]["watch"]["status"] == "paused"
     assert make("Notify me when this seller restocks under $25")["challenge"] == ch  # idempotent create keeps it
+
+
+def test_bug028_empty_tap_watches_shown_price_without_model():
+    def no_model(*a):
+        raise AssertionError("no model call for a tap")
+    w = watch.create(dict(LIVE_RUN, run_id="run_tap"), "", compile=no_model)
+    assert w["status"] == "preview_only" and w["question"] is None and w["origin"] == "buyer"
+    assert w["rule"] == {"seller": WINNER["seller"], "variant": WINNER["listing"], "mode": "becomes_eligible",
+                         "op": "lt", "cents": WINNER["item_cents"]}
+    assert w["command"] == "" and w["derived_command"] and w["receipts"] == [] and w["playground"]
+
+
+def test_live_conflicting_terms_on_explicit_words_is_not_a_question():
+    prop = raw(status="clarify", reason="conflicting_terms", candidate=None,
+               question="Would you like an alert when the price drops under $25, or only on a restock under $25?")
+    w = watch.create(dict(LIVE_RUN, run_id="run_conf"), "Notify me when this seller restocks under $25",
+                     compile=lambda *a: prop, image=b"jpeg")
+    assert w["status"] == "preview_only" and w["question"] is None and w["rule"]["mode"] == "restock"
+    assert w["draft"]["waived"] == ["conflicting_terms"]
+    w = watch.create(dict(LIVE_RUN, run_id="run_conf2"), "Notify me when this seller restocks under $25 or over $30",
+                     compile=lambda *a: prop, image=b"jpeg")
+    assert w["status"] == "needs_detail" and w["rule"] is None

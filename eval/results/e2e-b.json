@@ -1,0 +1,322 @@
+{
+ "run": "b",
+ "generated_at": 1795296122,
+ "code_sha": "890631904bea6cc760a6acd0371d9ac07d9ba20f",
+ "tree_dirty": true,
+ "pair_version": "v2-carbon-verified-quotes",
+ "pair_v2_note_seen_at_start": true,
+ "visual_match": true,
+ "visual_match_thresholds": {
+  "p": 0.75,
+  "margin": 0.25
+ },
+ "arms_run": [
+  "system",
+  "baseline"
+ ],
+ "arms_started_at": 1795296030,
+ "code_sha_at_end": "890631904bea6cc760a6acd0371d9ac07d9ba20f",
+ "freeze_seed": "0fb1e049d5717eab647bcfad61e6a2193de46ca80acd14ea2d2d2acddc0e47bc",
+ "models": {
+  "baseline": [
+   "gemini-4-carbon"
+  ],
+  "system": [
+   "gemini-4-neon",
+   "gemini-decision-1",
+   "gemini-4-carbon"
+  ]
+ },
+ "complete": false,
+ "cases": [
+  {
+   "case_id": "e2e-b-01",
+   "query": "building set",
+   "gold_upid": "gid://shopify/p/6Y0OgnEqVCBS1h4ss33Kz",
+   "sellers": 2,
+   "started_at": 1795296030,
+   "wall_ms": 23384,
+   "baseline_after_system_s": 3.8,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 2
+   },
+   "arms": {
+    "system": {
+     "outcome": "false_accept",
+     "reasons": [
+      "state:partial",
+      "result:winner",
+      "bind:model_number",
+      "offer_identity:model_number"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "unavailable"
+     },
+     "cheapest": "not_applicable",
+     "ms": 19374
+    },
+    "baseline": {
+     "outcome": "abstained",
+     "reasons": [
+      "abstain"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 3835
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-02",
+   "query": "board game",
+   "gold_upid": "gid://shopify/p/7b97g9TstCXlk1A2weh0ll",
+   "sellers": 10,
+   "started_at": 1795296030,
+   "wall_ms": 19677,
+   "baseline_after_system_s": 3.7,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 8
+   },
+   "arms": {
+    "system": {
+     "outcome": "correct",
+     "reasons": [
+      "state:complete",
+      "result:tie",
+      "bind:visual_match",
+      "offer_identity:merchant_barcode"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "pricier_than_reference",
+     "ms": 15550
+    },
+    "baseline": {
+     "outcome": "false_accept",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "not_applicable",
+     "ms": 3662
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-03",
+   "query": "action figure",
+   "gold_upid": "gid://shopify/p/5nsBy9j0xjAlgCaTIqsyYv",
+   "sellers": 10,
+   "started_at": 1795296049,
+   "wall_ms": 19237,
+   "baseline_after_system_s": 3.8,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 8
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 15043
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 3756
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-04",
+   "query": "phone charger",
+   "gold_upid": "gid://shopify/p/4ihW5U1BLw7fptodVOqQAq",
+   "sellers": 1,
+   "started_at": 1795296053,
+   "wall_ms": 26904,
+   "baseline_after_system_s": 4.5,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 21892
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 4513
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-05",
+   "query": "power bank",
+   "gold_upid": "gid://shopify/p/1UQcB226e6GqC60v5EEyt1",
+   "sellers": 1,
+   "started_at": 1795296069,
+   "wall_ms": 33823,
+   "baseline_after_system_s": 5.2,
+   "baseline_candidates": 10,
+   "gold_in_candidates": false,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 28403
+    },
+    "baseline": {
+     "outcome": "abstained",
+     "reasons": [
+      "abstain"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 5240
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-06",
+   "query": "wireless headphones",
+   "gold_upid": "gid://shopify/p/1RTD7AFK6swkYv2vcopI0U",
+   "sellers": 1,
+   "started_at": 1795296080,
+   "wall_ms": 20820,
+   "baseline_after_system_s": 4.5,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 14944
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "unavailable"
+     },
+     "cheapest": "agree",
+     "ms": 4538
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-07",
+   "query": "usb-c cable",
+   "gold_upid": "gid://shopify/p/17fzR4wEIigAVpNs24eJnL",
+   "sellers": 1,
+   "started_at": 1795296101,
+   "wall_ms": 20801,
+   "baseline_after_system_s": 4.2,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 16161
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 4171
+    }
+   }
+  }
+ ]
+}

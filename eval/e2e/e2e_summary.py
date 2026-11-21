@@ -16,9 +16,21 @@ import e2e_score as score  # noqa: E402
 RESULTS = Path(__file__).resolve().parents[2] / "eval" / "results"
 HEAD_KEYS = ("generated_at", "code_sha", "code_sha_at_end", "tree_dirty", "pair_version", "pair_v2_note_seen_at_start",
              "arms_started_at", "freeze_seed", "models")
+RUN_META = {
+    "v1": {"label": "Draw A, first run: strict printed-evidence identity (the visual_match basis did not exist yet)",
+           "draw": "A", "in_sample": False, "held_out": False},
+    "v2": {"label": "Draw A again after the visual_match change, system arm only. IN-SAMPLE: the change and its 0.75 "
+                    "threshold were read off this draw's own results and calibration table",
+           "draw": "A", "in_sample": True, "held_out": False},
+    "b": {"label": "Held-out draw B: new products, frozen before any call, both arms",
+          "draw": "B", "in_sample": False, "held_out": True},
+}
+DIAGNOSTIC_KEYS = ("post_hoc", "changes_scores", "system_abstention_codes", "system_false_accepts",
+                   "system_false_accepts_same_model_number_as_gold", "false_accepts", "visual_match_gap")
 
 NOTES = [
     "Blind draw: 30 product-family queries fixed first, one catalog product per query picked by a RNG seeded with the code SHA, frozen before any arm ran. Every frozen case is in the denominator; none was dropped, re-drawn or re-run.",
+    "Runs: v1 = draw A, first measurement. After v1 and the screen calibration were seen, ONE change was made to the system (a visual_match identity basis). v2 re-measures the system arm on draw A and is IN-SAMPLE (the change and its threshold came from draw A; the v1 baseline is shown next to it, not re-run). B is a new draw of the same queries (seed = sha256 of e2e-v1.json, every draw-A product excluded), frozen before any call: the held-out measurement.",
     "Gold is the Shop catalog product id of the drawn product. The same physical item can exist under another catalog product id; an answer bound to such a duplicate is counted as a false accept here.",
     "The photos are the merchants' own catalog images. Many show no printed model number, so the full system is expected to stop and ask one question; zero follow-up answers were given, so those cases count as abstained.",
     "The baseline is handed the listing rows of the draw query (which normally contain the gold product); the full system has to find the product in the whole catalog from the photo alone.",
@@ -62,7 +74,7 @@ def reading(s: dict) -> list[str]:
     else:
         out.append("On this sample the two arms trade coverage against wrong products; see the counts above.")
     d = s.get("diagnostic")
-    if d:
+    if d and "system_false_accepts" in d:
         causes = ", ".join(f"{k} x{v}" for k, v in d["system_abstention_codes"].items()) or "none"
         out.append(f"Why the full system stopped (post-hoc flags, no score changed): {causes}. Of its "
                    f"{d['system_false_accepts']} false accepts, {d['system_false_accepts_same_model_number_as_gold']} "
@@ -80,18 +92,95 @@ def reading(s: dict) -> list[str]:
     return out
 
 
-def build(cases: dict, diagnostic: dict | None, screen: dict | None = None) -> dict:
+def screen_block(screen: dict | None) -> dict | None:
+    if not (screen and screen.get("complete") and screen.get("metrics")):
+        return None
+    return {**{k: screen.get(k) for k in ("run", "generated_at", "code_sha", "tree_dirty", "model", "listing_cap",
+                                          "target_source", "label")}, **screen["metrics"], "notes": SCREEN_NOTES}
+
+
+def run_block(doc: dict, diagnostic: dict | None, v1: dict | None = None) -> dict:
+    """One run for the side-by-side table. A run without its own baseline arm shows the v1 baseline, marked as such."""
+    name, records, source = doc["run"], doc["cases"], None
+    if records and "baseline" not in records[0]["arms"] and v1:
+        base = {c["case_id"]: c["arms"]["baseline"] for c in v1["cases"]}
+        records = [{**c, "arms": {**c["arms"], "baseline": base[c["case_id"]]},
+                    "gold_in_candidates": None} for c in records]
+        source = "e2e-v1.json (not re-run)"
+    walls = sorted(r["wall_ms"] for r in doc["cases"] if type(r.get("wall_ms")) is int)
+    block = {"name": name, **RUN_META.get(name, {"label": name}),
+             **{k: doc.get(k) for k in ("generated_at", "code_sha", "code_sha_at_end", "tree_dirty", "pair_version")},
+             "visual_match": bool(doc.get("visual_match")), "visual_match_thresholds": doc.get("visual_match_thresholds"),
+             "baseline_source": source, **score.summarize(records),
+             "median_case_wall_ms": walls[len(walls) // 2] if walls else None}
+    if source:
+        block.pop("gold_in_baseline_candidates", None)
+    if diagnostic and diagnostic.get("run") == name:
+        block["diagnostic"] = {k: diagnostic[k] for k in DIAGNOSTIC_KEYS if k in diagnostic}
+    block["reading"] = reading(block)[:2] + split_reading(block)
+    return block
+
+
+def gap_reading(block: dict) -> list[str]:
+    gap = (block.get("diagnostic") or {}).get("visual_match_gap")
+    if not gap:
+        return []
+    codes = ", ".join(f"{k} x{v}" for k, v in gap["codes"].items()) or "none"
+    return [f"Why visual_match did not fire on the {gap['abstentions_with_screen_scores']} abstentions that reached the "
+            f"screen (post-hoc, from the probabilities on the question's options): {codes}. The gold product was the "
+            f"top-scored option in {gap['gold_is_top_option']} of them and among the options in {gap['gold_among_options']}."]
+
+
+def split_reading(block: dict) -> list[str]:
+    split = (block.get("diagnostic") or {}).get("false_accepts")
+    if not split:
+        return gap_reading(block)
+    return gap_reading(block) + [f"False accepts by catalog product id, {arm}: {v['strict']} strict, of which {v['same_item_other_catalog_id']} "
+            f"carry mechanical evidence of being the same item under another catalog product id (same model number "
+            f"or identical catalog title) and {v['no_same_item_evidence']} carry none."
+            for arm, v in split.items()]
+
+
+def comparison(runs: list[dict]) -> list[str]:
+    """Generated sentences across runs (system arm), nothing typed by hand."""
+    by = {r["name"]: r for r in runs}
+    out = []
+    def line(r):
+        a = r["arms"]["system"]
+        return (f"{a['correct']} correct, {a['false_accepts']} false accepts, {a['abstained']} abstained, "
+                f"{a['errors']} errors of {r['n']}")
+    if "v1" in by and "v2" in by:
+        out.append(f"Full system on draw A: v1 (visual_match off) {line(by['v1'])}; v2 (visual_match on, IN-SAMPLE) "
+                   f"{line(by['v2'])}. v2 is not an unbiased estimate: the change was designed from this draw.")
+    if "b" in by:
+        b = by["b"]
+        base = b["arms"]["baseline"]
+        out.append(f"Held-out draw B (the number to quote): full system {line(b)}; one-call baseline {base['correct']} "
+                   f"correct, {base['false_accepts']} false accepts, {base['abstained']} abstained, {base['errors']} "
+                   f"errors of {b['n']}.")
+    return out
+
+
+def build(cases: dict, diagnostic: dict | None, screen: dict | None = None, later: dict | None = None,
+          screen_b: dict | None = None) -> dict:
     records = cases["cases"]
     walls = sorted(r["wall_ms"] for r in records if type(r.get("wall_ms")) is int)
     s = {**{k: cases.get(k) for k in HEAD_KEYS}, "run": cases["run"], **score.summarize(records),
          "median_case_wall_ms": walls[len(walls) // 2] if walls else None}
     if diagnostic and diagnostic.get("run") == cases["run"]:
-        s["diagnostic"] = {k: diagnostic[k] for k in ("post_hoc", "changes_scores", "system_abstention_codes",
-                                                      "system_false_accepts", "system_false_accepts_same_model_number_as_gold")}
-    if screen and screen.get("complete") and screen.get("metrics"):
-        s["screen"] = {**{k: screen.get(k) for k in ("run", "generated_at", "code_sha", "tree_dirty", "model", "listing_cap",
-                                                     "target_source", "label")}, **screen["metrics"], "notes": SCREEN_NOTES}
+        s["diagnostic"] = {k: diagnostic[k] for k in DIAGNOSTIC_KEYS if k in diagnostic}
+    if screen_block(screen):
+        s["screen"] = screen_block(screen)
     s["reading"] = reading(s)
+    runs = [run_block({**cases, "visual_match": False}, diagnostic)]
+    for name in ("v2", "b"):
+        doc, diag = (later or {}).get(name) or (None, None)
+        if doc and doc.get("complete"):
+            runs.append(run_block(doc, diag, cases))
+    s["runs"] = runs
+    s["headline_run"] = "b" if any(r["name"] == "b" for r in runs) else "v1"
+    s["comparison"] = comparison(runs)
+    s["screens"] = {k: v for k, v in (("a", screen_block(screen)), ("b", screen_block(screen_b))) if v}
     s["notes"] = NOTES + RUN_NOTES.get(cases["run"], [])
     if cases.get("pair_v2_note_seen_at_start") is False:
         s["notes"].append("The arms were started before the team log carried the 'pair v2 landed' note; pair_version is what the code reported.")
@@ -103,13 +192,15 @@ def main() -> int:
     if not cases.get("complete"):
         print("e2e-v1.json is not complete; no summary written", file=sys.stderr)
         return 1
-    path = RESULTS / "e2e-diagnostic-v1.json"
-    screen_path = RESULTS / "e2e-screen.json"
-    summary = build(cases, json.loads(path.read_text()) if path.exists() else None,
-                    json.loads(screen_path.read_text()) if screen_path.exists() else None)
+    def read(name):
+        target = RESULTS / name
+        return json.loads(target.read_text()) if target.exists() else None
+
+    later = {name: (read(f"e2e-{name}.json"), read(f"e2e-diagnostic-{name}.json")) for name in ("v2", "b")}
+    summary = build(cases, read("e2e-diagnostic-v1.json"), read("e2e-screen.json"), later, read("e2e-screen-b.json"))
     summary["summarized_at"] = int(time.time())
     (RESULTS / "e2e-summary.json").write_text(json.dumps(summary, indent=1) + "\n")
-    print(f"e2e-summary.json rebuilt from e2e-v1.json: n={summary['n']}")
+    print(f"e2e-summary.json rebuilt: runs {[r['name'] for r in summary['runs']]}, screens {list(summary['screens'])}")
     return 0
 
 

@@ -29,6 +29,7 @@ ASK_RESTATE = ("I could not turn every condition in your words into one rule. Re
 ASK_ONE_STORE = ("I can only watch one store at a time, so I can't watch every store. Name the store, or say "
                  "\"this seller\" to watch the store shown.")
 ANY_STORE = re.compile(r"\b(?:any|every|all|other)\s+(?:stores?|sellers?|shops?|retailers?|merchants?|sites?)\b|\banywhere\b", re.I)
+MONEY = re.compile(r"(?:\$|USD\s*)\s*\d|\d\s*(?:dollars|bucks|usd)\b", re.I)
 DROPS_UNDER = re.compile(r"\b(drops?)\s+under\b", re.I)
 MAX_FEED_BYTES = 1_000_000
 
@@ -316,7 +317,7 @@ def _base(watch_id, run, command, status):
             "scope_sentence": "", "rule": None, "origin": None, "proof_hash": None,
             "pause_url": f"/api/watch/{watch_id}/pause", "preview_reason": None, "question": None,
             "playground": [], "simulation_note": "Playground rows are hypothetical timelines, not observations.",
-            "draft": None, "receipts": [], "created_at": int(time.time())}
+            "draft": None, "receipts": [], "simulation": False, "created_at": int(time.time())}
 
 
 def _persist(ledger, doc):
@@ -363,9 +364,22 @@ def create(run: dict, command: str, replies: dict | None = None, *, compile=None
     if existing is not None and existing["status"] != "needs_detail":
         return existing
     doc = _base(watch_id, run, command, "needs_detail")
+    tap = None
     if not command:
-        doc["question"] = _text_question(ASK_WHAT, "q_watch_words")
-        return _store(doc)
+        # An affirmative "Watch this price" tap on a single verified winner authorizes a watch on that price.
+        slot, _ = _server_binding(run, "", candidates_of(run))
+        cand = candidates_of(run)[slot] if slot is not None else None
+        winners = (run.get("result") or {}).get("winners") or []
+        if not cand or len(winners) != 1 or type(cand["item_cents"]) is not int or cand["item_cents"] < 2:
+            doc["question"] = _text_question(ASK_WHAT, "q_watch_words")
+            return _store(doc)
+        tap = f"Notify me when this seller's price drops below {_money(cand['item_cents'])}"
+        doc["derived_command"] = tap
+        compile = lambda image, words, shown: {"proposal": {  # noqa: E731  (no model call: the tap is the request)
+            "reason": "ok", "status": "ready", "candidate": slot, "mode": "becomes_eligible", "op": "lt",
+            "cents": cand["item_cents"], "cap_evidence": "Watch this price tap on the shown price",
+            "binding_evidence": "the run's only winning seller", "blockers": [], "question": ""}, "receipt": None}
+        command, image = tap, image or b"tap"
     if ANY_STORE.search(command):
         doc["question"] = _text_question(ASK_ONE_STORE, "q_watch_scope")
         return _store(doc)
@@ -382,7 +396,7 @@ def create(run: dict, command: str, replies: dict | None = None, *, compile=None
     cap = _explicit_cap(command)
     shown = [dict(c, server_bound=True, binding_basis=basis) if c["slot"] == slot else c for c in candidates]
     compiled = (compile or _compile)(image, command, shown)
-    doc["receipts"] = [compiled.get("receipt")]
+    doc["receipts"] = [compiled["receipt"]] if compiled.get("receipt") else []
     proposal = Proposal.model_validate(compiled["proposal"])
     doc["draft"] = {"candidate": proposal.candidate, "mode": proposal.mode, "op": proposal.op,
                     "cents": proposal.cents, "status": proposal.status, "reason": proposal.reason,
@@ -391,6 +405,9 @@ def create(run: dict, command: str, replies: dict | None = None, *, compile=None
                     "server_bound_slot": slot, "binding_basis": basis, "explicit_cap_cents": cap}
     # Seller and cap facts decided in code win over the model's draft; real hard-constraint flags still stop it.
     waived = (("ambiguous_target", "no_exact_variant") if slot is not None else ()) + (("missing_budget",) if cap else ())
+    if slot is not None and cap and not NEGATION.search(command) and len(MONEY.findall(command)) == 1:
+        # Mode/comparator semantics of explicit words belong to the autowatch parser + verifier, not the draft.
+        waived = waived + ("conflicting_terms",)
     if slot is None and proposal.status != "ready" and proposal.reason == "ambiguous_target" and len(candidates) > 1:
         proposal = proposal.model_copy(update={"candidate": None})
         waived = waived + ("ambiguous_target",)
@@ -437,14 +454,14 @@ def create(run: dict, command: str, replies: dict | None = None, *, compile=None
     rule = result["rule"]
     origins = result["origins"]
     doc.update(rule=asdict(rule), scope_sentence=scope_sentence(rule, name), proof_hash=result["proof"]["proof_hash"],
-               origin="buyer" if any(o["origin"] == "buyer" for o in origins) else "explicit_request",
+               origin="buyer" if tap or any(o["origin"] == "buyer" for o in origins) else "explicit_request",
                origins=origins, proof={"suite": result["proof"]["suite"], "rule_hash": result["proof"]["rule_hash"],
                                        "checks": len(result["proof"]["rows"]),
                                        "passed": sum(r["pass"] for r in result["proof"]["rows"])})
     doc["playground"] = playground(doc)
     binding = _feed_binding(rule.seller, rule.variant)
     if binding is None:
-        doc["status"], doc["preview_reason"] = "preview_only", PREVIEW_REASON
+        doc["status"], doc["preview_reason"], doc["simulation"] = "preview_only", PREVIEW_REASON, True
         return _store(doc)
     doc["status"], doc["feed_id"] = "active", binding["feed_id"]
     capture = digest({"run": run_id, "command": command})

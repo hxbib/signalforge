@@ -169,12 +169,50 @@ def test_diagnostic_flags_and_abstention_codes():
 
 
 def test_duplicate_check_uses_exact_model_tokens(monkeypatch):
-    monkeypatch.setattr(diagnose, "titles_of", lambda upid: ["Acme Widget AB-1234 blue", "Widget"])
-    hit = diagnose.duplicate_check({"target": {"mpn": "AB-1234"}}, GOLD)
-    assert hit == {"bound_on_model_number": True, "gold_titles_carry_bound_model_number": True}
-    assert diagnose.duplicate_check({"target": {"mpn": "AB-123"}}, GOLD)["gold_titles_carry_bound_model_number"] is False
-    assert diagnose.duplicate_check({"target": {"mpn": ""}}, GOLD) == {
-        "bound_on_model_number": False, "gold_titles_carry_bound_model_number": None}
+    titles = {GOLD: ["Acme Widget AB-1234 blue", "Widget"], OTHER: ["Other  Title"], "same": ["acme widget ab-1234 BLUE"]}
+    monkeypatch.setattr(diagnose, "titles_of", lambda upid: titles[upid])
+    hit = diagnose.duplicate_check({"target": {"mpn": "AB-1234"}}, GOLD, OTHER)
+    assert hit == {"bound_on_model_number": True, "gold_titles_carry_bound_model_number": True,
+                   "identical_catalog_title": False, "same_item_evidence": "model_number"}
+    miss = diagnose.duplicate_check({"target": {"mpn": "AB-123"}}, GOLD, OTHER)
+    assert miss["gold_titles_carry_bound_model_number"] is False and miss["same_item_evidence"] is None
+    by_title = diagnose.duplicate_check({}, GOLD, "same")
+    assert by_title["bound_on_model_number"] is False and by_title["same_item_evidence"] == "identical_catalog_title"
+    failed = diagnose.duplicate_check({}, GOLD, "missing")
+    assert failed["error"] == "KeyError" and failed["same_item_evidence"] is None
+    split = diagnose.false_accept_split([hit, miss, by_title])
+    assert split == {"strict": 3, "same_item_other_catalog_id": 2, "no_same_item_evidence": 1}
+
+
+def test_runs_side_by_side_mark_in_sample_and_copied_baseline():
+    summarize = _load("e2e_summary")
+    v1 = {"run": "v1", "complete": True, "code_sha": "a" * 40, "pair_version": "v2", "cases": [
+        {**_case("a", _arm("abstained", ["state:needs_detail"]), _arm("correct", valid=True, cheapest="agree")), "wall_ms": 10},
+        {**_case("b", _arm("abstained", ["state:needs_detail"]), _arm("abstained", ["abstain"])), "wall_ms": 20}]}
+    v2_cases = [{**_case("a", _arm("correct", valid=True, cheapest="agree"), None), "wall_ms": 30},
+                {**_case("b", _arm("false_accept", ["bind:visual_match"], valid=True), None), "wall_ms": 40}]
+    for c in v2_cases:
+        del c["arms"]["baseline"]
+    v2 = {"run": "v2", "complete": True, "code_sha": "b" * 40, "visual_match": True, "cases": v2_cases}
+    diag = {"run": "v2", "post_hoc": True, "changes_scores": False, "system_abstention_codes": {},
+            "false_accepts": {"system": {"strict": 1, "same_item_other_catalog_id": 1, "no_same_item_evidence": 0}}}
+    held = {"run": "b", "complete": True, "code_sha": "c" * 40, "visual_match": True, "cases": [
+        {**_case("x", _arm("correct", valid=True, cheapest="agree"), _arm("correct", valid=True)), "wall_ms": 5}]}
+    s = summarize.build(v1, None, None, {"v2": (v2, diag), "b": (held, None)})
+    assert [r["name"] for r in s["runs"]] == ["v1", "v2", "b"] and s["headline_run"] == "b"
+    r1, r2, rb = s["runs"]
+    assert s["arms"] == r1["arms"] and r1["visual_match"] is False and r1["in_sample"] is False
+    assert r2["in_sample"] is True and r2["visual_match"] is True and r2["baseline_source"] == "e2e-v1.json (not re-run)"
+    assert r2["arms"]["baseline"] == r1["arms"]["baseline"]
+    assert (r2["arms"]["system"]["correct"], r2["arms"]["system"]["false_accepts"]) == (1, 1) and r2["n"] == 2
+    assert r2["diagnostic"]["false_accepts"]["system"]["same_item_other_catalog_id"] == 1
+    assert rb["held_out"] is True and rb["baseline_source"] is None and rb["arms"]["baseline"]["correct"] == 1
+    assert "IN-SAMPLE" in s["comparison"][0] and s["comparison"][1].startswith("Held-out draw B (the number to quote)")
+    unfinished = summarize.build(v1, None, None, {"v2": ({**v2, "complete": False}, None)})
+    assert [r["name"] for r in unfinished["runs"]] == ["v1"] and unfinished["headline_run"] == "v1"
+    text = "\n".join(report.lines({"seed": "s" * 40, "created_at": 1}, v1, s))
+    assert "v2 (draw A, IN-SAMPLE) full system 1/2 1/2 1 of 1 0/2" in " ".join(text.split())
+    assert "one Carbon call [from v1]" in text and "b (draw B, held-out)" in text and "SF_VISUAL_MATCH on" in text
 
 
 def test_rate_limit_detector_ignores_timing_digits():
@@ -279,3 +317,21 @@ def test_screen_block_reaches_summary_and_report():
     text = "\n".join(report.lines({"seed": "s" * 40, "created_at": 1}, {"run": "v1", "cases": records}, s))
     assert "ROC AUC 1.0, Brier" in text and "p >= 0.9   1         1.000      1.000   0.000 (0/1)" in text
     assert "0.8-1.0          1      0.950           1.000" in text
+
+
+def test_visual_match_gap_codes():
+    q = {"options": [{"id": GOLD, "p": 0.8}, {"id": OTHER, "p": 0.7}, {"id": "none", "label": "None of these"}]}
+    assert diagnose.visual_match_gap(q, GOLD, 0.75, 0.25) == {
+        "code": "screen_margin_below_threshold", "gold_is_top_option": True, "gold_among_options": True}
+    low = {"options": [{"id": OTHER, "p": 0.6}, {"id": GOLD, "p": 0.2}]}
+    assert diagnose.visual_match_gap(low, GOLD, 0.75, 0.25) == {
+        "code": "screen_top_below_threshold", "gold_is_top_option": False, "gold_among_options": True}
+    clear = {"options": [{"id": OTHER, "p": 0.9}, {"id": "x", "p": 0.3}]}
+    out = diagnose.visual_match_gap(clear, GOLD, 0.75, 0.25)
+    assert out["code"] == "second_model_pick_differs_or_missing" and out["gold_among_options"] is False
+    assert diagnose.visual_match_gap({"options": [{"id": "a"}]}, GOLD, 0.75, 0.25) is None
+    assert diagnose.visual_match_gap(None, GOLD, 0.75, 0.25) is None
+    counts = diagnose.gap_counts([diagnose.visual_match_gap(q, GOLD, 0.75, 0.25), diagnose.visual_match_gap(low, GOLD, 0.75, 0.25), out])
+    assert counts["abstentions_with_screen_scores"] == 3 and counts["gold_is_top_option"] == 1 and counts["gold_among_options"] == 2
+    assert counts["codes"] == {"screen_margin_below_threshold": 1, "screen_top_below_threshold": 1,
+                               "second_model_pick_differs_or_missing": 1}

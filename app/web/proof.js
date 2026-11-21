@@ -68,17 +68,45 @@ function experiment(title, obj) {
 
 const SECTION_TITLE = { e2e: 'End-to-end photo to offer (e2e)' };
 
+function strList(value) {
+  return Array.isArray(value) ? value.filter((x) => typeof x === 'string') : typeof value === 'string' ? [value] : [];
+}
+
+function runBlock(run, headline) {
+  const pair = isObj(run) ? armPair(run.arms) : null;
+  if (!pair) return null;
+  const flags = [run.in_sample === true ? 'IN-SAMPLE' : null, run.held_out === true ? 'held-out' : null,
+    typeof run.draw === 'string' ? `draw ${run.draw}` : null, headline ? 'headline run' : null].filter(Boolean);
+  const reading = strList(run.reading);
+  return h('div', { class: 'run-block' },
+    h('h3', null, `${run.label || run.name || 'run'}${flags.length ? ` — ${flags.join(' · ')}` : ''}${typeof run.n === 'number' ? ` — ${run.n} cases` : ''}`),
+    typeof run.baseline_source === 'string' ? h('p', { class: 'proof-note' }, `Baseline source: ${run.baseline_source}`) : null,
+    h('div', { class: 'arms' },
+      armCard('SignalForge — full system', pair.system, true, run.n),
+      armCard('Baseline — one model call', pair.baseline, false, run.n)),
+    isObj(run.paired) ? h('details', { class: 'more-detail' }, h('summary', null, 'Paired outcome (same case, both arms)'), tree(run.paired)) : null,
+    reading.length ? h('ul', { class: 'files bullets reading' }, reading.map((line) => h('li', null, line))) : null,
+  );
+}
+
 function armSection(k, v) {
   const pair = isObj(v) ? armPair(v.arms) : null;
-  if (!pair) return null;
-  const notes = Array.isArray(v.notes) ? v.notes.filter((x) => typeof x === 'string') : [];
-  const rest = Object.fromEntries(Object.entries(v).filter(([key]) => !['arms', 'notes', 'paired'].includes(key)));
+  const runs = isObj(v) && Array.isArray(v.runs) ? v.runs.map((r) => runBlock(r, typeof v.headline_run === 'string' && r && r.name === v.headline_run)).filter(Boolean) : [];
+  if (!pair && !runs.length) return null;
+  const notes = strList(v.notes);
+  const shown = new Set(runs.length ? v.runs.flatMap((r) => strList(r && r.reading)) : []);
+  const reading = strList(v.reading).filter((line) => !shown.has(line));
+  const skip = ['arms', 'notes', 'paired', 'reading', 'runs'];
+  const rest = Object.fromEntries(Object.entries(v).filter(([key]) => !skip.includes(key)));
   return h('section', { class: 'panel' },
-    h('h2', null, `${SECTION_TITLE[k] || words(k)} — full system vs baseline${typeof v.n === 'number' ? ` — ${v.n} cases` : ''}`),
-    h('div', { class: 'arms' },
-      armCard('SignalForge — full system', pair.system, true, v.n),
-      armCard('Baseline — one model call', pair.baseline, false, v.n)),
-    isObj(v.paired) ? [h('h3', null, 'Paired outcome (same case, both arms)'), tree(v.paired)] : null,
+    h('h2', null, `${SECTION_TITLE[k] || words(k)} — full system vs baseline${!runs.length && typeof v.n === 'number' ? ` — ${v.n} cases` : ''}`),
+    runs.length ? runs : [
+      h('div', { class: 'arms' },
+        armCard('SignalForge — full system', pair.system, true, v.n),
+        armCard('Baseline — one model call', pair.baseline, false, v.n)),
+      isObj(v.paired) ? [h('h3', null, 'Paired outcome (same case, both arms)'), tree(v.paired)] : null,
+    ],
+    reading.length ? [h('h3', null, 'How to read it — as recorded'), h('ul', { class: 'files bullets reading' }, reading.map((line) => h('li', null, line)))] : null,
     notes.length ? [h('h3', null, 'How this run was set up — as recorded'), h('ul', { class: 'files bullets reading' }, notes.map((n) => h('li', null, n)))] : null,
     Object.keys(rest).length ? h('details', { class: 'more-detail' }, h('summary', null, 'Details of this run'), tree(rest)) : null,
   );

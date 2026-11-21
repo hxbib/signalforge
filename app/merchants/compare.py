@@ -236,37 +236,10 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
     jobs = [r for s in chosen for r in by_seller[s]] if confirm else []
     cluster_ids = {id(r) for r in cluster}
 
-    # listing checks only where they can change the answer: candidates cheaper than the cheapest eligible
-    # catalog-cluster offer (or any, when the cluster has none), and not screened out by Decision 1
-    cluster_floor = evaluate({"upid": upid, "gtin": given_gtin}, goal, cluster, as_of)["price_cents"]
-    skip_reason = {}
-    pair_pool = []
-    for r in sorted(candidates, key=lambda r: r["item_cents"] if amount(r.get("item_cents")) else 10**12):
-        sp = _screen_p(r)
-        if sp is not None and sp <= SCREEN_DIFFERENT_MAX:
-            skip_reason[id(r)] = "Decision 1 screen: different item (p {:.2f})".format(sp)
-        elif cluster_floor is not None and not (amount(r.get("item_cents")) and r.get("currency") == "USD"
-                                                and r["item_cents"] < cluster_floor):
-            skip_reason[id(r)] = "Not checked: not cheaper than the verified catalog offer"
-        elif sp is not None and sp < SCREEN_PAIR_MIN:
-            skip_reason[id(r)] = "Not checked: Decision 1 screen below 0.5 (p {:.2f})".format(sp)
-        else:
-            pair_pool.append(r)
-    pair_jobs = pair_pool[:MAX_PAIR_CALLS] if pair else []
-    pair_over = pair_pool[MAX_PAIR_CALLS:] if pair else []
-    target_summary = {"name": target.get("name") or "", "brand": brand, "mpn": mpn,
-                      "variant_details": list(target.get("variant_details") or []), "gtin": given_gtin}
-
-    def listing_fields(r):
-        return {k: r.get(k) for k in ("title", "seller_name", "seller_domain", "sku", "handle", "url") if r.get(k)}
-
     t_phase = time.monotonic()
     c_ex, c_fut = _start(lambda r: confirm(r, as_of), jobs, CONFIRM_WORKERS)
-    p_ex, p_fut = _start(lambda r: pair(target_summary, listing_fields(r)), pair_jobs, PAIR_WORKERS)
     outcomes = _collect(c_ex, c_fut, min(t_phase + CONFIRM_PHASE_S, deadline))
     confirm_ms = int((time.monotonic() - t_phase) * 1000)
-    pair_out = _collect(p_ex, p_fut, min(t_phase + PAIR_PHASE_S, deadline))
-    pair_ms = int((time.monotonic() - t_phase) * 1000)
 
     receipts = []
     confirmed_by = {}            # (seller, listing) -> ["merchant_api"]
@@ -349,13 +322,57 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
 
     # model-number candidates: an agreeing published barcode decides first, else the listing check verdict
     quote_by_key = {_key(q): q for q in merchant_quotes}
+
+    def published_code(r):
+        q = quote_by_key.get(_key(r))
+        return q.get("gtin") if q and _valid_gtin(q.get("gtin")) else (r.get("gtin") if _valid_gtin(r.get("gtin")) else None)
+
+    barcode_ok = [r for r in candidates if published_code(r) and run_gtin and same_gtin(published_code(r), run_gtin)]
+    undecided = [r for r in candidates if not (published_code(r) and run_gtin)]
+    # the verified winner WITHOUT listing checks: eligible after confirmation (mismatched sellers excluded)
+    if not clock_given:
+        as_of = max(as_of, int(time.time()))
+    pre_keys = {_key(r) for r in cluster + barcode_ok}
+    pre_rows = cluster + [dict(r, gtin=published_code(r)) for r in barcode_ok] + \
+        [q for q in merchant_quotes if _key(q) in pre_keys] + passthrough
+    pre = evaluate({"upid": upid, "gtin": run_gtin}, goal, pre_rows, as_of)
+    pre_el = [e for e in pre["eligible"] if (e["seller"], e["listing"]) not in mismatched]
+    verified_floor = pre_el[0]["cents"] if pre_el else None
+    skip_reason = {}
+    pair_pool = []
+    for r in sorted(undecided, key=lambda r: r["item_cents"] if amount(r.get("item_cents")) else 10**12):
+        sp = _screen_p(r)
+        priced = amount(r.get("item_cents")) and r.get("currency") == "USD"
+        if sp is not None and sp <= SCREEN_DIFFERENT_MAX:
+            skip_reason[id(r)] = "Decision 1 screen: different item (p {:.2f})".format(sp)
+        elif verified_floor is not None and not priced:
+            skip_reason[id(r)] = "Not checked: no USD price to compare"
+        elif verified_floor is not None and r["item_cents"] >= verified_floor:
+            skip_reason[id(r)] = "Not checked: costs more than the verified winner"
+        elif sp is not None and sp < SCREEN_PAIR_MIN:
+            skip_reason[id(r)] = "Not checked: Decision 1 screen below 0.5 (p {:.2f})".format(sp)
+        else:
+            pair_pool.append(r)
+    pair_jobs = pair_pool[:MAX_PAIR_CALLS] if pair else []
+    pair_over = pair_pool[MAX_PAIR_CALLS:] if pair else []
+    target_summary = {"name": target.get("name") or "", "brand": brand, "mpn": mpn,
+                      "variant_details": list(target.get("variant_details") or []), "gtin": run_gtin}
+
+    def listing_fields(r):
+        return {k: r.get(k) for k in ("title", "seller_name", "seller_domain", "sku", "handle", "url") if r.get(k)}
+
+    t_pair = time.monotonic()
+    p_ex, p_fut = _start(lambda r: pair(target_summary, listing_fields(r)), pair_jobs, PAIR_WORKERS)
+    pair_out = _collect(p_ex, p_fut, min(t_pair + PAIR_PHASE_S, deadline))
+    pair_ms = int((time.monotonic() - t_pair) * 1000)
+
     pair_index = {id(r): i for i, r in enumerate(pair_jobs)}
     over_ids = {id(r) for r in pair_over}
     ranked_candidates = []
     pair_results = []
     for r in candidates:
         q = quote_by_key.get(_key(r))
-        code = q.get("gtin") if q and _valid_gtin(q.get("gtin")) else (r.get("gtin") if _valid_gtin(r.get("gtin")) else None)
+        code = published_code(r)
         i = pair_index.get(id(r))
         kind, value = pair_out.get(i, (None, None)) if i is not None else (None, None)
         verdict = value.get("verdict") if kind == "ok" and isinstance(value, dict) else None
@@ -387,7 +404,7 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
         elif id(r) in skip_reason:
             leads.append((r, skip_reason[id(r)]))
         elif id(r) in over_ids:
-            leads.append((r, "Listing check limit reached"))
+            leads.append((r, "Not checked: listing check limit (4) reached"))
         else:
             leads.append((r, "Listing check not available"))
     lead_keys = {_key(r) for r, _ in leads}
@@ -552,7 +569,7 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
         l_status, l_note = "not_connected", "Listing check not available"
     elif not pair_jobs:
         l_status = "ok"
-        l_note = ("{} candidates not checked: none cheaper than the verified catalog offer or screened out".format(len(skip_reason))
+        l_note = ("{} candidates not checked: none cheaper than the verified winner, or screened out".format(len(skip_reason))
                   if skip_reason else "No model-number candidates to check")
     else:
         answered = len(pair_jobs) - late_pairs - failed_pairs

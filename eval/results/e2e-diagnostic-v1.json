@@ -1,5 +1,5 @@
 {
- "generated_at": 1795295399,
+ "generated_at": 1795295832,
  "run": "v1",
  "post_hoc": true,
  "changes_scores": false,
@@ -10,6 +10,18 @@
  },
  "system_false_accepts": 1,
  "system_false_accepts_same_model_number_as_gold": 1,
+ "false_accepts": {
+  "system": {
+   "strict": 1,
+   "same_item_other_catalog_id": 1,
+   "no_same_item_evidence": 0
+  },
+  "baseline": {
+   "strict": 0,
+   "same_item_other_catalog_id": 0,
+   "no_same_item_evidence": 0
+  }
+ },
  "cases": [
   {
    "case_id": "e2e-01",
@@ -22,7 +34,9 @@
    "question_kind": null,
    "duplicate_check": {
     "bound_on_model_number": true,
-    "gold_titles_carry_bound_model_number": true
+    "gold_titles_carry_bound_model_number": true,
+    "identical_catalog_title": false,
+    "same_item_evidence": "model_number"
    }
   },
   {

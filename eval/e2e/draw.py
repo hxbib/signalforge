@@ -3,6 +3,10 @@
 The query list below was written before any catalog call. The pick inside each query is made by a RNG
 seeded with the code SHA, so nobody on the team chooses a product or a photo.
 Photos go to private/e2e/ (gitignored). The freeze file carries ids, hashes and counts only.
+
+  .venv/bin/python eval/e2e/draw.py      # draw A -> eval/results/e2e-freeze.json
+  .venv/bin/python eval/e2e/draw.py --b  # held-out draw B -> eval/results/e2e-freeze-b.json: same queries, seed =
+                                         # sha256 of eval/results/e2e-v1.json, every draw-A product id excluded
 """
 from __future__ import annotations
 
@@ -23,6 +27,7 @@ from app.merchants import shop  # noqa: E402
 from live_smoke import clean_image  # noqa: E402  (reference/, on sys.path after `import app`)
 
 FREEZE = ROOT / "eval" / "results" / "e2e-freeze.json"
+FREEZE_B = ROOT / "eval" / "results" / "e2e-freeze-b.json"
 PHOTOS = ROOT / "private" / "e2e"
 TARGET_CASES = 24
 IMAGE_HOSTS = {"cdn.shopify.com"}
@@ -84,13 +89,23 @@ def sellers_of(doc: dict) -> int:
     return len({(v.get("seller") or {}).get("id") for v in variants if isinstance(v, dict) and (v.get("seller") or {}).get("id")})
 
 
-def main() -> int:
-    if FREEZE.exists():
-        print(f"{FREEZE} exists; the draw is frozen and is not repeated", file=sys.stderr)
+def main(argv: list[str] | None = None) -> int:
+    held_out = "--b" in (argv or [])
+    freeze_path = FREEZE_B if held_out else FREEZE
+    photos = PHOTOS / "b" if held_out else PHOTOS
+    prefix = "e2e-b" if held_out else "e2e"
+    if freeze_path.exists():
+        print(f"{freeze_path} exists; the draw is frozen and is not repeated", file=sys.stderr)
         return 1
-    sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
-    PHOTOS.mkdir(parents=True, exist_ok=True)
+    code_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
     cases, skipped, seen = [], [], set()
+    if held_out:
+        sha = hashlib.sha256((ROOT / "eval" / "results" / "e2e-v1.json").read_bytes()).hexdigest()
+        seen = {c["gold_upid"] for c in json.loads(FREEZE.read_text())["cases"]}
+    else:
+        sha = code_sha
+    excluded = len(seen)
+    photos.mkdir(parents=True, exist_ok=True)
     for i, query in enumerate(QUERIES):
         if len(cases) >= TARGET_CASES:
             break
@@ -117,18 +132,20 @@ def main() -> int:
             sellers = sellers_of(pdoc)
         except Exception:
             sellers = None
-        case_id = f"e2e-{len(cases) + 1:02d}"
-        (PHOTOS / f"{case_id}.img").write_bytes(raw)
+        case_id = f"{prefix}-{len(cases) + 1:02d}"
+        (photos / f"{case_id}.img").write_bytes(raw)
         seen.add(p["id"])
         cases.append({"case_id": case_id, "query": query, "gold_upid": p["id"], "sellers": sellers,
                       "image_sha256": hashlib.sha256(raw).hexdigest(), "candidates": len(cands), "pick_tries": tries})
         print(case_id, query, "candidates", len(cands), "sellers", sellers, flush=True)
-    out = {"seed": sha, "code_sha": sha, "created_at": int(time.time()), "target_cases": TARGET_CASES,
+    out = {"seed": sha, "code_sha": code_sha, "created_at": int(time.time()), "target_cases": TARGET_CASES,
            "queries": QUERIES, "cases": cases, "skipped": skipped}
-    FREEZE.write_text(json.dumps(out, indent=1) + "\n")
-    print(f"frozen {len(cases)} cases, {len(skipped)} queries skipped -> {FREEZE}")
+    if held_out:
+        out.update(draw="B", seed_source="sha256 of eval/results/e2e-v1.json", excluded_draw_a_products=excluded)
+    freeze_path.write_text(json.dumps(out, indent=1) + "\n")
+    print(f"frozen {len(cases)} cases, {len(skipped)} queries skipped -> {freeze_path}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))

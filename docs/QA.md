@@ -20,7 +20,7 @@ All 10 v1 system failures were abstentions on truly matching pairs: seven where 
 
 ## 5. Your end-to-end benchmark says one model call beats your whole system. Why should anyone use it?
 
-On 24 blind-drawn catalog photos with a blank note and no follow-up answer, the full system found the correct product on 0/24, picked a wrong product on 1 and stopped without an answer on 23 (gate did not pass x2, no model number or barcode in photo x21), while one Carbon call was correct on 20/24 with 0 wrong products (`eval/results/e2e-summary.json`). So on bare catalog photos a single call beats this build clearly; the system only answers unprompted when a model number or barcode is printed in the photo, in the app the question it asks can be answered with one tap, and we did not measure the with-answers path.
+On blind-drawn catalog photos with a blank note and no follow-up answer, in the first run the full system found the correct product on 0/24, picked a wrong product on 1 and stopped without an answer on 23 (gate did not pass x2, no model number or barcode in photo x21), while one Carbon call was correct on 20/24 with 0 wrong products (`eval/results/e2e-summary.json`). We added the visual_match basis in response, and its effect is not measured yet: no later run is in the result file. In the app the question it asks can be answered with one tap, and that with-answers path is not what the benchmark measures.
 
 ## 6. How do you know the price on screen is real and not something a model made up?
 
@@ -28,11 +28,11 @@ No model output is ever used as a price or a stock state: offer rows come from t
 
 ## 7. The Shop catalog gave you no barcodes. How can you say two listings are the exact same product?
 
-Through three evidence tiers defined in `docs/CONTRACT.md` section 0: the merchant's own storefront publishes a barcode equal to the target's, or the listing belongs to the bound Shop universal product, or the listing carries the brand and exact printed model number and the listing check returns match with no contradicting barcode. Anything else is shown as an unverified lead and never ranked.
+An offer counts as the same item through three evidence tiers (`docs/CONTRACT.md` section 0): the merchant's own storefront publishes a barcode equal to the target's, or the listing belongs to the bound Shop universal product, or the listing carries the brand and exact printed model number and the listing check returns match with no contradicting barcode; anything else is an unverified lead and never ranked. The photo itself is bound to a catalog product only on a barcode, a printed model number, the buyer's own choice, or a visual match where Carbon's pick is also the Decision 1 screen's top product at 0.75 or more with a 0.25 lead.
 
 ## 8. What does the Decisions API actually decide, and what happens without it?
 
-Gemini Decision 1 answers one bounded question, whether the photo shows a single target, multiple, or other, and the run proceeds only on `single` at confidence of at least 0.75 (`app/models/io.py::gate`); a failed gate triggers one automatic second look and then one question. We did not measure the pipeline with the gate removed, so its separate effect on accuracy is unknown; its choice, confidence and latency are shown per run.
+It does two jobs: the gate (single target, multiple, or other; the run proceeds only on `single` at confidence of at least 0.75, `app/models/io.py::gate`) and the listing screen, one call that gives every catalog listing a probability of being the pictured item (`app/models/__init__.py::screen`). We did not measure the pipeline with the gate removed, so its separate effect is unknown; the screen was calibrated on the first end-to-end draw, and those numbers are in the README table.
 
 ## 9. Why two models instead of one?
 

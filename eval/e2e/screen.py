@@ -5,7 +5,8 @@ with the case photo and a target built from the photo alone (what Gemini 4 Neon 
 and a label per listing taken from the draw itself: positive iff the row belongs to the gold catalog product.
 Gold never enters the call. Run once; a case is never repeated (an interrupted or failed call is an error row).
 
-  .venv/bin/python eval/e2e/screen.py
+  .venv/bin/python eval/e2e/screen.py            # draw A
+  .venv/bin/python eval/e2e/screen.py --draw b   # held-out draw B (after `run.py --run b`)
 """
 from __future__ import annotations
 
@@ -31,10 +32,20 @@ import e2e_calibration as calibration  # noqa: E402
 import e2e_summary  # noqa: E402
 
 RESULTS = ROOT / "eval" / "results"
+PRIVATE = ROOT / "private" / "e2e"
 OUT = RESULTS / "e2e-screen.json"
-PHOTOS = ROOT / "private" / "e2e"
-ARM_JOURNAL = PHOTOS / "journal-v1.jsonl"
-JOURNAL = PHOTOS / "journal-screen.jsonl"
+FREEZE = RESULTS / "e2e-freeze.json"
+PHOTOS = PRIVATE
+ARM_JOURNAL = PRIVATE / "journal-v1.jsonl"
+JOURNAL = PRIVATE / "journal-screen.jsonl"
+NAME = "screen-v1"
+
+
+def select_b() -> None:
+    """Held-out draw B: its own freeze, photos, system-arm journal (for the photo-only target) and output."""
+    global OUT, FREEZE, PHOTOS, ARM_JOURNAL, JOURNAL, NAME
+    OUT, FREEZE, PHOTOS = RESULTS / "e2e-screen-b.json", RESULTS / "e2e-freeze-b.json", PRIVATE / "b"
+    ARM_JOURNAL, JOURNAL, NAME = PRIVATE / "journal-b.jsonl", PRIVATE / "journal-screen-b.jsonl", "screen-b"
 CAP = 60
 _lock = threading.Lock()
 
@@ -110,8 +121,10 @@ def write(freeze: dict, records: list[dict], head: dict, complete: bool) -> None
                                "metrics": calibration.metrics(records) if complete else None, "cases": records}, indent=1) + "\n")
 
 
-def main() -> int:
-    freeze = json.loads((RESULTS / "e2e-freeze.json").read_text())
+def main(argv: list[str] | None = None) -> int:
+    if "b" in [a.lower() for a in (argv or [])]:
+        select_b()
+    freeze = json.loads(FREEZE.read_text())
     records, started = {}, set()
     if JOURNAL.exists():
         for line in JOURNAL.read_text().splitlines():
@@ -124,7 +137,7 @@ def main() -> int:
         if case["case_id"] in started and case["case_id"] not in records:
             records[case["case_id"]] = error_case(case, "runner_stopped_mid_case", called=True)
             _log({"event": "done", "record": records[case["case_id"]]})
-    head = {"run": "screen-v1", "code_sha": _git("rev-parse", "HEAD"),
+    head = {"run": NAME, "code_sha": _git("rev-parse", "HEAD"),
             "tree_dirty": bool(_git("status", "--porcelain", "--untracked-files=no")), "freeze_seed": freeze["seed"],
             "model": "gemini-decision-1", "listing_cap": CAP, "started_at": int(time.time()),
             "target_source": "photo only: name, brand, model number and variant details read by Gemini 4 Neon in the system-arm run",
@@ -157,4 +170,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))

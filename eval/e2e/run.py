@@ -1,6 +1,8 @@
 """Two arms on every frozen case: the full pipeline vs one Gemini 4 Carbon call. Real calls only.
 
-  .venv/bin/python eval/e2e/run.py            # all frozen cases, at most 2 in flight
+  .venv/bin/python eval/e2e/run.py            # run v1: draw A, both arms, at most 2 cases in flight
+  .venv/bin/python eval/e2e/run.py --run v2   # draw A again, system arm only (in-sample re-measurement after a change)
+  .venv/bin/python eval/e2e/run.py --run b    # held-out draw B, both arms
   .venv/bin/python eval/e2e/run.py --smoke P  # one photo outside the benchmark (path P, query "building set"); writes nothing
 
 A case is never repeated: a case that was started and did not finish (crash, kill) is recorded as an error.
@@ -37,11 +39,21 @@ import e2e_score as score  # noqa: E402
 import e2e_summary as summarize  # noqa: E402
 
 RESULTS = ROOT / "eval" / "results"
-FREEZE = RESULTS / "e2e-freeze.json"
-CASES_OUT = RESULTS / "e2e-v1.json"
-SUMMARY_OUT = RESULTS / "e2e-summary.json"
 PHOTOS = ROOT / "private" / "e2e"
+RUNS = {   # name -> frozen draw, where its photos are, which arms run
+    "v1": {"freeze": "e2e-freeze.json", "photos": PHOTOS, "arms": ("system", "baseline")},
+    "v2": {"freeze": "e2e-freeze.json", "photos": PHOTOS, "arms": ("system",)},
+    "b": {"freeze": "e2e-freeze-b.json", "photos": PHOTOS / "b", "arms": ("system", "baseline")},
+}
+RUN = "v1"
+CASES_OUT = RESULTS / "e2e-v1.json"
 JOURNAL = PHOTOS / "journal-v1.jsonl"   # private: start/done events + raw replies for failure analysis
+
+
+def select(name: str) -> dict:
+    global RUN, CASES_OUT, JOURNAL
+    RUN, CASES_OUT, JOURNAL = name, RESULTS / f"e2e-{name}.json", PHOTOS / f"journal-{name}.jsonl"
+    return RUNS[name]
 BASELINE_JOB = "e2e_baseline"
 BOARD = ROOT / "coord" / "BOARD.md"     # team coordination log, not published
 LANDED = "pair v2 landed"
@@ -136,11 +148,12 @@ def _confirm(offer: dict | None) -> str | None:
     return chains.confirm(dict(offer), int(time.time())).get("status") or "unavailable"
 
 
-def run_case(case: dict, raw: bytes, journal: bool = True) -> dict:
+def run_case(case: dict, raw: bytes, journal: bool = True, arm_names: tuple = ("system", "baseline")) -> dict:
     image = clean_image(raw)
     gold = case["gold_upid"]
     started, wall = int(time.time()), time.monotonic()
     private = {"event": "detail", "case_id": case["case_id"]}
+    outs = []
 
     try:
         doc, sys_ms = system_arm(image)
@@ -151,22 +164,26 @@ def run_case(case: dict, raw: bytes, journal: bool = True) -> dict:
             _on_rate_limit()
     except Exception as e:
         sys_out, sys_ms = {"outcome": "error", "reasons": [f"exception:{type(e).__name__}"], "offer": None}, None
+    outs.append(("system", sys_out, sys_ms))
     sys_done = time.time()
 
-    rows = []
-    try:
-        pick, rows, base_ms = baseline_arm(image, case["query"])
-        base_out = score.baseline_outcome(pick, rows, gold)
-        private["baseline"] = pick
-    except Exception as e:
-        base_out, base_ms = {"outcome": "error", "reasons": [f"exception:{type(e).__name__}"], "offer": None}, None
-        if _rate_limited(str(e)):
-            _on_rate_limit()
-    arm_gap_s = round(time.time() - sys_done, 1)
+    rows, arm_gap_s = [], None
+    if "baseline" in arm_names:
+        try:
+            pick, rows, base_ms = baseline_arm(image, case["query"])
+            base_out = score.baseline_outcome(pick, rows, gold)
+            private["baseline"] = pick
+            private["baseline_product"] = (base_out.get("offer") or {}).get("product")
+        except Exception as e:
+            base_out, base_ms = {"outcome": "error", "reasons": [f"exception:{type(e).__name__}"], "offer": None}, None
+            if _rate_limited(str(e)):
+                _on_rate_limit()
+        outs.append(("baseline", base_out, base_ms))
+        arm_gap_s = round(time.time() - sys_done, 1)
 
     ref = score.reference(reference_for(gold))
     arms = {}
-    for name, out, ms in (("system", sys_out, sys_ms), ("baseline", base_out, base_ms)):
+    for name, out, ms in outs:
         validity = score.offer_validity(out["offer"], _confirm(out["offer"]))
         arms[name] = score.arm_record(out, validity, score.cheapest_code(out, ref), ms)
     record = {"case_id": case["case_id"], "query": case["query"], "gold_upid": gold, "sellers": case.get("sellers"),
@@ -179,25 +196,23 @@ def run_case(case: dict, raw: bytes, journal: bool = True) -> dict:
     return record
 
 
-def crashed(case: dict, why: str) -> dict:
+def crashed(case: dict, why: str, arm_names: tuple = ("system", "baseline")) -> dict:
     err = {"outcome": "error", "reasons": [why], "offer": None, "cheapest": "not_applicable", "ms": None}
     return {"case_id": case["case_id"], "query": case["query"], "gold_upid": case["gold_upid"],
             "sellers": case.get("sellers"), "started_at": None, "wall_ms": None, "baseline_after_system_s": None,
             "baseline_candidates": 0, "gold_in_candidates": False,
-            "reference": {"status": "unavailable", "eligible": 0}, "arms": {"system": dict(err), "baseline": dict(err)}}
+            "reference": {"status": "unavailable", "eligible": 0}, "arms": {name: dict(err) for name in arm_names}}
 
 
 def _line(rec: dict) -> str:
-    a = rec["arms"]
-    return (f"{rec['case_id']} system={a['system']['outcome']} ({a['system']['ms']} ms) "
-            f"baseline={a['baseline']['outcome']} ({a['baseline']['ms']} ms)")
+    return rec["case_id"] + " " + " ".join(f"{name}={arm['outcome']} ({arm['ms']} ms)" for name, arm in rec["arms"].items())
 
 
 def _interim(done: list[dict]) -> str:
     s = score.summarize(done)
     def arm(x):
         return f"{x['correct']} correct / {x['false_accepts']} false accepts / {x['abstained']} abstained / {x['errors']} errors"
-    return f"after {s['n']} cases: system {arm(s['arms']['system'])}; baseline {arm(s['arms']['baseline'])}"
+    return f"run {RUN} after {s['n']} cases: " + "; ".join(f"{name} {arm(x)}" for name, x in s["arms"].items())
 
 
 def _git(*args: str) -> str:
@@ -209,7 +224,10 @@ def provenance() -> dict:
     landed = LANDED in BOARD.read_text() if BOARD.is_file() else None
     return {"code_sha": _git("rev-parse", "HEAD"), "tree_dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
             "pair_version": getattr(models, "PAIR_VERSION", None), "pair_v2_note_seen_at_start": landed,
-            "arms_started_at": int(time.time())}
+            "visual_match": pipeline._visual_match_on() if hasattr(pipeline, "_visual_match_on") else False,
+            "visual_match_thresholds": {"p": getattr(pipeline, "VISUAL_MATCH_P", None),
+                                        "margin": getattr(pipeline, "VISUAL_MATCH_MARGIN", None)},
+            "arms_run": list(RUNS[RUN]["arms"]), "arms_started_at": int(time.time())}
 
 
 def write_outputs(freeze: dict, records: list[dict], prov: dict, complete: bool) -> None:
@@ -217,7 +235,7 @@ def write_outputs(freeze: dict, records: list[dict], prov: dict, complete: bool)
     records = sorted(records, key=lambda r: order[r["case_id"]])
     head = {"generated_at": int(time.time()), **prov, "code_sha_at_end": _git("rev-parse", "HEAD"),
             "freeze_seed": freeze["seed"], "models": {"baseline": [io.CARBON], "system": [io.NEON, io.DECISION, io.CARBON]}}
-    CASES_OUT.write_text(json.dumps({"run": "v1", **head, "complete": complete, "cases": records}, indent=1) + "\n")
+    CASES_OUT.write_text(json.dumps({"run": RUN, **head, "complete": complete, "cases": records}, indent=1) + "\n")
     if complete:
         summarize.main()
 
@@ -228,7 +246,9 @@ def main(argv: list[str]) -> int:
                        Path(argv[1]).read_bytes(), journal=False)
         print(json.dumps(rec, indent=1))
         return 0
-    freeze = json.loads(FREEZE.read_text())
+    cfg = select(argv[argv.index("--run") + 1] if "--run" in argv else "v1")
+    arm_names, photos = cfg["arms"], cfg["photos"]
+    freeze = json.loads((RESULTS / cfg["freeze"]).read_text())
     prov = provenance()
     print("provenance:", json.dumps(prov), flush=True)
     records, started = {}, set()
@@ -241,7 +261,7 @@ def main(argv: list[str]) -> int:
                 records[ev["record"]["case_id"]] = ev["record"]
     for case in freeze["cases"]:
         if case["case_id"] in started and case["case_id"] not in records:
-            records[case["case_id"]] = crashed(case, "runner_stopped_mid_case")
+            records[case["case_id"]] = crashed(case, "runner_stopped_mid_case", arm_names)
             _log({"event": "done", "record": records[case["case_id"]]})
     todo = [c for c in freeze["cases"] if c["case_id"] not in records]
     lock = threading.Lock()
@@ -250,9 +270,9 @@ def main(argv: list[str]) -> int:
         with _slots:
             _log({"event": "start", "case_id": case["case_id"], "at": int(time.time())})
             try:
-                rec = run_case(case, (PHOTOS / f"{case['case_id']}.img").read_bytes())
+                rec = run_case(case, (photos / f"{case['case_id']}.img").read_bytes(), arm_names=arm_names)
             except Exception as e:
-                rec = crashed(case, f"exception:{type(e).__name__}")
+                rec = crashed(case, f"exception:{type(e).__name__}", arm_names)
             _log({"event": "done", "record": rec})
         with lock:
             records[rec["case_id"]] = rec
@@ -263,7 +283,7 @@ def main(argv: list[str]) -> int:
     with ThreadPoolExecutor(max_workers=2) as pool:
         list(pool.map(work, todo))
     write_outputs(freeze, list(records.values()), prov, complete=len(records) == len(freeze["cases"]))
-    print(f"wrote {CASES_OUT.name} and {SUMMARY_OUT.name}: {len(records)} of {len(freeze['cases'])} cases")
+    print(f"wrote {CASES_OUT.name}: {len(records)} of {len(freeze['cases'])} cases")
     return 0
 
 

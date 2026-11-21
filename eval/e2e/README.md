@@ -78,6 +78,27 @@ No number is typed into this file. Print the table from the recorded files:
   abstained (flags from what it read in the photo) and, for a system false accept, whether the gold product's
   own catalog titles carry the model number the system bound on. It changes no score.
 
+## Three runs: v1 (draw A), v2 (draw A, in-sample), B (held-out)
+
+The first run (v1) and the screen calibration below led to exactly one change in the system: a `visual_match`
+identity basis (the gate passed, the Decision 1 screen scores the top catalog product at or above 0.75 with a
+lead of at least 0.25 over the next product, and Gemini 4 Carbon independently picked the same product).
+`SF_VISUAL_MATCH=0` restores the strict v1 behaviour. Whether it was on, the code SHA and the listing-check
+version are recorded in every result file.
+
+| run | cases | arms | what it is |
+|---|---|---|---|
+| `v1` | draw A (`e2e-freeze.json`) | both | the first measurement, before the change |
+| `v2` | draw A again | system only | **in-sample**: the change and its threshold were read off draw A's own results and calibration table, so v2 is not an unbiased estimate. The v1 baseline is shown next to it and is not re-run. |
+| `b` | draw B (`e2e-freeze-b.json`) | both | **held-out**: the same 30 queries, seed = sha256 of `e2e-v1.json`, every draw-A product excluded, frozen before any model call. This is the number to quote for the changed system. |
+
+`report.py` prints the three runs side by side. False accepts are always strict (any other catalog product id).
+`diagnose.py --run <name>` adds, separately and without changing a score, how many of them carry mechanical
+evidence of being the same item under another catalog product id: the model number the system bound on is in the
+gold product's own titles, or the two catalog products have the identical catalog title. An answer without such
+evidence is not thereby a different item; nothing was adjudicated by hand. The screen calibration was repeated on
+draw B (`screen.py --draw b`).
+
 ## Second experiment on the same draw: is the listing screen calibrated?
 
 `screen.py` asks one more question of the same 24 frozen cases. For each case it reads the catalog search rows of
@@ -107,6 +128,11 @@ and the `screen` block of `e2e-summary.json`; `report.py` prints both tables.
 ```
 .venv/bin/python eval/e2e/draw.py     # only with no e2e-freeze.json: makes a NEW draw (live catalog, new photos)
 .venv/bin/python eval/e2e/run.py      # both arms on the frozen cases; needs private/e2e/*.img and GEMINI_API_KEY
+.venv/bin/python eval/e2e/run.py --run v2   # draw A again, system arm only
+.venv/bin/python eval/e2e/draw.py --b       # only with no e2e-freeze-b.json: a NEW held-out draw
+.venv/bin/python eval/e2e/run.py --run b    # both arms on draw B
+.venv/bin/python eval/e2e/screen.py --draw b
+.venv/bin/python eval/e2e/diagnose.py --run v2 && .venv/bin/python eval/e2e/diagnose.py --run b
 .venv/bin/python eval/e2e/screen.py    # one Decision 1 call per frozen case; writes e2e-screen.json, rebuilds the summary
 .venv/bin/python eval/e2e/diagnose.py  # post-hoc flags from the private run journal (re-reads the catalog for false accepts)
 .venv/bin/python eval/e2e/e2e_summary.py # rebuilds e2e-summary.json (counts, generated reading, notes) from e2e-v1.json; runs no arm

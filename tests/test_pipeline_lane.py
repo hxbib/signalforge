@@ -47,6 +47,7 @@ class Fakes:
         self.inspect_error = self.goal_error = self.catalog_error = self.compare_error = self.watch_error = None
         self.inspect_gate = None
         self.product_rows = {UPID: [dict(ROW)]}
+        self.choice_slot = "absent"
         self.screen_p = 0.91
         self.printed_p = 0.96
         self.screen_error = None
@@ -79,7 +80,10 @@ class Fakes:
         self.calls.append("bind")
         receipt = {"job": "bind", "model": "fake-bind", "id": "b", "ms": 6}
         if self.bind_slot is None:
-            return {"slot": None, "anchor": None, "basis": None, "question": "which?", "receipt": receipt}
+            out = {"slot": None, "anchor": None, "basis": None, "question": "which?", "receipt": receipt}
+            if self.choice_slot != "absent":
+                out["choice_slot"] = self.choice_slot
+            return out
         return {"slot": self.bind_slot, "anchor": anchors[self.bind_slot], "basis": "model_number", "question": "",
                 "receipt": receipt}
 
@@ -645,3 +649,92 @@ def test_bind_failure_still_records_what_the_screen_did(fakes, monkeypatch):
     rows = rows_of(run)
     assert run["state"] == "unavailable" and run["result"] is None
     assert rows["bind"]["status"] == "failed" and rows["screen"]["status"] == "done"
+
+
+def visual_case(fakes, ps=(0.86, 0.31, 0.2), choice_slot=0):
+    """Three catalog products, one listing each, nothing printed: bind() corroborates nothing but reports Carbon's pick."""
+    fakes.bind_slot = None
+    fakes.choice_slot = choice_slot
+    fakes.visual.update({"part_number": "", "evidence": []})
+    fakes.anchors = [{**ANCHOR, "upid": f"gid://shopify/p/{i}", "title": f"Product {i}"} for i in range(3)]
+    fakes.rows = [{**ROW, "product": f"gid://shopify/p/{i}", "listing": f"gid://variant/{i}"} for i in range(3)]
+    fakes.screen_p = list(ps)
+    run_id = make_run()
+    pipeline._work(run_id, None)
+    return store.get_run(run_id)
+
+
+def test_visual_match_binds_when_screen_and_carbon_agree(fakes, monkeypatch):
+    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    run = visual_case(fakes)
+    assert run["state"] == "complete" and run["question"] is None and run["result"]["status"] == "single_offer"
+    target = run["target"]
+    assert target["bound"] is True and target["identity_basis"] == "visual_match"
+    assert target["upid"] == "gid://shopify/p/0" and target["screen_p"] == 0.86 and target["screen_margin"] == 0.55
+    assert rows_of(run)["bind"]["detail"] == ("Product 0 · two independent model judgments agree: Decision 1 scored "
+                                              "this catalog product 0.86 from the photo and Carbon chose it")
+    assert fakes.calls.count("compare") == 1
+
+
+def test_visual_match_follows_the_best_product_not_the_first(fakes, monkeypatch):
+    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    run = visual_case(fakes, ps=(0.2, 0.31, 0.9), choice_slot=2)
+    assert run["target"]["identity_basis"] == "visual_match" and run["target"]["upid"] == "gid://shopify/p/2"
+    assert run["target"]["screen_margin"] == 0.59
+
+
+@pytest.mark.parametrize("ps,choice_slot,why", [
+    ((0.74, 0.1, 0.1), 0, "p below 0.75"),
+    ((0.9, 0.66, 0.1), 0, "margin below 0.25"),
+    ((0.9, 0.3, 0.1), 1, "Carbon picked another product"),
+    ((0.9, 0.3, 0.1), None, "Carbon picked nothing"),
+    ((0.9, 0.3, 0.1), "absent", "bind() does not report its pick"),
+])
+def test_visual_match_refused_asks_the_choice_question(fakes, monkeypatch, ps, choice_slot, why):
+    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    run = visual_case(fakes, ps=ps, choice_slot=choice_slot)
+    assert run["state"] == "needs_detail" and run["question"]["kind"] == "choice", why
+    assert run["target"]["bound"] is False and run["result"]["winners"] == [] and "compare" not in fakes.calls
+    assert run["question"]["options"][0]["id"] == "gid://shopify/p/0" and run["question"]["options"][0]["p"] == ps[0]
+    detail = rows_of(run)["bind"]["detail"]
+    if type(choice_slot) is int:
+        assert f"visual match not accepted: best catalog product {ps[0]:.2f}, next {ps[1]:.2f}" in detail
+        assert ("Carbon chose a different product" in detail) == (choice_slot != 0)
+    else:
+        assert "visual match" not in detail
+
+
+def test_visual_match_boundary_values_are_accepted(fakes, monkeypatch):
+    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    run = visual_case(fakes, ps=(0.75, 0.5, 0.1))
+    assert run["target"]["identity_basis"] == "visual_match" and run["target"]["screen_margin"] == 0.25
+
+
+def test_visual_match_needs_the_screen(fakes, monkeypatch):
+    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    fakes.screen_error = ModelCallError("screen", "gemini-decision-1", "HTTP 500")
+    run = visual_case(fakes)
+    assert run["state"] == "needs_detail" and run["question"]["kind"] == "choice" and "compare" not in fakes.calls
+    assert rows_of(run)["screen"]["status"] == "failed"
+
+
+def test_visual_match_switch_off_restores_strict_behaviour(fakes, monkeypatch):
+    monkeypatch.setenv("SF_VISUAL_MATCH", "0")
+    run = visual_case(fakes)
+    assert run["state"] == "needs_detail" and run["question"]["kind"] == "choice" and "compare" not in fakes.calls
+    assert run["target"]["bound"] is False
+
+
+def test_visual_match_needs_a_passed_gate(fakes, monkeypatch):
+    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    fakes.decision.update({"pass": False, "confidence": 0.6})
+    run = visual_case(fakes)
+    assert run["state"] == "needs_detail" and run["question"]["kind"] == "text" and "compare" not in fakes.calls
+
+
+def test_visual_match_does_not_replace_a_corroborated_bind(fakes, monkeypatch):
+    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    run_id = make_run()
+    pipeline._work(run_id, None)
+    target = store.get_run(run_id)["target"]
+    assert target["identity_basis"] == "model_number" and "screen_p" not in target
