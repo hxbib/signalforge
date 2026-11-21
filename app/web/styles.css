@@ -447,3 +447,11 @@ td { font-variant-numeric: tabular-nums; }
 .caution { margin-top: 10px; padding: 8px 12px; font-size: .93rem; line-height: 1.3; }
 .price { margin-top: 10px; }
 .result[data-tone="verified"] #run-title { font-size: clamp(1.35rem, 2.05vw, 1.9rem); min-height: 0; letter-spacing: -.02em; }
+.handoff { margin: 16px auto 0; padding: 16px; max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; border: 1px solid var(--line); border-radius: 14px; }
+.handoff[hidden] { display: none; }
+.handoff img { width: 220px; height: 220px; background: #fff; border-radius: 8px; }
+.handoff a { font-size: .85rem; overflow-wrap: anywhere; }
+.handoff p { margin: 0; }
+.handoff-phone { max-width: 520px; margin: 0 auto; padding: 32px 20px; text-align: center; }
+.handoff-phone .actions { justify-content: center; margin-top: 20px; }
+.handoff-phone .btn { font-size: 1.15rem; padding: 18px 28px; }

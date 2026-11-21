@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<title>SignalForge — take the photo</title>
+<link rel="stylesheet" href="/static/styles.css">
+<script type="module" src="/static/handoff-phone.js"></script>
+</head>
+<body>
+<main id="main" class="handoff-phone">
+  <p class="eyebrow">One photo. Zero typing.</p>
+  <h1 id="phone-title">Show me the item</h1>
+  <p id="phone-status" class="lede" role="status" aria-live="polite">Take one photo of the item. The search appears on the other screen.</p>
+  <div class="actions">
+    <input id="phone-file" class="file-input" type="file" accept="image/*" capture="environment">
+    <label for="phone-file" id="phone-take" class="btn btn-primary">Take the photo</label>
+  </div>
+</main>
+</body>
+</html>

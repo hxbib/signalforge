@@ -16,6 +16,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c2410c'/%3E%3Cpath d='M9 17l5 5 9-12' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/static/styles.css">
 <script type="module" src="/static/app.js"></script>
+<script type="module" src="/static/handoff-desk.js"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -48,6 +49,7 @@
             <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6.5h3l1.3-2h5.4l1.3 2h3v9H3z"/><circle cx="10" cy="10.8" r="2.8"/></svg>
             Use camera
           </button>
+          <button type="button" id="phone-camera" class="btn" hidden>Use my phone's camera</button>
           <input id="file-camera" class="file-input" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
         </div>
         <p class="hint hint-wide"><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>V</kbd> pastes from anywhere on this page · or drop an image here</p>
@@ -71,6 +73,7 @@
       <input id="note" type="text" maxlength="300" autocomplete="off" enterkeyhint="done"
              placeholder="Optional — e.g. notify me when this restocks under $25">
     </div>
+    <div id="handoff" class="handoff" hidden></div>
     <p id="capture-error" class="capture-error" role="alert"></p>
   </section>
 

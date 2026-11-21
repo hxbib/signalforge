@@ -158,7 +158,7 @@ for _name in ("app.models", "app.merchants.shop", "app.merchants.chains", "app.m
     except Exception as exc:  # a lane that is not importable is reported, never faked
         LANES[_name] = False
         LOG.warning("lane %s not loaded: %s", _name, type(exc).__name__)
-for _name in ("app.watch.routes", "app.evidence.routes", "app.optional.routes"):
+for _name in ("app.watch.routes", "app.evidence.routes", "app.optional.routes", "app.handoff.routes"):
     try:
         app.include_router(importlib.import_module(_name).router)
         LANES[_name] = True
