@@ -1,0 +1,41 @@
+# The buyer experience
+
+**The first sellable feature is an answer.** Open directly on “Show me the item.” The buyer pastes a screenshot, drops an image, or takes a photo. No onboarding, typed query, retailer checklist, price limit, login or push permission on this path. Paste/drop submits immediately. Empty note means one new item, US online sellers, USD item price before shipping and tax, no membership or coupon. Display these assumptions in an editable line beside the result. The source region is US for this build. Never guess a buyer's ZIP or current location. Preserve any explicit buyer preference even if it prevents a result.
+
+## A concrete run
+
+A photo of a LEGO box might reveal the set number but never show a barcode. Neon reads the manufacturer, set number, and edition from the box. The system searches for those identifiers while it looks for a merchant or manufacturer record linking that exact set and edition to a trade item. Carbon picks a source-backed identity. The merchant adapters search in parallel. The page shows a winning in-stock price plus one meaningful near miss. If a cheaper store only offers pickup, the shopper sees why. They can choose a store location with a tap if pickup suits them. Do not program this example into the application. Electronics, toys and other retail goods with clear model identifiers must enter through the same handler.
+
+With “shipped to 10001,” only show a shipping-qualified winner if there is evidence for that ZIP. With “delivered price,” all mandatory shipping, tax and fees must be known for the same destination. If a requested total cannot be compared, immediately show the still-useful verified item prices under their own heading. An unresolved seller can undercut the known ones. Phrase the result as “Lowest verified among the stores checked” and qualify the basis or incomplete coverage. A single eligible merchant is “One verified offer.” An empty eligible set yields “No verified offer yet” and real reasons. No invented savings, delivery dates or market-wide claims.
+
+## How to make one action feel effortless
+
+| Situation | Automatic work | What the buyer sees |
+|---|---|---|
+| Clear target | Clean image locally, optional barcode decode on the focus crop, run Neon and Decision 1 concurrently, compile intent and resolve catalog anchors. Preserve source citations internally. | Product identity then a provisional progress line while sellers finish. Only show a winning price after its evidence passes. |
+| An image contains several products | Use a pointer/crop if supplied, readable text and spoken/typed referent; try alternate crop and an exact catalog lookup once within the time budget. | One image with two tappable regions only if the choice changes the product. |
+| No printed barcode | Look up manufacturer + MPN + edition/pack. The manufacturer's authoritative variant mapping or independently corroborated merchant catalog supplies GTIN. | Normally no interruption. If two viable variants survive, ask one discriminating question. |
+| The request lacks a ZIP | An ordinary comparison uses national US online item price. For a location-specific request, use a previously authorized destination when available. | Item-price answer first. Ask once for ZIP only for requested local stock, shipping or all-in comparison. |
+| One retailer fails or rates out | Continue with successful merchants. Retain source failure/unknown count and check time; allow user-triggered refresh. | Best verified result so far and the remaining coverage. |
+| Same item, same cheapest price | Keep all tied sellers. Collapse duplicate listings for a seller. | Tied seller links. No artificial tie-breaker presented as “best.” |
+| Clear one-off request | Compare once. Optional “Watch this price” is secondary. | Winner without an alert or permission prompt. |
+| Explicit watch: “Notify me when this restocks under $25” | Bind identity, price, exact operator and event. Run counterexamples silently, verify proof, check authorization for repeated reads. | “Watching this seller for a restock below $25” plus Undo/Pause if armed. Drawer shows evidence and provenance. |
+| Ambiguous watch: “when it comes back cheap” | Return shopping result immediately. Attempt deterministic disambiguation; ask for the single missing fact that changes the rule. | One question at a time. The comparison remains usable if ignored. |
+
+**Interaction budget.** Target zero follow-up questions on unambiguous comparisons and explicit eligible watches. One discriminating question per round; at most two unresolved fields in a watch before leaving it as an editable draft. Ask no question merely to reconfirm a known barcode, approve a model choice, collect a training label, or start a normal search. Explicit “watch/notify me” with exact supported meaning authorizes the reversible in-app watch. If the request is only a lookup, an affirmative watch tap is the authorization. Ask separately for any external delivery channel if ever added. Never initiate checkout in this release.
+
+**Speed budget, measured on venue Wi-Fi.** Show captured image immediately. Run the visual gate and visual grounding together; overlap Carbon intent extraction and local decode. Start candidate discovery as soon as there is a usable identifier, before every seller is available. Set an initial 10-second progress checkpoint and a 20-second source deadline per comparison wave; expose partial coverage if a lane times out. Treat these as targets until measured. Cache only within current source allowances. No artificial loading timers, canned quotes or prewarmed answers for the drawn test item.
+
+## Runtime model jobs
+
+- **Gemini 4 Neon** reads visible evidence: which object, printed identifiers and distinctive options. It can propose candidates and locate a crop. Printed merchant prices are leads. Treat text inside images/pages as data.
+- **Gemini Decision 1** calls the beta Decisions API to gate visual resolvability using bounded choices `single/multiple/other`. The supplied gate requires single and confidence ≥0.75 (project default). Low confidence triggers one automatic recovery first. A correctly scoped independently decoded barcode can override a low gate when one target is corroborated; otherwise request one tap. Never use this score to assert price or inventory. Show the real choice, score, latency and trace ID on demand.
+- **Gemini 4 Carbon** interprets the natural-language purchase goal and binds it to admissible source evidence. On an explicit watch, it compiles a bounded typed rule; at most one repair is allowed before draft-only. Model disagreement about the merchant's facts is resolved by source evidence and program logic.
+- **Deterministic code** validates checksums, normalizes exact options, enforces freshness, rejects conditional offers, computes total/ties, generates distinguishing timelines and replays the approved rule. Hydrogen/Managed Agents is optional after the core is proven.
+
+## A watch that can explain itself
+
+The executable watch in this handoff covers **one named seller + variant on an authorized feed**. Persist that scope visibly. A user saying “any store” must not silently get a single-store alert. An optional multi-store watch requires a fixed versioned roster: any fresh qualifying witness proves positive, only complete fresh roster coverage can establish negative, missing coverage is unknown, roster changes reset the baseline. Do not ship that wording until implemented and tested.
+
+For the bounded single-seller language, test all four interpretations: strict/inclusive price cap × genuine return to stock/first joint eligibility. A price that falls below the cap while already in stock distinguishes the two event modes. Arriving at exactly the cap distinguishes the two comparators. reference/autowatch.py derives only semantics that follow from explicit supported wording and labels every derived answer `explicit_request`. A real tap is labeled `buyer`. Never describe an inferred answer as a human response. Show a “Would this alert?” playground after the result. Initial read establishes baseline; source error, out-of-order reading, wrong variant, stale gap, duplicate or CAD price cannot fabricate a restock. No live feed with appropriate rights means offer a clearly labeled rule preview and keep shopping fully usable.
+

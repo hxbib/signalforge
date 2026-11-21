@@ -1,0 +1,24 @@
+.venv/
+.env
+.env.*
+__pycache__/
+*.py[cod]
+private/
+*.sqlite*
+*.db
+*.jsonl
+*_gs.json.gz
+
+
+coord/
+data/
+uploads/
+.pytest_cache/
+node_modules/
+*.log
+
+# internal planning / handoff material — kept on disk for the team, not published
+/START_HERE.md
+/MANIFEST.json
+/ops/
+/qa/
