@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>SignalForge — show me the item</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c2410c'/%3E%3Cpath d='M9 17l5 5 9-12' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/styles.css">
+<script type="module" src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <a class="brand" href="/" aria-label="SignalForge home">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7"/><path d="M9 17l5 5 9-12"/></svg>
+    <span>SignalForge</span>
+  </a>
+  <nav class="top-nav" aria-label="Site">
+    <button type="button" id="new-search" class="link-btn" hidden>New search</button>
+    <a href="/proof">Proof</a>
+  </nav>
+</header>
+
+<main id="main">
+  <section id="capture" class="capture" aria-labelledby="capture-title">
+    <div id="drop" class="drop">
+      <div id="drop-idle" class="drop-idle">
+        <p class="eyebrow">One photo. Zero typing.</p>
+        <h1 id="capture-title">Show me the item</h1>
+        <p class="lede">Paste a screenshot, drop a photo or take one. We find the exact product and the lowest verified in-stock price among the stores checked.</p>
+        <div class="actions">
+          <input id="file" class="file-input" type="file" accept="image/*">
+          <label for="file" class="btn btn-primary">
+            <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 14.5l4.2-4.2 3 3 2.3-2.3L17 15.5M3 4.5h14v11H3z"/></svg>
+            Choose a photo
+          </label>
+          <button type="button" id="camera" class="btn">
+            <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6.5h3l1.3-2h5.4l1.3 2h3v9H3z"/><circle cx="10" cy="10.8" r="2.8"/></svg>
+            Use camera
+          </button>
+          <input id="file-camera" class="file-input" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
+        </div>
+        <p class="hint hint-wide"><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>V</kbd> pastes from anywhere on this page · or drop an image here</p>
+        <p class="hint hint-narrow">A screenshot from your library works too.</p>
+      </div>
+
+      <div id="viewfinder" class="viewfinder" hidden>
+        <video id="video" playsinline muted aria-label="Camera viewfinder"></video>
+        <div class="viewfinder-bar">
+          <button type="button" id="camera-cancel" class="btn btn-ghost">Cancel</button>
+          <button type="button" id="shutter" class="shutter" aria-label="Take the photo and search"><span></span></button>
+          <span class="viewfinder-spacer" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <p class="drop-over" aria-hidden="true">Drop to search</p>
+    </div>
+
+    <div class="note-row">
+      <label for="note" class="visually-hidden">Optional note</label>
+      <input id="note" type="text" maxlength="300" autocomplete="off" enterkeyhint="done"
+             placeholder="Optional — e.g. notify me when this restocks under $25">
+    </div>
+    <p id="capture-error" class="capture-error" role="alert"></p>
+  </section>
+
+  <section id="run" class="run" hidden aria-labelledby="run-title">
+    <div class="run-grid">
+      <figure class="shot">
+        <img id="shot" alt="The photo you submitted">
+        <figcaption id="shot-note"></figcaption>
+      </figure>
+
+      <div class="answer">
+        <div class="result" id="result">
+          <p class="eyebrow" id="run-eyebrow"></p>
+          <h1 id="run-title" tabindex="-1"></h1>
+          <p id="run-message" class="run-message"></p>
+          <button type="button" id="retry" class="btn retry" hidden>Try another photo</button>
+          <div id="offer"></div>
+          <div id="question"></div>
+          <div id="identity"></div>
+          <div id="assumptions"></div>
+        </div>
+        <section class="panel progress-panel" aria-labelledby="progress-title">
+          <div class="panel-head">
+            <h2 id="progress-title">What ran</h2>
+            <p id="elapsed" class="elapsed"></p>
+          </div>
+          <ol id="progress" class="progress"></ol>
+          <p id="conn" class="conn" role="status"></p>
+        </section>
+      </div>
+    </div>
+
+    <div class="below">
+      <div id="why"></div>
+      <div id="coverage"></div>
+      <div id="watch"></div>
+      <details id="evidence" class="panel evidence">
+        <summary>Evidence — model receipts, sources, rejection reasons</summary>
+        <div id="evidence-body"></div>
+      </details>
+    </div>
+  </section>
+</main>
+
+<div id="live" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

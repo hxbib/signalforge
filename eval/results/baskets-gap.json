@@ -1,0 +1,13 @@
+{
+ "experiment": "B",
+ "status": "not_run",
+ "recorded_at": 1795293540,
+ "statement": "The five-case photo-to-offer check (eval/seal_baskets.py; baseline basket_answer(packet, False) vs system basket_answer(packet, True)) was not run: rights-cleared merchant evidence for five preregistered cases could not be assembled before the 16:05 ET proof cutoff. No case, price or score was substituted.",
+ "missing": [
+  "A sampling frame from an authorized merchant or manufacturer catalog whose terms grant retention and offsite model-evaluation rights. The shop.dev catalog is used shopper-triggered with a short eligibility window; spec/RETAILERS.md forbids feeding restricted external offer data to an evaluation job, and no source in the registry records an evaluation right.",
+  "Five rights-cleared product images (merchant-licensed or the team's own new capture of each drawn item).",
+  "A human operator adjudication pass of all five cases (GTIN/model, pack, seller, stock, basis, fulfillment, amount, fees) against the independent source before either arm runs.",
+  "Sealed cases.jsonl with source_rights and gold_evidence per case (eval/seal_baskets.py refuses to seal without them)."
+ ],
+ "what_exists": "Experiment A (independent WDC v2 pairs) measures the identity check the live app uses for tier model_number. End-to-end live runs are timed by the app itself and are not reported here."
+}
