@@ -12,7 +12,8 @@ SUMMARY = ROOT / "eval" / "results" / "summary.json"
 E2E = ROOT / "eval" / "results" / "e2e-summary.json"
 README = ROOT / "README.md"
 START, END = "<!-- EVAL:START (written by scripts/readme_numbers.py; do not edit by hand) -->", "<!-- EVAL:END -->"
-ARM_NAMES = {"baseline": "Baseline: one Gemini 4 Carbon call", "full": "System listing check", "system": "SignalForge full system"}
+ARM_NAMES = {"baseline": "Baseline: one Gemini 4 Carbon call", "full": "System listing check", "system": "SignalForge full system, zero taps",
+             "system_one_tap": "SignalForge with ONE tap: a simulated buyer answers one choice question using the gold label"}
 
 
 def _v(value):
@@ -96,11 +97,23 @@ def _e2e(e):
         label = (f'{_v(r.get("label") or r.get("name"))}{"" if kind == "first run" else f" ({kind})"}, code `{_v(r.get("code_sha"))[:7]}`'
                  + (" plus uncommitted changes" if r.get("tree_dirty") else "")
                  + (f', visual_match {"on" if r["visual_match"] else "off"}' if "visual_match" in r else ""))
-        for key in ("system", "baseline"):
+        for key in ("system", "system_one_tap", "baseline"):
             a = (r.get("arms") or {}).get(key)
             if a:
                 copied = key == "baseline" and r.get("baseline_source") and "not re-run" in str(r["baseline_source"])
-                out.append(_e2e_row(label, key, a, r.get("n"), f' (from {r["baseline_source"]})' if copied else ""))
+                note, t = (f' (from {r["baseline_source"]})' if copied else ""), r.get("one_tap") or {}
+                if key == "system_one_tap" and t.get("code_sha"):   # this arm can run on a later commit than the row's other arms
+                    note = (f' (this arm: code `{str(t["code_sha"])[:7]}`' + (" plus uncommitted changes" if t.get("tree_dirty") else "")
+                            + (f', visual_match {"on" if t["visual_match"] else "off"}' if "visual_match" in t else "") + ")")
+                out.append(_e2e_row(label, key, a, r.get("n"), note))
+    for r in runs:
+        t = r.get("one_tap")
+        if t:
+            keys = ("cases", "choice_questions", "text_questions", "answered_without_question", "gold_offered", "gold_first",
+                    "answered_gold", "answered_none")
+            out += ["", f'One-tap arm of {_v(r.get("label") or r.get("name"))}: '
+                        + ", ".join(f"{k.replace('_', ' ')} {_v(t[k])}" for k in keys if k in t) + "."
+                        + (f' Note recorded with the run: {t["note"]}' if t.get("note") else "")]
     for r in runs:
         if r.get("reading"):
             out += ["", f'Reading of {_v(r.get("label") or r.get("name"))}, written by the benchmark script itself (`eval/e2e`):', ""]

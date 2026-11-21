@@ -27,7 +27,9 @@ Written on November 21 before the application was assembled, then committed as t
   binding with deterministic corroboration, the listing check (two versions, both kept), local barcode decode); the commerce lanes
   (`app/merchants/shop.py` for the Shop catalog, `chains.py` for the merchant's own storefront, `compare.py` for
   fan-out and the shopper-facing result, `ranking.py` for tiered identity on top of the reference rules); the
-  watch lane (`app/watch/`); the evaluation evidence route (`app/evidence/`).
+  watch lane (`app/watch/`); the evaluation evidence route (`app/evidence/`); the Decision 1 listing screen and the
+  `visual_match` rule (built, measured, then switched off after a red-team test); the optional Managed Agent
+  challenge lane (`app/optional/`).
 - `app/web/`: the browser app (capture, progress, result, evidence drawer, watch, proof page).
 - `tests/`: offline tests for each lane.
 - `eval/draw.py`, `run_pairs.py`, `summarize.py`, `report.py`, `interim.py`, `failures.py`, `diagnose.py`, `eval/e2e/` and
@@ -41,13 +43,19 @@ field; UPC lookup `not_found`): the reference GTIN-lookup path could not be the 
 ## Commit history
 
 `git log --reverse --format='%h %ad %s' --date=iso`, times shown in ET. Range at the time of writing:
-`0e6fbd2..caf5b8f` (this list is refreshed before submission; the repository log is authoritative).
+`0e6fbd2..8b5f11e` (later commits may follow; the repository log is authoritative).
 
 | Commit | Time (ET), Nov 21 2026 | Subject |
 |---|---|---|
 | `0e6fbd2` | 15:36:50 | Seed: event-day product spec, reference modules and evaluation protocol |
 | `6cf1194` | 15:43:38 | Application skeleton: API, pipeline, model/catalog/ranking/watch/eval lanes, browser app |
 | `caf5b8f` | 15:53:53 | Serve and tunnel scripts; model, catalog and ranking lanes verified against live services |
+| `6fc8711` | 16:01:16 | Merchant storefront lane, evaluation v1 results, docs, review fixes |
+| `8906319` | 16:15:30 | Decision 1 listing screen, price-outlier caution, question-path fixes, blind end-to-end benchmark v1, eval v2 |
+| `c09f42a` | 16:22:04 | Visual-match identity basis, listing-check gating fix, watch fixes, sandbox challenge lane, installable web app, pinned requirements |
+| `5bc338c` | 16:26:04 | Frozen build: watch preview labelled simulation, proof page fixes, evaluation runs v2 and held-out draws |
+| `10d8e58` | 16:29:30 | Demo video page |
+| `8b5f11e` | 16:30:59 | Remove unused demo page |
 
 The first commit was made at 15:36 ET. Work earlier in the day (the planning notes and reference modules of layer 1)
 was done outside this repository's history, so the log shows when each layer was committed, not when each line was

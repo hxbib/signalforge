@@ -1,5 +1,5 @@
 {
- "generated_at": 1795296243,
+ "generated_at": 1795296726,
  "generated_from": [
   "pairs-v1.json",
   "pairs-v2.json",
@@ -784,7 +784,8 @@
    "One-call baseline: answered 20 of 24 (20 the gold product, 0 another product), abstained on 4, 0 errors; 1 of its 20 answered offers were invalid and 12 matched the reference cheapest valid offer.",
    "On this sample, with no follow-up answer given, the single model call covered more photos than the full system with no more wrong products; the full system's extra checks bought no measured identity safety here.",
    "Why the full system stopped (post-hoc flags, no score changed): gate_did_not_pass x2, no_model_number_or_barcode_in_photo x21. Of its 1 false accepts, 1 bound a model number that the gold product's own catalog titles also carry (the same item under two catalog product ids).",
-   "Listing screen (one gemini-decision-1 call per photo): 240 listing judgments over 24 cases (22 positive, 218 negative, 0 failed calls), ROC AUC 0.9875; at p >= 0.9 precision 1.0, recall 0.0909, false-accept rate 0.0; at p >= 0.5 precision 0.9375, recall 0.6818; the top-scored listing was the gold product in 19 of 22 cases that had one; median 384 ms per call."
+   "Listing screen (one gemini-decision-1 call per photo): 240 listing judgments over 24 cases (22 positive, 218 negative, 0 failed calls), ROC AUC 0.9875; at p >= 0.9 precision 1.0, recall 0.0909, false-accept rate 0.0; at p >= 0.5 precision 0.9375, recall 0.6818; the top-scored listing was the gold product in 19 of 22 cases that had one; median 384 ms per call.",
+   "What the photos are: every case photo is the catalog's own product image of the drawn product. That is the easiest input for a model that matches a picture to a listing (the candidate listing was made from that very image) and the hardest for a rule that wants printed evidence (a studio shot rarely shows a model number or a barcode). The benchmark therefore shows how each arm behaves on clean merchant imagery with no typed hint: how often it answers, how often the answer is another product, and whether the answered offer survives the checks. It does not show how either arm performs on a shopper's own photo of an item in hand, where the picture is not the listing's own and packaging text may be readable; neither arm was measured on such photos here."
   ],
   "runs": [
    {
@@ -1003,7 +1004,8 @@
       },
       "gold_is_top_option": 10,
       "gold_among_options": 12
-     }
+     },
+     "no_lead_rule": null
     },
     "reading": [
      "Full system: answered 2 of 24 photos (1 the gold product, 1 another catalog product id), stopped without an answer on 22, 0 errors; 0 of its 2 answered offers were invalid.",
@@ -1011,12 +1013,212 @@
      "Why visual_match did not fire on the 20 abstentions that reached the screen (post-hoc, from the probabilities on the question's options): screen_margin_below_threshold x8, screen_top_below_threshold x11, second_model_pick_differs_or_missing x1. The gold product was the top-scored option in 10 of them and among the options in 12.",
      "False accepts by catalog product id, system: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none."
     ]
+   },
+   {
+    "name": "b",
+    "label": "Held-out draw B: new products, frozen before any call, both arms",
+    "draw": "B",
+    "in_sample": false,
+    "held_out": true,
+    "generated_at": 1795296303,
+    "code_sha": "890631904bea6cc760a6acd0371d9ac07d9ba20f",
+    "code_sha_at_end": "c09f42a8659b2304638199e2b7007a902edf45e3",
+    "tree_dirty": true,
+    "pair_version": "v2-carbon-verified-quotes",
+    "visual_match": true,
+    "visual_match_thresholds": {
+     "p": 0.75,
+     "margin": 0.25
+    },
+    "baseline_source": null,
+    "n": 24,
+    "arms": {
+     "system": {
+      "correct": 1,
+      "false_accepts": 1,
+      "abstained": 22,
+      "errors": 0,
+      "answered": 2,
+      "invalid_offers": 0,
+      "invalid_reasons": {},
+      "storefront_checks": {
+       "confirmed": 1,
+       "unavailable": 1
+      },
+      "cheapest_agreement": 0,
+      "cheapest_codes": {
+       "not_applicable": 23,
+       "pricier_than_reference": 1
+      },
+      "reason_codes": {
+       "bind:model_number": 1,
+       "offer_identity:model_number": 1,
+       "question:choice": 17,
+       "question:text": 4,
+       "result:needs_identity": 21,
+       "result:no_verified_offer": 1,
+       "result:winner": 1,
+       "state:complete": 1,
+       "state:needs_detail": 21,
+       "state:partial": 1
+      },
+      "median_ms": 15296
+     },
+     "system_one_tap": {
+      "correct": 8,
+      "false_accepts": 1,
+      "abstained": 15,
+      "errors": 0,
+      "answered": 9,
+      "invalid_offers": 0,
+      "invalid_reasons": {},
+      "storefront_checks": {
+       "confirmed": 9
+      },
+      "cheapest_agreement": 7,
+      "cheapest_codes": {
+       "agree": 7,
+       "not_applicable": 16,
+       "pricier_than_reference": 1
+      },
+      "reason_codes": {
+       "bind:model_number": 1,
+       "offer_identity:model_number": 1,
+       "question:text": 11,
+       "result:needs_identity": 11,
+       "result:no_verified_offer": 4,
+       "result:winner": 1,
+       "state:complete": 4,
+       "state:needs_detail": 11,
+       "state:partial": 1
+      },
+      "median_ms": 15605
+     },
+     "baseline": {
+      "correct": 21,
+      "false_accepts": 1,
+      "abstained": 2,
+      "errors": 0,
+      "answered": 22,
+      "invalid_offers": 4,
+      "invalid_reasons": {
+       "storefront_mismatch": 4
+      },
+      "storefront_checks": {
+       "confirmed": 17,
+       "mismatch": 4,
+       "unavailable": 1
+      },
+      "cheapest_agreement": 16,
+      "cheapest_codes": {
+       "agree": 16,
+       "cheaper_than_reference": 1,
+       "not_applicable": 3,
+       "pricier_than_reference": 3,
+       "reference_unavailable": 1
+      },
+      "reason_codes": {
+       "abstain": 2,
+       "winner": 1
+      },
+      "median_ms": 4559
+     }
+    },
+    "paired": {
+     "system_abstained__baseline_abstained": 1,
+     "system_abstained__baseline_correct": 21,
+     "system_correct__baseline_false_accept": 1,
+     "system_false_accept__baseline_abstained": 1
+    },
+    "reference_offer_cases": 23,
+    "gold_in_baseline_candidates": 23,
+    "median_case_wall_ms": 20820,
+    "diagnostic": {
+     "post_hoc": true,
+     "changes_scores": false,
+     "system_abstention_codes": {
+      "gate_did_not_pass": 4,
+      "model_number_read_but_not_bound": 3,
+      "no_model_number_or_barcode_in_photo": 15
+     },
+     "system_false_accepts": 1,
+     "system_false_accepts_same_model_number_as_gold": 1,
+     "false_accepts": {
+      "system": {
+       "strict": 1,
+       "same_item_other_catalog_id": 1,
+       "no_same_item_evidence": 0
+      },
+      "baseline": {
+       "strict": 1,
+       "same_item_other_catalog_id": 0,
+       "no_same_item_evidence": 1
+      },
+      "system_one_tap": {
+       "strict": 1,
+       "same_item_other_catalog_id": 1,
+       "no_same_item_evidence": 0
+      }
+     },
+     "visual_match_gap": {
+      "abstentions_with_screen_scores": 17,
+      "codes": {
+       "screen_margin_below_threshold": 3,
+       "screen_top_below_threshold": 10,
+       "second_model_pick_differs_or_missing": 4
+      },
+      "gold_is_top_option": 5,
+      "gold_among_options": 12
+     },
+     "no_lead_rule": {
+      "deployed": false,
+      "is_score": false,
+      "rule": "top catalog product's screen probability >= 0.75 and the second model picked the same product; no lead requirement",
+      "source": "recorded runs only: the bind step's recorded outcome and the screen probabilities on the question's options",
+      "cases": 24,
+      "reached_visual_match_decision": 5,
+      "accepted": 2,
+      "accepted_by_deployed_rule": 1,
+      "accepted_gold": 1,
+      "accepted_other_catalog_id": 1
+     }
+    },
+    "one_tap": {
+     "cases": 24,
+     "choice_questions": 17,
+     "text_questions": 5,
+     "answered_without_question": 2,
+     "gold_offered": 11,
+     "gold_first": 8,
+     "answered_gold": 11,
+     "answered_none": 6,
+     "source": "e2e-b-tap.json",
+     "code_sha": "5bc338c6e6048ec45d8bc740c22f4529cb838fa3",
+     "tree_dirty": true,
+     "visual_match": true,
+     "generated_at": 1795296641,
+     "note": "system_one_tap: the system run plus at most one answer to a choice question, given by a simulated buyer who knows what they are holding (the gold option if it is offered, otherwise 'None of these'). The tap uses the gold label, so this arm measures the system given one correct human confirmation; the baseline arm gets no such help. It is a separate fresh run of the system, so its first leg can differ from the zero-tap system row."
+    },
+    "reading": [
+     "Full system: answered 2 of 24 photos (1 the gold product, 1 another catalog product id), stopped without an answer on 22, 0 errors; 0 of its 2 answered offers were invalid.",
+     "One-call baseline: answered 22 of 24 (21 the gold product, 1 another product), abstained on 2, 0 errors; 4 of its 22 answered offers were invalid and 16 matched the reference cheapest valid offer.",
+     "With one correct tap (system_one_tap, the tap uses the gold label): 8 correct, 1 false accepts, 15 abstained, 0 errors of 24; 0 of its 9 answered offers were invalid and 7 matched the reference cheapest valid offer. The system asked a choice question in 17 of 24 cases; the gold product was among the options in 11 and was the first option (ordered by the Decision 1 screen) in 8. The baseline arm gets no such help.",
+     "Why visual_match did not fire on the 17 abstentions that reached the screen (post-hoc, from the probabilities on the question's options): screen_margin_below_threshold x3, screen_top_below_threshold x10, second_model_pick_differs_or_missing x4. The gold product was the top-scored option in 5 of them and among the options in 12.",
+     "False accepts by catalog product id, system: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.",
+     "False accepts by catalog product id, baseline: 1 strict, of which 0 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 1 carry none.",
+     "False accepts by catalog product id, system_one_tap: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.",
+     "Documented next step, NOT deployed and NOT a score (computed from the recorded runs, nothing re-run): a rule without the lead requirement (top catalog product's screen probability >= 0.75 and the second model picked the same product; no lead requirement) would have accepted 2 of 24 cases (1 of them also accepted by the deployed rule): 1 the gold product, 1 another catalog product id."
+    ]
    }
   ],
-  "headline_run": "v1",
+  "headline_run": "b",
   "comparison": [
-   "Full system on draw A: v1 (visual_match off) 0 correct, 1 false accepts, 23 abstained, 0 errors of 24; v2 (visual_match on, IN-SAMPLE) 1 correct, 1 false accepts, 22 abstained, 0 errors of 24. v2 is not an unbiased estimate: the change was designed from this draw."
+   "Full system on draw A: v1 (visual_match off) 0 correct, 1 false accepts, 23 abstained, 0 errors of 24; v2 (visual_match on, IN-SAMPLE) 1 correct, 1 false accepts, 22 abstained, 0 errors of 24. v2 is not an unbiased estimate: the change was designed from this draw.",
+   "Held-out draw B (the number to quote): full system 1 correct, 1 false accepts, 22 abstained, 0 errors of 24; one-call baseline 21 correct, 1 false accepts, 2 abstained, 0 errors of 24.",
+   "Run b: With one correct tap (system_one_tap, the tap uses the gold label): 8 correct, 1 false accepts, 15 abstained, 0 errors of 24; 0 of its 9 answered offers were invalid and 7 matched the reference cheapest valid offer. The system asked a choice question in 17 of 24 cases; the gold product was among the options in 11 and was the first option (ordered by the Decision 1 screen) in 8. The baseline arm gets no such help.",
+   "Run b: Documented next step, NOT deployed and NOT a score (computed from the recorded runs, nothing re-run): a rule without the lead requirement (top catalog product's screen probability >= 0.75 and the second model picked the same product; no lead requirement) would have accepted 2 of 24 cases (1 of them also accepted by the deployed rule): 1 the gold product, 1 another catalog product id."
   ],
+  "photo_caveat": "What the photos are: every case photo is the catalog's own product image of the drawn product. That is the easiest input for a model that matches a picture to a listing (the candidate listing was made from that very image) and the hardest for a rule that wants printed evidence (a studio shot rarely shows a model number or a barcode). The benchmark therefore shows how each arm behaves on clean merchant imagery with no typed hint: how often it answers, how often the answer is another product, and whether the answered offer survives the checks. It does not show how either arm performs on a shopper's own photo of an item in hand, where the picture is not the listing's own and packaging text may be readable; neither arm was measured on such photos here.",
   "screens": {
    "a": {
     "run": "screen-v1",
@@ -1111,6 +1313,100 @@
      "Every frozen case is in the denominator; a failed call is an error case with no judgments. Precision is null when nothing was accepted at a threshold.",
      "The screen orders and annotates listings; in the product it never grants identity on its own."
     ]
+   },
+   "b": {
+    "run": "screen-b",
+    "generated_at": 1795296320,
+    "code_sha": "c09f42a8659b2304638199e2b7007a902edf45e3",
+    "tree_dirty": true,
+    "model": "gemini-decision-1",
+    "listing_cap": 60,
+    "target_source": "photo only: name, brand, model number and variant details read by Gemini 4 Neon in the system-arm run",
+    "label": "positive iff the listing belongs to the drawn (gold) catalog product id",
+    "cases": 24,
+    "calls": 24,
+    "error_cases": 0,
+    "judgments": 240,
+    "not_scored": 0,
+    "positives": 23,
+    "negatives": 217,
+    "cases_without_positive": 1,
+    "median_ms_per_call": 439,
+    "thresholds": [
+     {
+      "threshold": 0.5,
+      "tp": 15,
+      "fp": 1,
+      "fn": 8,
+      "tn": 216,
+      "precision": 0.9375,
+      "recall": 0.6522,
+      "false_accept_rate": 0.0046
+     },
+     {
+      "threshold": 0.75,
+      "tp": 11,
+      "fp": 0,
+      "fn": 12,
+      "tn": 217,
+      "precision": 1.0,
+      "recall": 0.4783,
+      "false_accept_rate": 0.0
+     },
+     {
+      "threshold": 0.9,
+      "tp": 0,
+      "fp": 0,
+      "fn": 23,
+      "tn": 217,
+      "precision": null,
+      "recall": 0.0,
+      "false_accept_rate": 0.0
+     }
+    ],
+    "false_accept_rate_at_0.9": 0.0,
+    "reliability": [
+     {
+      "bin": "0.0-0.2",
+      "count": 212,
+      "mean_predicted": 0.0993,
+      "observed_positive_rate": 0.0094
+     },
+     {
+      "bin": "0.2-0.4",
+      "count": 11,
+      "mean_predicted": 0.2769,
+      "observed_positive_rate": 0.4545
+     },
+     {
+      "bin": "0.4-0.6",
+      "count": 3,
+      "mean_predicted": 0.5062,
+      "observed_positive_rate": 1.0
+     },
+     {
+      "bin": "0.6-0.8",
+      "count": 5,
+      "mean_predicted": 0.7263,
+      "observed_positive_rate": 0.8
+     },
+     {
+      "bin": "0.8-1.0",
+      "count": 9,
+      "mean_predicted": 0.8457,
+      "observed_positive_rate": 1.0
+     }
+    ],
+    "roc_auc": 0.9882,
+    "brier": 0.035,
+    "top1_positive_cases": 20,
+    "cases_with_positive": 23,
+    "notes": [
+     "Same frozen draw and photos as the two-arm run; the candidate rows are the catalog search rows of the draw query, read again at screen time (at most 60 per case). One Decision 1 call per case scores every listing; gold never enters the call.",
+     "Label noise: a listing is positive only if it belongs to the gold catalog product id. The same product listed by a seller outside that catalog cluster counts as a negative here, so precision is a lower bound and the false-accept rate an upper bound.",
+     "Every frozen case is in the denominator; a failed call is an error case with no judgments. Precision is null when nothing was accepted at a threshold.",
+     "The screen orders and annotates listings; in the product it never grants identity on its own."
+    ]
    }
   },
   "notes": [
@@ -1119,13 +1415,15 @@
    "Gold is the Shop catalog product id of the drawn product. The same physical item can exist under another catalog product id; an answer bound to such a duplicate is counted as a false accept here.",
    "The photos are the merchants' own catalog images. Many show no printed model number, so the full system is expected to stop and ask one question; zero follow-up answers were given, so those cases count as abstained.",
    "The baseline is handed the listing rows of the draw query (which normally contain the gold product); the full system has to find the product in the whole catalog from the photo alone.",
+   "What the photos are: every case photo is the catalog's own product image of the drawn product. That is the easiest input for a model that matches a picture to a listing (the candidate listing was made from that very image) and the hardest for a rule that wants printed evidence (a studio shot rarely shows a model number or a barcode). The benchmark therefore shows how each arm behaves on clean merchant imagery with no typed hint: how often it answers, how often the answer is another product, and whether the answered offer survives the checks. It does not show how either arm performs on a shopper's own photo of an item in hand, where the picture is not the listing's own and packaging text may be readable; neither arm was measured on such photos here.",
+   "system_one_tap: the system run plus at most one answer to a choice question, given by a simulated buyer who knows what they are holding (the gold option if it is offered, otherwise 'None of these'). The tap uses the gold label, so this arm measures the system given one correct human confirmation; the baseline arm gets no such help. It is a separate fresh run of the system, so its first leg can differ from the zero-tap system row.",
    "Cheapest-valid agreement is circular for the full system: the reference winner is computed by the same deterministic evaluator (app.merchants.ranking.evaluate) the system uses, over the gold product's rows. For the system it tests binding and lane wiring; for the baseline it tests constraint-following.",
    "An invalid offer is an answered offer that is not new / in stock / USD on its own row, or whose merchant storefront disagreed on price or stock when re-read at scoring time (storefront_mismatch).",
    "A system run that ended 'unavailable' with an error is counted as an error, not as an abstention.",
    "Baseline rows come from catalog search, which can list fewer sellers of a product than the full product read the reference uses; 'pricier_than_reference' can therefore also mean the cheapest seller was not among the baseline's rows.",
    "During run v1 the runner's rate-limit detector matched a step duration whose digits contained 429; no rate-limit error occurred. The runner paused 30 s and ran one case at a time from then on (two at a time before). No case was affected or re-run."
   ],
-  "summarized_at": 1795296030
+  "summarized_at": 1795296646
  },
  "freeze": {
   "frozen_at": 1795293437,

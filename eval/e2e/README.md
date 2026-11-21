@@ -99,6 +99,40 @@ gold product's own titles, or the two catalog products have the identical catalo
 evidence is not thereby a different item; nothing was adjudicated by hand. The screen calibration was repeated on
 draw B (`screen.py --draw b`).
 
+## What the photos are, and what that does and does not show
+
+Every case photo is the catalog's own product image of the drawn product. That is the easiest input for a model
+that matches a picture to a listing (the candidate listing was made from that very image) and the hardest for a
+rule that wants printed evidence (a studio shot rarely shows a model number or a barcode). The benchmark
+therefore shows how each arm behaves on clean merchant imagery with no typed hint: how often it answers, how
+often the answer is another product, and whether the answered offer survives the checks. It does not show how
+either arm performs on a shopper's own photo of an item in hand, where the picture is not the listing's own and
+packaging text may be readable; neither arm was measured on such photos here.
+
+## The one-tap arm (`system_one_tap`)
+
+The product is designed as one photo and at most one tap, so zero-tap alone does not measure it.
+`run.py --run b-tap` (and `a-tap` on draw A) runs the system again on every case; when the run ends in a choice
+question, a simulated buyer who knows what they are holding answers once: the option whose id is the gold
+product if it is offered, otherwise "None of these". The answer is applied with the semantics of
+`POST /api/search/{run_id}/answer` (current revision and question, revision + 1, pipeline resumed) and the run
+is followed to its terminal state with no second answer. A text question gets no answer and counts as
+abstained. Scoring is identical to the other arms; the time includes both legs.
+
+**The tap uses the gold label.** This arm measures the system given one correct human confirmation; the
+baseline arm gets no such help, so the two rows are not a like-for-like comparison. The report also prints how
+often the gold product was among the options and how often it was the first option (options are ordered by the
+Decision 1 screen). It is a separate fresh run, so its first leg can differ from the zero-tap row.
+
+## A documented next step that is NOT deployed and NOT a score
+
+`diagnose.py` also computes, from the recorded runs only (nothing is re-run), what a visual-match rule without
+the lead requirement would have done: accept the top-scored catalog product when its screen probability reaches
+the deployed threshold and the second model picked the same product. It reports accepted / gold / another
+catalog product id. The deployed rule keeps the lead requirement; no threshold was changed after the results
+were seen. Where a run's recording cannot tell whether the second model's pick agreed, the figure is not
+computed and the file says so.
+
 ## Second experiment on the same draw: is the listing screen calibrated?
 
 `screen.py` asks one more question of the same 24 frozen cases. For each case it reads the catalog search rows of

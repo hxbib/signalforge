@@ -30,8 +30,9 @@ VISUAL_MATCH_MARGIN = 0.25   # and its lead over the next-best product on offer
 
 
 def _visual_match_on() -> bool:
-    """SF_VISUAL_MATCH=0 restores the strict printed-evidence behaviour (no visual_match basis)."""
-    return os.environ.get("SF_VISUAL_MATCH", "1").strip() != "0"
+    """Off unless SF_VISUAL_MATCH=1: the shipped build keeps the strict printed-evidence behaviour (no visual_match
+    basis), because the screen does not check colour or variant (coord/bugs/040)."""
+    return os.environ.get("SF_VISUAL_MATCH", "0").strip() == "1"
 TIMEOUT_MESSAGE = "This search took longer than 90 seconds and was stopped. Please try again."
 INTERRUPTED_MESSAGE = "This search was interrupted by a server restart. Please try again."
 

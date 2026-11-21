@@ -1,5 +1,5 @@
 {
- "generated_at": 1795296030,
+ "generated_at": 1795296475,
  "run": "v2",
  "post_hoc": true,
  "changes_scores": false,
@@ -10,6 +10,8 @@
  },
  "system_false_accepts": 1,
  "system_false_accepts_same_model_number_as_gold": 1,
+ "no_lead_rule": null,
+ "no_lead_rule_note": "not computed: this run's recording never shows the second model's pick differing, so it cannot tell whether the pick agreed with the top-scored product",
  "false_accepts": {
   "system": {
    "strict": 1,

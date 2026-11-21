@@ -49,12 +49,13 @@ def render(summary):
            ". Do not edit by hand._", ""]
     fr = summary.get("freeze")
     out += ["## Experiment A · does a listing describe the exact same product?", "",
-            "Independent inputs we did not write or label: 40 listing pairs drawn blind from the **WDC Product Data Corpus v2** "
+            "Independent inputs we did not write or label: two blind draws of 40 listing pairs each (draw A, and held-out draw B "
+            "disjoint from A) from the **WDC Product Data Corpus v2** "
             "non-normalized gold standard (Peeters, Primpeli, Bizer; https://webdatacommons.org/largescaleproductcorpus/v2/), "
             "computers + cameras, 10 matching and 10 non-matching pairs per category. Models see only title, description, brand "
-            "and spec text; ids, clusters and labels never enter a model input. The system arm is the same two-model listing "
-            "check the live app uses to decide whether a merchant listing is the photographed item (identity tier "
-            "`model_number`, `app.models.pair`). Abstentions and errors count as incorrect and stay in the denominator.", ""]
+            "and spec text; ids, clusters and labels never enter a model input. The system arm is the listing check the live app "
+            "uses to decide whether a merchant listing is the photographed item (identity tier `model_number`, `app.models.pair`): "
+            "two models in v1; one Gemini 4 Carbon call plus a deterministic quote check since v2, which is what the app runs now. Abstentions and errors count as incorrect and stay in the denominator.", ""]
     if fr:
         out += [f'Frozen before either arm ran: {fr["frozen_at_iso"]}, seed = code SHA `{fr["seed"][:12]}`, '
                 f'inputs sha256 `{fr["inputs_sha256"][:12]}…`, gold sha256 `{fr["gold_sha256"][:12]}…`, '

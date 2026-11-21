@@ -57,6 +57,36 @@ def visual_match_gap(question: dict | None, gold_upid: str, p_min: float, margin
             "gold_among_options": any(upid == gold_upid for upid, _ in scored)}
 
 
+REFUSED, DIFFERENT = "visual match not accepted", "Carbon chose a different product"
+
+
+def no_lead_case(system: dict, arm: dict, gold_upid: str, p_min: float) -> dict | None:
+    """What a rule WITHOUT the lead requirement would have done on one recorded run (nothing is re-run): accept the
+    top-scored catalog product when its screen probability reaches p_min and the second model picked that same
+    product. Read from the recorded bind step and the probabilities on the question's options. None when the run
+    never reached the visual-match decision."""
+    if "bind:visual_match" in arm.get("reasons", []):
+        return {"accepted": True, "deployed_rule_accepted": True, "gold": arm["outcome"] == "correct"}
+    bind = next((row.get("detail") or "" for row in system.get("progress") or [] if row.get("id") == "bind"), "")
+    scored = [(o.get("id"), o["p"]) for o in (system.get("question") or {}).get("options") or [] if type(o.get("p")) is float]
+    if REFUSED not in bind or not scored:
+        return None
+    accepted = scored[0][1] >= p_min and DIFFERENT not in bind
+    return {"accepted": accepted, "deployed_rule_accepted": False, "gold": scored[0][0] == gold_upid}
+
+
+def no_lead_counts(rows: list[dict | None], n: int, p_min: float) -> dict:
+    reached = [r for r in rows if r]
+    accepted = [r for r in reached if r["accepted"]]
+    return {"deployed": False, "is_score": False,
+            "rule": f"top catalog product's screen probability >= {p_min} and the second model picked the same product; no lead requirement",
+            "source": "recorded runs only: the bind step's recorded outcome and the screen probabilities on the question's options",
+            "cases": n, "reached_visual_match_decision": len(reached), "accepted": len(accepted),
+            "accepted_by_deployed_rule": sum(r["deployed_rule_accepted"] for r in accepted),
+            "accepted_gold": sum(r["gold"] for r in accepted),
+            "accepted_other_catalog_id": sum(not r["gold"] for r in accepted)}
+
+
 def gap_counts(gaps: list[dict]) -> dict:
     codes: dict[str, int] = {}
     for g in gaps:
@@ -110,16 +140,21 @@ def main(argv: list[str] | None = None) -> int:
     name = argv[argv.index("--run") + 1] if "--run" in argv else "v1"
     cases = json.loads((RESULTS / f"e2e-{name}.json").read_text())
     details = {}
-    for line in (PRIVATE / f"journal-{name}.jsonl").read_text().splitlines():
+    journal_text = (PRIVATE / f"journal-{name}.jsonl").read_text()
+    for line in journal_text.splitlines():
         ev = json.loads(line)
         if ev.get("event") == "detail":
             details[ev["case_id"]] = ev
-    rows, codes, checks, gaps = [], {}, {"system": [], "baseline": []}, []
+    arm_key = "system" if "system" in cases["cases"][0]["arms"] else "system_one_tap"
+    rows, codes, checks, gaps, no_lead = [], {}, {arm_key: [], "baseline": []}, [], []
     limits = cases.get("visual_match_thresholds") or {}
     for c in cases["cases"]:
         detail = details.get(c["case_id"]) or {}
         system = detail.get("system") or {}
-        arm = c["arms"]["system"]
+        arm = c["arms"][arm_key]
+        first = detail.get("first_leg")   # one-tap runs: the zero-tap leg before the simulated answer
+        if cases.get("visual_match") and (arm_key == "system" or first):
+            no_lead.append(no_lead_case(first or system, first or arm, c["gold_upid"], limits.get("p") or 0.75))
         flags = evidence_flags(system)
         row = {"case_id": c["case_id"], "system_outcome": arm["outcome"], **flags}
         if arm["outcome"] == "abstained":
@@ -131,16 +166,21 @@ def main(argv: list[str] | None = None) -> int:
                 gaps.append(gap)
         if arm["outcome"] == "false_accept":
             row["duplicate_check"] = duplicate_check(system, c["gold_upid"], (system.get("target") or {}).get("upid"))
-            checks["system"].append(row["duplicate_check"])
+            checks[arm_key].append(row["duplicate_check"])
         if (c["arms"].get("baseline") or {}).get("outcome") == "false_accept":
             row["baseline_duplicate_check"] = duplicate_check({}, c["gold_upid"], detail.get("baseline_product"))
             checks["baseline"].append(row["baseline_duplicate_check"])
         rows.append(row)
     doc = {"generated_at": int(time.time()), "run": cases["run"], "post_hoc": True, "changes_scores": False,
            "n": len(rows), "system_abstention_codes": dict(sorted(codes.items())),
-           "system_false_accepts": len(checks["system"]),
+           "system_false_accepts": len(checks[arm_key]),
            "system_false_accepts_same_model_number_as_gold": sum(
-               bool(c.get("gold_titles_carry_bound_model_number")) for c in checks["system"]),
+               bool(c.get("gold_titles_carry_bound_model_number")) for c in checks[arm_key]),
+           "no_lead_rule": no_lead_counts(no_lead, len(rows), limits.get("p") or 0.75)
+           if no_lead and DIFFERENT in journal_text else None,
+           "no_lead_rule_note": None if not no_lead or DIFFERENT in journal_text else
+           "not computed: this run's recording never shows the second model's pick differing, so it cannot tell whether "
+           "the pick agreed with the top-scored product",
            "false_accepts": {arm: false_accept_split(checks[arm]) for arm in c["arms"]},
            "visual_match_gap": gap_counts(gaps) if cases.get("visual_match") else None,
            "cases": rows}

@@ -3,8 +3,9 @@
   .venv/bin/python eval/run_pairs.py v1
 
 baseline = ONE Gemini 4 Carbon call (reference deal_models.pair_verdict(packet, False): PAIR prompt, Pair schema).
-system   = app.models.pair — the production two-model listing check used for identity tier "model_number":
-           Gemini 4 Neon extraction + Gemini 4 Carbon verdict, agreement + verbatim-quote verification, else abstain.
+system   = app.models.pair — the production listing check used for identity tier "model_number" (its PAIR_VERSION is
+           recorded per run): v1 = Gemini 4 Neon extraction + Gemini 4 Carbon verdict, agreement + verbatim quotes, else
+           abstain; v2 (live since 16:02 ET) = one Gemini 4 Carbon call + deterministic verbatim-quote check.
 Both arms go through app.models.io (the verified SDK call shape). Models only ever see the packet (title,
 description, brand, spec table); gold is read only after every prediction is written. At most 2 model calls
 in flight; an HTTP 429 (no answer produced) waits 30 s and is retried at most twice and counted. Every packet

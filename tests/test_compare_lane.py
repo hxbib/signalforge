@@ -448,6 +448,24 @@ class CompareLane(unittest.TestCase):
         reasons = {l["seller_name"]: l["lead_reason"] for l in r["leads"]}
         self.assertEqual((reasons["C4"], reasons["C5"]), ("Not checked: listing check limit (4) reached",) * 2)
 
+    def test_caution_wording_when_winner_storefront_did_not_confirm(self):
+        """bug 044: a catalog-only verified winner (confirmed_by []) must not be described as storefront-stated."""
+        rows = [row("cheap", 3050), row("b", 8499), row("c", 8599), row("d", 8999)]
+        r = run(rows, confirm=confirming(statuses={"Cheap": "unavailable"}))["result"]
+        w = r["winners"][0]
+        self.assertEqual((w["seller_name"], w["verified"], w["confirmed_by"], w["source"]),
+                         ("Cheap", True, [], "shop_native"))
+        self.assertEqual(r["caution"]["sentence"],
+                         "This price is 64% below the median of the 4 verified offers ($85.49). Verified means the Shop "
+                         "catalog lists this price and stock for this exact item (this seller's own storefront did not "
+                         "confirm it) \u2014 it is not a rating of the merchant.")
+        self.assertNotIn("merchant's own storefront states", str(r))
+        # tie: one confirmed + one catalog-only winner -> catalog wording
+        rows = [row("a", 3000), row("t", 3000), row("c", 9000), row("d", 9000), row("e", 9000)]
+        r = run(rows, confirm=confirming(statuses={"T": "unavailable"}))["result"]
+        self.assertIn("did not confirm it", r["caution"]["sentence"])
+        self.assertEqual({w["seller_name"]: w["confirmed_by"] for w in r["winners"]}, {"A": ["merchant_api"], "T": []})
+
 
 if __name__ == "__main__":
     unittest.main()

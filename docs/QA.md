@@ -1,6 +1,6 @@
 # Judge Q&A: the 15 hardest questions
 
-Two-sentence answers taken from the code on disk and from `eval/results/summary.json` (generated 1795296243; runs: pairs-v1, pairs-v2, pairs-b-v2; end-to-end results included). Where something was not measured the answer says so.
+Two-sentence answers taken from the code on disk, from `eval/results/summary.json` (listing-check runs: pairs-v1, pairs-v2, pairs-b-v2) and from `eval/results/e2e-summary.json` (end-to-end runs: v1, v2, b). Where something was not measured the answer says so.
 
 ## 1. Your own table shows the first system scoring below a single model call. Why is this a better system?
 
@@ -20,7 +20,7 @@ All 10 v1 system failures were abstentions on truly matching pairs: seven where 
 
 ## 5. Your end-to-end benchmark says one model call beats your whole system. Why should anyone use it?
 
-On blind-drawn catalog photos with a blank note and no follow-up answer, in the first run the full system found the correct product on 0/24, picked a wrong product on 1 and stopped without an answer on 23 (gate did not pass x2, no model number or barcode in photo x21), while one Carbon call was correct on 20/24 with 0 wrong products (`eval/results/e2e-summary.json`). After adding visual_match: run v2 on draw A (in-sample: changed after seeing the first run on these photos, visual_match on) system 1/24 correct with 1 wrong products against 20/24 and 0 for the single call; run b on draw B (held-out, visual_match on) system 1/24 correct with 1 wrong products against 21/24 and 1 for the single call. In the app the question it asks can be answered with one tap, and that with-answers path is not what the benchmark measures.
+On blind-drawn catalog photos with a blank note and no follow-up answer, in the first run the full system found the correct product on 0/24, picked a wrong product on 1 and stopped without an answer on 23 (gate did not pass x2, no model number or barcode in photo x21), while one Carbon call was correct on 20/24 with 0 wrong products (`eval/results/e2e-summary.json`). With the visual_match rule switched on (it is off in the shipped build after failing a red-team test): run v2 on draw A (in-sample: changed after seeing the first run on these photos, visual_match on) system 1/24 correct with 1 wrong products against 20/24 and 0 for the single call; run b on draw B (held-out, visual_match on) system 1/24 correct with 1 wrong products against 21/24 and 1 for the single call. With one tap on the question (a simulated buyer picking the gold option when offered): 8/24 correct with 1 wrong products on draw B.
 
 ## 6. How do you know the price on screen is real and not something a model made up?
 
@@ -28,7 +28,7 @@ No model output is ever used as a price or a stock state: offer rows come from t
 
 ## 7. The Shop catalog gave you no barcodes. How can you say two listings are the exact same product?
 
-An offer counts as the same item through three evidence tiers (`docs/CONTRACT.md` section 0): the merchant's own storefront publishes a barcode equal to the target's, or the listing belongs to the bound Shop universal product, or the listing carries the brand and exact printed model number and the listing check returns match with no contradicting barcode; anything else is an unverified lead and never ranked. The photo itself is bound to a catalog product only on a barcode, a printed model number, the buyer's own choice, or a visual match where Carbon's pick is also the Decision 1 screen's top product at 0.75 or more with a 0.25 lead.
+An offer counts as the same item through three evidence tiers (`docs/CONTRACT.md` section 0): the merchant's own storefront publishes a barcode equal to the target's, or the listing belongs to the bound Shop universal product, or the listing carries the brand and exact printed model number and the listing check returns match with no contradicting barcode; anything else is an unverified lead and never ranked. The photo itself is bound to a catalog product only on a barcode, a printed model number or the buyer's own choice; the visual_match rule (two agreeing model judgments) exists in the code but is off after it bound a wrong colourway in a red-team test.
 
 ## 8. What does the Decisions API actually decide, and what happens without it?
 
@@ -44,7 +44,7 @@ They are not connected: there was no approved key or partner access at the event
 
 ## 11. Is the live demo scripted, cached or pre-warmed?
 
-No: the application has no mock or canned path, every run makes real model and merchant calls, and a failed call is shown as a failure with its reason. The only cache is an in-memory copy of a merchant storefront response for at most 120 seconds inside `app/merchants/chains.py`.
+No: the application has no mock or canned path, every run makes real model and merchant calls, and a failed call is shown as a failure with its reason. The only cache is a process-wide in-memory copy of a merchant storefront response for at most 120 seconds inside `app/merchants/chains.py`, so a repeat search within two minutes can reuse a storefront reading.
 
 ## 12. Does the watch really notify me when the item restocks?
 

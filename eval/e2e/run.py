@@ -3,6 +3,7 @@
   .venv/bin/python eval/e2e/run.py            # run v1: draw A, both arms, at most 2 cases in flight
   .venv/bin/python eval/e2e/run.py --run v2   # draw A again, system arm only (in-sample re-measurement after a change)
   .venv/bin/python eval/e2e/run.py --run b    # held-out draw B, both arms
+  .venv/bin/python eval/e2e/run.py --run b-tap  # draw B, system_one_tap arm (a-tap: the same on draw A)
   .venv/bin/python eval/e2e/run.py --smoke P  # one photo outside the benchmark (path P, query "building set"); writes nothing
 
 A case is never repeated: a case that was started and did not finish (crash, kill) is recorded as an error.
@@ -44,6 +45,9 @@ RUNS = {   # name -> frozen draw, where its photos are, which arms run
     "v1": {"freeze": "e2e-freeze.json", "photos": PHOTOS, "arms": ("system", "baseline")},
     "v2": {"freeze": "e2e-freeze.json", "photos": PHOTOS, "arms": ("system",)},
     "b": {"freeze": "e2e-freeze-b.json", "photos": PHOTOS / "b", "arms": ("system", "baseline")},
+    # one-tap arm: a fresh system run; a choice question is answered once by a simulated buyer who knows the item
+    "b-tap": {"freeze": "e2e-freeze-b.json", "photos": PHOTOS / "b", "arms": ("system_one_tap",)},
+    "a-tap": {"freeze": "e2e-freeze.json", "photos": PHOTOS, "arms": ("system_one_tap",)},
 }
 RUN = "v1"
 CASES_OUT = RESULTS / "e2e-v1.json"
@@ -120,6 +124,43 @@ def system_arm(image: bytes) -> tuple[dict, int]:
     return public(store.get_run(run["run_id"])), ms
 
 
+def one_tap_arm(image: bytes, gold_upid: str) -> tuple[dict, int, dict, dict]:
+    """The system run, then at most ONE answer to a choice question by a simulated buyer who knows what they hold:
+    the option whose id is the gold product if it is offered, otherwise "none". The answer is applied with the
+    semantics of POST /api/search/{run_id}/answer (current revision and question, revision + 1, state searching,
+    pipeline resumed with {"question", "choice"}). A text question gets no answer. No second answer is ever given.
+    The tap uses the gold label: this arm measures the system given one correct human confirmation."""
+    run = new_run("")
+    store.create_run(run, "e2e", image)
+    run_id = run["run_id"]
+    t = time.monotonic()
+    pipeline._guard(run_id, None)
+    leg1_ms = round((time.monotonic() - t) * 1000)
+    doc = store.get_run(run_id)
+    first = score.system_outcome(public(doc), gold_upid)
+    question = doc.get("question") or {}
+    tap = {"first_leg_outcome": first["outcome"], "question": question.get("kind"), "options": 0, "gold_offered": False,
+           "gold_first": False, "answered": None, "leg_ms": [leg1_ms]}
+    first_leg = {"outcome": first["outcome"], "reasons": first["reasons"], "question": dict(question) or None,
+                 "progress": list(doc.get("progress") or []), "decision": doc.get("decision"), "target": doc.get("target")}
+    if doc.get("state") == "needs_detail" and question.get("kind") == "choice":
+        offered = [o["id"] for o in question.get("options") or [] if o.get("id") != "none"]
+        tap.update(options=len(offered), gold_offered=gold_upid in offered, gold_first=offered[:1] == [gold_upid])
+        choice = gold_upid if tap["gold_offered"] else "none"
+        tap["answered"] = "gold" if tap["gold_offered"] else "none"
+        doc["revision"] += 1
+        doc.update(question=None, state="searching", error=None)
+        now_ms = int(time.time() * 1000)
+        if doc.get("_ended_ms") and doc.get("_started_ms"):
+            doc["_started_ms"] += max(0, now_ms - doc["_ended_ms"])
+        doc["_ended_ms"] = None
+        store.save_run(doc)
+        t = time.monotonic()
+        pipeline._guard(run_id, {"question": question, "choice": choice})
+        tap["leg_ms"].append(round((time.monotonic() - t) * 1000))
+    return public(store.get_run(run_id)), sum(tap["leg_ms"]), tap, first_leg
+
+
 def baseline_arm(image: bytes, query: str) -> tuple[dict, list[dict], int]:
     """One catalog search by the product-family query + ONE Carbon call. ms covers both."""
     t = time.monotonic()
@@ -153,10 +194,15 @@ def run_case(case: dict, raw: bytes, journal: bool = True, arm_names: tuple = ("
     gold = case["gold_upid"]
     started, wall = int(time.time()), time.monotonic()
     private = {"event": "detail", "case_id": case["case_id"]}
-    outs = []
+    outs, tap = [], None
+    system_name = "system_one_tap" if "system_one_tap" in arm_names else "system"
 
     try:
-        doc, sys_ms = system_arm(image)
+        if system_name == "system_one_tap":
+            doc, sys_ms, tap, private["first_leg"] = one_tap_arm(image, gold)
+            private["tap"] = tap
+        else:
+            doc, sys_ms = system_arm(image)
         sys_out = score.system_outcome(doc, gold)
         private["system"] = {k: doc.get(k) for k in ("state", "target", "decision", "question", "error", "progress")}
         if _rate_limited(" | ".join([str((doc.get("error") or {}).get("message") or "")]
@@ -164,7 +210,7 @@ def run_case(case: dict, raw: bytes, journal: bool = True, arm_names: tuple = ("
             _on_rate_limit()
     except Exception as e:
         sys_out, sys_ms = {"outcome": "error", "reasons": [f"exception:{type(e).__name__}"], "offer": None}, None
-    outs.append(("system", sys_out, sys_ms))
+    outs.append((system_name, sys_out, sys_ms))
     sys_done = time.time()
 
     rows, arm_gap_s = [], None
@@ -191,6 +237,8 @@ def run_case(case: dict, raw: bytes, journal: bool = True, arm_names: tuple = ("
               "baseline_after_system_s": arm_gap_s,
               "baseline_candidates": len(rows), "gold_in_candidates": any(r.get("product") == gold for r in rows),
               "reference": {"status": ref["status"], "eligible": ref["eligible"]}, "arms": arms}
+    if system_name == "system_one_tap":
+        record["tap"] = tap
     if journal:
         _log(private)
     return record

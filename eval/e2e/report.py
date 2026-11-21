@@ -28,7 +28,7 @@ def _codes(counts: dict) -> str:
     return ", ".join(f"{k} x{v}" for k, v in counts.items()) or "none"
 
 
-ARM_LABEL = {"system": "full system", "baseline": "one Carbon call"}
+ARM_LABEL = {"system": "full system", "system_one_tap": "full system + one correct tap", "baseline": "one Carbon call"}
 
 
 def runs_table(summary: dict) -> list[str]:
@@ -42,7 +42,9 @@ def runs_table(summary: dict) -> list[str]:
     for r in runs:
         split = (r.get("diagnostic") or {}).get("false_accepts") or {}
         tag = f"{r['name']} (draw {r.get('draw')}{', IN-SAMPLE' if r.get('in_sample') else ''}{', held-out' if r.get('held_out') else ''})"
-        for arm in ("system", "baseline"):
+        for arm in ("system", "system_one_tap", "baseline"):
+            if arm not in r["arms"]:
+                continue
             a, n = r["arms"][arm], r["n"]
             same = split.get(arm, {}).get("same_item_other_catalog_id")
             label = ARM_LABEL[arm] + (" [from v1]" if arm == "baseline" and r.get("baseline_source") else "")
@@ -62,6 +64,17 @@ def runs_table(summary: dict) -> list[str]:
         codes = (r.get("diagnostic") or {}).get("system_abstention_codes")
         if codes is not None:
             out.append(f"  full-system abstentions by cause: {_codes(codes)}")
+        t = r.get("one_tap")
+        if t:
+            out.append(f"  one-tap arm ({t['source']}, code {str(t.get('code_sha'))[:12]}): choice question in "
+                       f"{t['choice_questions']}/{t['cases']} cases, text question in {t['text_questions']}; gold among the "
+                       f"options in {t['gold_offered']}, gold the FIRST option in {t['gold_first']}; simulated buyer tapped "
+                       f"gold {t['answered_gold']} times, 'none' {t['answered_none']} times. The tap uses the gold label.")
+        nl = (r.get("diagnostic") or {}).get("no_lead_rule")
+        if nl:
+            out.append(f"  documented next step, NOT deployed, NOT a score: without the lead requirement the rule would "
+                       f"have accepted {nl['accepted']}/{nl['cases']} ({nl['accepted_by_deployed_rule']} also by the deployed "
+                       f"rule): {nl['accepted_gold']} gold, {nl['accepted_other_catalog_id']} another catalog product id")
         gap = (r.get("diagnostic") or {}).get("visual_match_gap")
         if gap:
             out.append(f"  why visual_match did not fire ({gap['abstentions_with_screen_scores']} abstentions with screen "

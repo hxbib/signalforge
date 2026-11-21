@@ -47,9 +47,12 @@ Say only what the screen shows. If something fails, show the real failure and th
   match in any arm; we read the failures case by case and changed the check once. Show one failing case from the
   list on the page.
 - Read the end-to-end table (whole pipeline on blind-drawn catalog photos, no answers given, against one Carbon
-  call) exactly as shown, and say it first before a judge finds it: the single call wins that benchmark, because
-  the system stops and asks when a photo shows no printed model number or barcode. Then say what the demo item has
-  that those photos lack: the number printed on the box.
+  call) exactly as shown, held-out row first, and say it before a judge finds it: with zero taps the single call names
+  the right product on most photos and our system stops and asks on almost all of them. Then read the offer-level
+  cells from the same rows: how many of the single call's offers agree with the reference cheapest valid offer, and
+  how many were contradicted by the merchant's storefront. Do not claim more than those cells show: our system
+  answered too few photos for its own offer cells to mean anything.
+- Then say what the demo item has that those photos lack: the model number printed on the box.
 - Say that the five-case experiment with human-adjudicated prices was not run and why (no rights-cleared merchant
   evidence in time).
 

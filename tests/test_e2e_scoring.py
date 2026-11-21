@@ -312,7 +312,8 @@ def test_screen_block_reaches_summary_and_report():
     s = summarize.build({"run": "v1", "code_sha": "c" * 40, "cases": records}, None, screen)
     assert s["screen"]["roc_auc"] == 1.0 and s["screen"]["judgments"] == 2 and "judgments" not in str(s["screen"].get("cases"))
     assert any("lower bound" in note for note in s["screen"]["notes"])
-    assert s["reading"][-1].startswith("Listing screen (one gemini-decision-1 call per photo): 2 listing judgments over 1 cases")
+    assert any(x.startswith("Listing screen (one gemini-decision-1 call per photo): 2 listing judgments over 1 cases")
+               for x in s["reading"]) and s["reading"][-1] == summarize.PHOTO_CAVEAT
     assert "screen" not in summarize.build({"run": "v1", "cases": records}, None, {**screen, "complete": False})
     text = "\n".join(report.lines({"seed": "s" * 40, "created_at": 1}, {"run": "v1", "cases": records}, s))
     assert "ROC AUC 1.0, Brier" in text and "p >= 0.9   1         1.000      1.000   0.000 (0/1)" in text
@@ -335,3 +336,49 @@ def test_visual_match_gap_codes():
     assert counts["abstentions_with_screen_scores"] == 3 and counts["gold_is_top_option"] == 1 and counts["gold_among_options"] == 2
     assert counts["codes"] == {"screen_margin_below_threshold": 1, "screen_top_below_threshold": 1,
                                "second_model_pick_differs_or_missing": 1}
+
+
+def test_no_lead_rule_is_post_hoc_and_reads_recorded_runs_only():
+    refused = "No exact product could be confirmed from the photo alone · visual match not accepted: best catalog product 0.81, next 0.78 (needs 0.75 and a 0.25 lead)"
+    def system(detail, top=GOLD, p=0.81):
+        return {"progress": [{"id": "bind", "detail": detail}],
+                "question": {"options": [{"id": top, "p": p}, {"id": "x", "p": 0.78}, {"id": "none"}]}}
+    asked = {"outcome": "abstained", "reasons": ["state:needs_detail"]}
+    assert diagnose.no_lead_case(system(refused), asked, GOLD, 0.75) == {"accepted": True, "deployed_rule_accepted": False, "gold": True}
+    assert diagnose.no_lead_case(system(refused, top=OTHER), asked, GOLD, 0.75)["gold"] is False
+    assert diagnose.no_lead_case(system(refused + "; Carbon chose a different product"), asked, GOLD, 0.75)["accepted"] is False
+    assert diagnose.no_lead_case(system(refused, p=0.6), asked, GOLD, 0.75)["accepted"] is False
+    assert diagnose.no_lead_case(system("No exact product could be confirmed from the photo alone"), asked, GOLD, 0.75) is None
+    fired = diagnose.no_lead_case({}, {"outcome": "correct", "reasons": ["bind:visual_match"]}, GOLD, 0.75)
+    assert fired == {"accepted": True, "deployed_rule_accepted": True, "gold": True}
+    counts = diagnose.no_lead_counts([fired, diagnose.no_lead_case(system(refused, top=OTHER), asked, GOLD, 0.75), None,
+                                      diagnose.no_lead_case(system(refused, p=0.6), asked, GOLD, 0.75)], 4, 0.75)
+    assert counts["deployed"] is False and counts["is_score"] is False
+    assert (counts["cases"], counts["reached_visual_match_decision"], counts["accepted"], counts["accepted_by_deployed_rule"],
+            counts["accepted_gold"], counts["accepted_other_catalog_id"]) == (4, 3, 2, 1, 1, 1)
+
+
+def test_one_tap_arm_is_a_third_row_with_its_own_stats():
+    summarize = _load("e2e_summary")
+    v1 = {"run": "v1", "complete": True, "code_sha": "a" * 40, "generated_at": 1,
+          "cases": [{**_case("a", _arm("abstained", ["state:needs_detail"]), _arm("correct", valid=True)), "wall_ms": 1}]}
+    held = {"run": "b", "complete": True, "visual_match": True, "cases": [
+        {**_case("x", _arm("abstained", ["state:needs_detail"]), _arm("correct", valid=True)), "wall_ms": 5},
+        {**_case("y", _arm("abstained", ["state:needs_detail"]), _arm("abstained", ["abstain"])), "wall_ms": 5}]}
+    tap = {"run": "b-tap", "complete": True, "visual_match": True, "code_sha": "e" * 40, "cases": [
+        {"case_id": "x", "arms": {"system_one_tap": _arm("correct", valid=True, cheapest="agree", ms=9000)},
+         "tap": {"question": "choice", "gold_offered": True, "gold_first": True, "answered": "gold", "first_leg_outcome": "abstained"}},
+        {"case_id": "y", "arms": {"system_one_tap": _arm("abstained", ["state:needs_detail"], ms=4000)},
+         "tap": {"question": "choice", "gold_offered": False, "gold_first": False, "answered": "none", "first_leg_outcome": "abstained"}}]}
+    s = summarize.build(v1, None, None, {"b": (held, None)}, None, {"b": (tap, None)})
+    b = s["runs"][1]
+    assert list(b["arms"]) == ["system", "system_one_tap", "baseline"]
+    assert (b["arms"]["system_one_tap"]["correct"], b["arms"]["system_one_tap"]["abstained"], b["arms"]["system"]["correct"]) == (1, 1, 0)
+    t = b["one_tap"]
+    assert (t["choice_questions"], t["gold_offered"], t["gold_first"], t["answered_gold"], t["answered_none"]) == (2, 1, 1, 1, 1)
+    assert "gold label" in t["note"] and any("The baseline arm gets no such help" in x for x in b["reading"])
+    assert s["photo_caveat"] == summarize.PHOTO_CAVEAT and summarize.PHOTO_CAVEAT in s["notes"]
+    flat = " ".join("\n".join(report.lines({"seed": "s" * 40, "created_at": 1}, v1, s)).split())
+    assert "b (draw B, held-out) full system + one correct tap 1/2 0/2" in flat and "gold the FIRST option in 1" in flat
+    unfinished = summarize.build(v1, None, None, {"b": (held, None)}, None, {"b": ({**tap, "complete": False}, None)})
+    assert "system_one_tap" not in unfinished["runs"][1]["arms"] and "one_tap" not in unfinished["runs"][1]

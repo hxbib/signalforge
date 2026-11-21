@@ -665,7 +665,7 @@ def visual_case(fakes, ps=(0.86, 0.31, 0.2), choice_slot=0):
 
 
 def test_visual_match_binds_when_screen_and_carbon_agree(fakes, monkeypatch):
-    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    monkeypatch.setenv("SF_VISUAL_MATCH", "1")
     run = visual_case(fakes)
     assert run["state"] == "complete" and run["question"] is None and run["result"]["status"] == "single_offer"
     target = run["target"]
@@ -677,7 +677,7 @@ def test_visual_match_binds_when_screen_and_carbon_agree(fakes, monkeypatch):
 
 
 def test_visual_match_follows_the_best_product_not_the_first(fakes, monkeypatch):
-    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    monkeypatch.setenv("SF_VISUAL_MATCH", "1")
     run = visual_case(fakes, ps=(0.2, 0.31, 0.9), choice_slot=2)
     assert run["target"]["identity_basis"] == "visual_match" and run["target"]["upid"] == "gid://shopify/p/2"
     assert run["target"]["screen_margin"] == 0.59
@@ -691,7 +691,7 @@ def test_visual_match_follows_the_best_product_not_the_first(fakes, monkeypatch)
     ((0.9, 0.3, 0.1), "absent", "bind() does not report its pick"),
 ])
 def test_visual_match_refused_asks_the_choice_question(fakes, monkeypatch, ps, choice_slot, why):
-    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    monkeypatch.setenv("SF_VISUAL_MATCH", "1")
     run = visual_case(fakes, ps=ps, choice_slot=choice_slot)
     assert run["state"] == "needs_detail" and run["question"]["kind"] == "choice", why
     assert run["target"]["bound"] is False and run["result"]["winners"] == [] and "compare" not in fakes.calls
@@ -705,35 +705,39 @@ def test_visual_match_refused_asks_the_choice_question(fakes, monkeypatch, ps, c
 
 
 def test_visual_match_boundary_values_are_accepted(fakes, monkeypatch):
-    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    monkeypatch.setenv("SF_VISUAL_MATCH", "1")
     run = visual_case(fakes, ps=(0.75, 0.5, 0.1))
     assert run["target"]["identity_basis"] == "visual_match" and run["target"]["screen_margin"] == 0.25
 
 
 def test_visual_match_needs_the_screen(fakes, monkeypatch):
-    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    monkeypatch.setenv("SF_VISUAL_MATCH", "1")
     fakes.screen_error = ModelCallError("screen", "gemini-decision-1", "HTTP 500")
     run = visual_case(fakes)
     assert run["state"] == "needs_detail" and run["question"]["kind"] == "choice" and "compare" not in fakes.calls
     assert rows_of(run)["screen"]["status"] == "failed"
 
 
-def test_visual_match_switch_off_restores_strict_behaviour(fakes, monkeypatch):
-    monkeypatch.setenv("SF_VISUAL_MATCH", "0")
+@pytest.mark.parametrize("setting", [None, "0", "", "on", "true"])
+def test_visual_match_is_off_unless_switched_on_with_1(fakes, monkeypatch, setting):
+    if setting is None:
+        monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    else:
+        monkeypatch.setenv("SF_VISUAL_MATCH", setting)
     run = visual_case(fakes)
     assert run["state"] == "needs_detail" and run["question"]["kind"] == "choice" and "compare" not in fakes.calls
     assert run["target"]["bound"] is False
 
 
 def test_visual_match_needs_a_passed_gate(fakes, monkeypatch):
-    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    monkeypatch.setenv("SF_VISUAL_MATCH", "1")
     fakes.decision.update({"pass": False, "confidence": 0.6})
     run = visual_case(fakes)
     assert run["state"] == "needs_detail" and run["question"]["kind"] == "text" and "compare" not in fakes.calls
 
 
 def test_visual_match_does_not_replace_a_corroborated_bind(fakes, monkeypatch):
-    monkeypatch.delenv("SF_VISUAL_MATCH", raising=False)
+    monkeypatch.setenv("SF_VISUAL_MATCH", "1")
     run_id = make_run()
     pipeline._work(run_id, None)
     target = store.get_run(run_id)["target"]

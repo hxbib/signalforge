@@ -1,5 +1,5 @@
 {
- "generated_at": 1795296321,
+ "generated_at": 1795296475,
  "run": "b",
  "post_hoc": true,
  "changes_scores": false,
@@ -11,6 +11,19 @@
  },
  "system_false_accepts": 1,
  "system_false_accepts_same_model_number_as_gold": 1,
+ "no_lead_rule": {
+  "deployed": false,
+  "is_score": false,
+  "rule": "top catalog product's screen probability >= 0.75 and the second model picked the same product; no lead requirement",
+  "source": "recorded runs only: the bind step's recorded outcome and the screen probabilities on the question's options",
+  "cases": 24,
+  "reached_visual_match_decision": 5,
+  "accepted": 2,
+  "accepted_by_deployed_rule": 1,
+  "accepted_gold": 1,
+  "accepted_other_catalog_id": 1
+ },
+ "no_lead_rule_note": null,
  "false_accepts": {
   "system": {
    "strict": 1,

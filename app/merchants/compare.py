@@ -97,7 +97,13 @@ CAUTION_MIN_SELLERS = 3
 CAUTION_PERCENT = 40
 
 
-def price_caution(eligible, floor):
+CAUTION_STOREFRONT = ("Verified means the merchant's own storefront states this price and stock for this exact item "
+                      "\u2014 it is not a rating of the merchant.")
+CAUTION_CATALOG = ("Verified means the Shop catalog lists this price and stock for this exact item (this seller's own "
+                   "storefront did not confirm it) \u2014 it is not a rating of the merchant.")
+
+
+def price_caution(eligible, floor, winners=()):
     """Deterministic outlier note. Median over each eligible seller's cheapest price; integer cents only.
     Nothing is hidden or re-ranked: the winner stays the winner."""
     if floor is None:
@@ -115,9 +121,9 @@ def price_caution(eligible, floor):
     if median <= 0 or (median - floor) * 100 < CAUTION_PERCENT * median:
         return None
     pct = (median - floor) * 100 // median
-    sentence = ("This price is {}% below the median of the {} verified offers ({}). Verified means the merchant's own "
-                "storefront states this price and stock for this exact item \u2014 it is not a rating of the merchant."
-                ).format(pct, k, _money(median))
+    storefront = bool(winners) and all("merchant_api" in (w.get("confirmed_by") or ()) for w in winners)
+    sentence = "This price is {}% below the median of the {} verified offers ({}). {}".format(
+        pct, k, _money(median), CAUTION_STOREFRONT if storefront else CAUTION_CATALOG)
     return {"code": "price_outlier", "sentence": sentence, "median_cents": median, "eligible_sellers": k,
             "percent_below": pct}
 
@@ -513,7 +519,7 @@ def run_comparison(target, goal, rows, *, deadline_s=20.0, as_of=None, confirm=N
     result = {
         "status": status, "headline": headline, "price_cents": floor, "currency": "USD" if floor is not None else None,
         "basis_label": _basis_label(goal), "winners": winners, "runner_up": runner_up,
-        "caution": price_caution(ev["eligible"], floor),
+        "caution": price_caution(ev["eligible"], floor, winners),
         "near_miss": near_miss, "rejected": rejected,
         "leads": sorted((dict(_offer(r), lead_reason=why) for r, why in leads),   # cheapest first, unpriced last
                         key=lambda o: (o["item_cents"] is None or o["currency"] != "USD", o["item_cents"] or 0,
