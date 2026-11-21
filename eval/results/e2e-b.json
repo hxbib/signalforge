@@ -1,6 +1,6 @@
 {
  "run": "b",
- "generated_at": 1795296122,
+ "generated_at": 1795296303,
  "code_sha": "890631904bea6cc760a6acd0371d9ac07d9ba20f",
  "tree_dirty": true,
  "pair_version": "v2-carbon-verified-quotes",
@@ -15,7 +15,7 @@
   "baseline"
  ],
  "arms_started_at": 1795296030,
- "code_sha_at_end": "890631904bea6cc760a6acd0371d9ac07d9ba20f",
+ "code_sha_at_end": "c09f42a8659b2304638199e2b7007a902edf45e3",
  "freeze_seed": "0fb1e049d5717eab647bcfad61e6a2193de46ca80acd14ea2d2d2acddc0e47bc",
  "models": {
   "baseline": [
@@ -27,7 +27,7 @@
    "gemini-4-carbon"
   ]
  },
- "complete": false,
+ "complete": true,
  "cases": [
   {
    "case_id": "e2e-b-01",
@@ -315,6 +315,710 @@
      },
      "cheapest": "agree",
      "ms": 4171
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-08",
+   "query": "mechanical keyboard",
+   "gold_upid": "gid://shopify/p/1DL3Bbzb1Ofm15vb1zXSrA",
+   "sellers": 1,
+   "started_at": 1795296103,
+   "wall_ms": 27357,
+   "baseline_after_system_s": 5.3,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 21667
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 5274
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-09",
+   "query": "insulated water bottle",
+   "gold_upid": "gid://shopify/p/3gg4zxOHt5rmGZjvTgkAhu",
+   "sellers": 1,
+   "started_at": 1795296122,
+   "wall_ms": 21772,
+   "baseline_after_system_s": 5.5,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:complete",
+      "result:no_verified_offer"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 16053
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": false,
+      "reasons": [
+       "storefront_mismatch"
+      ],
+      "confirm": "mismatch"
+     },
+     "cheapest": "agree",
+     "ms": 5537
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-10",
+   "query": "tumbler",
+   "gold_upid": "gid://shopify/p/5fTPl5zsTTfFTJJs0dAmuQ",
+   "sellers": 1,
+   "started_at": 1795296130,
+   "wall_ms": 24413,
+   "baseline_after_system_s": 10.7,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 13352
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 10730
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-11",
+   "query": "nonstick frying pan",
+   "gold_upid": "gid://shopify/p/63dIb7ZQ4vq2x93WHRmOC9",
+   "sellers": 1,
+   "started_at": 1795296144,
+   "wall_ms": 18622,
+   "baseline_after_system_s": 3.5,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 14729
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "cheaper_than_reference",
+     "ms": 3506
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-12",
+   "query": "chef knife",
+   "gold_upid": "gid://shopify/p/3hnBUqrM6iyGRFJgdjcJb2",
+   "sellers": 2,
+   "started_at": 1795296155,
+   "wall_ms": 18299,
+   "baseline_after_system_s": 4.6,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 2
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 13367
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 4581
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-13",
+   "query": "pour over coffee maker",
+   "gold_upid": "gid://shopify/p/4uEQ9QqzGdOfMvxm4W8QsS",
+   "sellers": 10,
+   "started_at": 1795296163,
+   "wall_ms": 18877,
+   "baseline_after_system_s": 4.3,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 10
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 14185
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "pricier_than_reference",
+     "ms": 4258
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-14",
+   "query": "face moisturizer",
+   "gold_upid": "gid://shopify/p/6nKkhwNwG8aNKmetEIKN3W",
+   "sellers": 2,
+   "started_at": 1795296173,
+   "wall_ms": 18037,
+   "baseline_after_system_s": 4.4,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 2
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 13225
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": false,
+      "reasons": [
+       "storefront_mismatch"
+      ],
+      "confirm": "mismatch"
+     },
+     "cheapest": "pricier_than_reference",
+     "ms": 4449
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-15",
+   "query": "hardcover novel",
+   "gold_upid": "gid://shopify/p/4P3Z4QGjYnSuh2dLJgNodu",
+   "sellers": 1,
+   "started_at": 1795296182,
+   "wall_ms": 17241,
+   "baseline_after_system_s": 4.7,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:text"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 12159
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": false,
+      "reasons": [
+       "storefront_mismatch"
+      ],
+      "confirm": "mismatch"
+     },
+     "cheapest": "agree",
+     "ms": 4736
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-16",
+   "query": "jigsaw puzzle",
+   "gold_upid": "gid://shopify/p/712l9ffLCzGbc9s8s7vcEO",
+   "sellers": 5,
+   "started_at": 1795296191,
+   "wall_ms": 16884,
+   "baseline_after_system_s": 6.5,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 4
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:text"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 10020
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "pricier_than_reference",
+     "ms": 6486
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-17",
+   "query": "dog toy",
+   "gold_upid": "gid://shopify/p/2EdajVIwzJK9eMLVjhfMMY",
+   "sellers": 2,
+   "started_at": 1795296199,
+   "wall_ms": 19905,
+   "baseline_after_system_s": 5.1,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 2
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 14442
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 5095
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-18",
+   "query": "yoga mat",
+   "gold_upid": "gid://shopify/p/6yD4mUlTChOaexVdV9c7Mz",
+   "sellers": 1,
+   "started_at": 1795296208,
+   "wall_ms": 24287,
+   "baseline_after_system_s": 5.0,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 18956
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 4963
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-19",
+   "query": "notebook",
+   "gold_upid": "gid://shopify/p/4MQjBMJwzBfddrMw8UWlsw",
+   "sellers": 3,
+   "started_at": 1795296219,
+   "wall_ms": 12718,
+   "baseline_after_system_s": 3.8,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 3
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:text"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 8411
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 3840
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-20",
+   "query": "backpack",
+   "gold_upid": "gid://shopify/p/2aPls7YGl7huZ0P7wjIY9M",
+   "sellers": 1,
+   "started_at": 1795296232,
+   "wall_ms": 21652,
+   "baseline_after_system_s": 4.1,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 17180
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 4094
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-21",
+   "query": "bluetooth speaker",
+   "gold_upid": "gid://shopify/p/2cupmNhp0hdGF8R6MhK7y2",
+   "sellers": null,
+   "started_at": 1795296233,
+   "wall_ms": 23124,
+   "baseline_after_system_s": 6.0,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "unavailable",
+    "eligible": 0
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 16736
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "reference_unavailable",
+     "ms": 6041
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-22",
+   "query": "desk lamp",
+   "gold_upid": "gid://shopify/p/2WfClCPn5p2r2v2UvLxjBd",
+   "sellers": 1,
+   "started_at": 1795296253,
+   "wall_ms": 24652,
+   "baseline_after_system_s": 4.1,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 20055
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": false,
+      "reasons": [
+       "storefront_mismatch"
+      ],
+      "confirm": "mismatch"
+     },
+     "cheapest": "agree",
+     "ms": 4136
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-23",
+   "query": "sunscreen",
+   "gold_upid": "gid://shopify/p/5qqsGCqGW2eyfXrM4H6uXp",
+   "sellers": 1,
+   "started_at": 1795296256,
+   "wall_ms": 17700,
+   "baseline_after_system_s": 7.5,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:text"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 9754
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 7536
+    }
+   }
+  },
+  {
+   "case_id": "e2e-b-24",
+   "query": "running socks",
+   "gold_upid": "gid://shopify/p/2Hg9Mt06jzA1FTdfEAzA3p",
+   "sellers": 1,
+   "started_at": 1795296274,
+   "wall_ms": 29427,
+   "baseline_after_system_s": 5.5,
+   "baseline_candidates": 10,
+   "gold_in_candidates": true,
+   "reference": {
+    "status": "winner",
+    "eligible": 1
+   },
+   "arms": {
+    "system": {
+     "outcome": "abstained",
+     "reasons": [
+      "state:needs_detail",
+      "result:needs_identity",
+      "question:choice"
+     ],
+     "offer": null,
+     "cheapest": "not_applicable",
+     "ms": 23547
+    },
+    "baseline": {
+     "outcome": "correct",
+     "reasons": [
+      "winner"
+     ],
+     "offer": {
+      "valid": true,
+      "reasons": [],
+      "confirm": "confirmed"
+     },
+     "cheapest": "agree",
+     "ms": 5515
     }
    }
   }

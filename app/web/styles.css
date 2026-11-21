@@ -442,3 +442,7 @@ td { font-variant-numeric: tabular-nums; }
   .result > #assumptions { order: 9; }
   .result > .retry { align-self: flex-start; }
 }
+.winners:not(.winners-tied) > .winner { align-items: start; }
+.winners:not(.winners-tied) > .winner > .cta { margin-top: 4px; }
+.caution { margin-top: 10px; padding: 8px 12px; font-size: .93rem; line-height: 1.3; }
+.price { margin-top: 10px; }

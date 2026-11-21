@@ -116,9 +116,8 @@ def block(summary):
     if summary is None:
         return "Not yet measured: `eval/results/summary.json` does not exist, so no number is shown here."
     b = summary.get("experiment_b") or {}
-    e2e, files = summary.get("e2e"), list(summary.get("generated_from", []))
-    if not e2e and E2E.is_file():
-        e2e = json.loads(E2E.read_text())
+    files = list(summary.get("generated_from", []))
+    e2e = json.loads(E2E.read_text()) if E2E.is_file() else summary.get("e2e")   # the file is the source of summary["e2e"]
     if e2e:
         files += [name for name in ("e2e-summary.json", "e2e-freeze.json", "e2e-freeze-b.json") if name not in files and (E2E.parent / name).is_file()]
     lines = _pairs(summary) + [""] + _e2e(e2e) + [

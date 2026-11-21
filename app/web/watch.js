@@ -104,6 +104,7 @@ export function renderWatch(root, run, actions) {
     parts.push(
       w.scope_sentence ? h('p', { class: 'watch-scope' }, w.scope_sentence) : null,
       h('p', { class: `watch-status watch-${w.status}` }, h('span', { class: 'badge' }, STATUS[w.status] || words(w.status)),
+        w.simulation === true ? h('span', { class: 'sim-tag' }, 'simulation') : null,
         w.origin ? h('span', { class: 'watch-origin' }, w.origin === 'buyer' ? 'Started by your tap' : `Origin: ${words(w.origin)}`) : null),
       w.preview_reason ? h('p', { class: 'watch-reason' }, w.preview_reason) : null,
       question(w),

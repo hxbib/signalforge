@@ -115,7 +115,7 @@ Python 3.12.
 
 ```sh
 python3.12 -m venv .venv
-.venv/bin/python -m pip install google-genai fastapi uvicorn python-multipart pydantic Pillow zxing-cpp httpx pytest
+.venv/bin/python -m pip install -r requirements.txt -r requirements-dev.txt   # runtime + pytest, pinned
 printf 'GEMINI_API_KEY=your-key\n' > .env        # read by app/config.py; .env is gitignored
 .venv/bin/uvicorn app.main:app --port 8000        # then open http://localhost:8000
 .venv/bin/python -m pytest tests -q               # offline tests; fakes exist only under tests/
@@ -168,12 +168,16 @@ Reading written by `eval/summarize.py`:
 
 Latency: ms = the final successful attempt only; HTTP 429 back-off sleeps are excluded (bug 007), wall_ms kept per case.
 
-**End-to-end benchmark (photo in, offer out):** catalog photos drawn blind and frozen before any arm ran on them, blank note, no follow-up answer given, so a question from the app counts as no answer. Baseline: one Gemini 4 Carbon call handed the photo and a list of listings. Protocol: `eval/e2e/README.md`. Headline run: `v1`.
+**End-to-end benchmark (photo in, offer out):** catalog photos drawn blind and frozen before any arm ran on them, blank note, no follow-up answer given, so a question from the app counts as no answer. Baseline: one Gemini 4 Carbon call handed the photo and a list of listings. Protocol: `eval/e2e/README.md`. Headline run: `b`.
 
 | Run | Arm | Correct product | Wrong product | Stopped without an answer | Errors | Invalid offers / answered | Cheapest agrees with reference | Median ms |
 |---|---|---|---|---|---|---|---|---|
 | Draw A, first run: strict printed-evidence identity (the visual_match basis did not exist yet), code `6fc8711` plus uncommitted changes, visual_match off | SignalForge full system | 0/24 | 1/24 | 23/24 | 0/24 | 0/1 | 0/24 | 14360 |
 | Draw A, first run: strict printed-evidence identity (the visual_match basis did not exist yet), code `6fc8711` plus uncommitted changes, visual_match off | Baseline: one Gemini 4 Carbon call | 20/24 | 0/24 | 4/24 | 0/24 | 1/20 | 12/24 | 4529 |
+| Draw A again after the visual_match change, system arm only. IN-SAMPLE: the change and its 0.75 threshold were read off this draw's own results and calibration table (in-sample), code `8906319` plus uncommitted changes, visual_match on | SignalForge full system | 1/24 | 1/24 | 22/24 | 0/24 | 0/2 | 1/24 | 15276 |
+| Draw A again after the visual_match change, system arm only. IN-SAMPLE: the change and its 0.75 threshold were read off this draw's own results and calibration table (in-sample), code `8906319` plus uncommitted changes, visual_match on | Baseline: one Gemini 4 Carbon call (from e2e-v1.json (not re-run)) | 20/24 | 0/24 | 4/24 | 0/24 | 1/20 | 12/24 | 4529 |
+| Held-out draw B: new products, frozen before any call, both arms (held-out), code `8906319` plus uncommitted changes, visual_match on | SignalForge full system | 1/24 | 1/24 | 22/24 | 0/24 | 0/2 | 0/24 | 15296 |
+| Held-out draw B: new products, frozen before any call, both arms (held-out), code `8906319` plus uncommitted changes, visual_match on | Baseline: one Gemini 4 Carbon call | 21/24 | 1/24 | 2/24 | 0/24 | 4/22 | 16/24 | 4559 |
 
 Reading of Draw A, first run: strict printed-evidence identity (the visual_match basis did not exist yet), written by the benchmark script itself (`eval/e2e`):
 
@@ -182,6 +186,21 @@ Reading of Draw A, first run: strict printed-evidence identity (the visual_match
 - False accepts by catalog product id, system: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.
 - False accepts by catalog product id, baseline: 0 strict, of which 0 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.
 
+Reading of Draw A again after the visual_match change, system arm only. IN-SAMPLE: the change and its 0.75 threshold were read off this draw's own results and calibration table, written by the benchmark script itself (`eval/e2e`):
+
+- Full system: answered 2 of 24 photos (1 the gold product, 1 another catalog product id), stopped without an answer on 22, 0 errors; 0 of its 2 answered offers were invalid.
+- One-call baseline: answered 20 of 24 (20 the gold product, 0 another product), abstained on 4, 0 errors; 1 of its 20 answered offers were invalid and 12 matched the reference cheapest valid offer.
+- Why visual_match did not fire on the 20 abstentions that reached the screen (post-hoc, from the probabilities on the question's options): screen_margin_below_threshold x8, screen_top_below_threshold x11, second_model_pick_differs_or_missing x1. The gold product was the top-scored option in 10 of them and among the options in 12.
+- False accepts by catalog product id, system: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.
+
+Reading of Held-out draw B: new products, frozen before any call, both arms, written by the benchmark script itself (`eval/e2e`):
+
+- Full system: answered 2 of 24 photos (1 the gold product, 1 another catalog product id), stopped without an answer on 22, 0 errors; 0 of its 2 answered offers were invalid.
+- One-call baseline: answered 22 of 24 (21 the gold product, 1 another product), abstained on 2, 0 errors; 4 of its 22 answered offers were invalid and 16 matched the reference cheapest valid offer.
+- Why visual_match did not fire on the 17 abstentions that reached the screen (post-hoc, from the probabilities on the question's options): screen_margin_below_threshold x3, screen_top_below_threshold x10, second_model_pick_differs_or_missing x4. The gold product was the top-scored option in 5 of them and among the options in 12.
+- False accepts by catalog product id, system: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.
+- False accepts by catalog product id, baseline: 1 strict, of which 0 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 1 carry none.
+
 **Decision 1 listing screen, calibration on draw A** (run `screen-v1`, `gemini-decision-1`, one call per case, 24 cases): 240 listing judgments (22 positive, 218 negative), 0 failed calls, ROC AUC 0.9875, Brier 0.0325, top-scored listing is the drawn product in 19/22 cases that had one.
 
 | Threshold | True accepts | False accepts | Missed | Precision | Recall | False-accept rate |
@@ -189,6 +208,14 @@ Reading of Draw A, first run: strict printed-evidence identity (the visual_match
 | p >= 0.5 | 15 | 1 | 7 | 0.9375 | 0.6818 | 0.0046 |
 | p >= 0.75 | 12 | 0 | 10 | 1.0 | 0.5455 | 0.0 |
 | p >= 0.9 | 2 | 0 | 20 | 1.0 | 0.0909 | 0.0 |
+
+**Decision 1 listing screen, calibration on draw B** (run `screen-b`, `gemini-decision-1`, one call per case, 24 cases): 240 listing judgments (23 positive, 217 negative), 0 failed calls, ROC AUC 0.9882, Brier 0.035, top-scored listing is the drawn product in 20/23 cases that had one.
+
+| Threshold | True accepts | False accepts | Missed | Precision | Recall | False-accept rate |
+|---|---|---|---|---|---|---|
+| p >= 0.5 | 15 | 1 | 8 | 0.9375 | 0.6522 | 0.0046 |
+| p >= 0.75 | 11 | 0 | 12 | 1.0 | 0.4783 | 0.0 |
+| p >= 0.9 | 0 | 0 | 23 | unknown | 0.0 | 0.0 |
 
 **Experiment B (five rights-cleared photo-to-offer cases):** status `not_run`. The five-case photo-to-offer check (eval/seal_baskets.py; baseline basket_answer(packet, False) vs system basket_answer(packet, True)) was not run: rights-cleared merchant evidence for five preregistered cases could not be assembled before the 16:05 ET proof cutoff. No case, price or score was substituted.
 
@@ -206,26 +233,32 @@ How to read it:
   seeing v1 fail on those same pairs; only a run on the separately frozen draw B is a held-out result for v2.
 - Read the table as it is. Where the system arm scores below the baseline, the difference is abstentions. In the
   product an abstention keeps a listing as an unranked lead; a false match would put a wrong item at the top.
-- The end-to-end benchmark runs the whole pipeline on catalog photos drawn blind, with a blank note and no
-  follow-up answer, and compares it with one Carbon call that is handed the photo and a list of listings. **In the
-  first run the single call won it clearly**: the full system stopped and asked a question on almost every photo,
-  because merchant studio photos rarely show a printed model number or barcode and that build refused to bind an
-  identity without one. The benchmark gives no answers, so every question counts as no answer.
-- That result is why `visual_match` was added. Any later end-to-end row on draw A is in-sample (the change was made
-  after seeing run v1 on those photos); only a row on the separately frozen draw B is a held-out result. If no such
-  row is in the table, the effect of `visual_match` is not measured.
-- The Decision 1 listing screen was calibrated on the benchmark photos after the two-arm run; its thresholds in the
-  code were chosen from that calibration. It is a calibration of one signal, not a re-score of the system arm.
-- The benchmark photos are catalog images, not shopper snapshots of a box.
+- The end-to-end benchmark runs the whole pipeline on catalog photos drawn blind, with a blank note and **no
+  follow-up answer**, and compares it with one Carbon call that is handed the photo and a list of listings. The
+  benchmark gives no answers, so every question the app asks counts as no answer.
+- **The single call wins it clearly, on the first draw and on the held-out draw.** With zero taps, one Carbon call
+  that sees the photo and the catalog rows names the right product on most studio photos. The full system refuses to
+  name a product without printed evidence, a merchant barcode, the buyer's choice, or two agreeing model judgments
+  with a clear lead, and asks one question instead, on almost every photo.
+- The first run is why `visual_match` was added. The row on draw A after that change is in-sample (the change and its
+  threshold were read off that draw); the row on the separately frozen draw B is the held-out result and the one to
+  quote. It shows `visual_match` firing rarely: its thresholds are strict and were not tuned further.
+- What the single call does less well is in the same table: its chosen offer agrees with the reference cheapest valid
+  offer on fewer photos than it names the right product, and some of its offers were contradicted by the merchant's
+  own storefront (invalid offers). The full system's offers are storefront-confirmed, but it answered so few photos
+  that its offer columns carry almost no information.
+- The Decision 1 listing screen was calibrated on the benchmark photos after the first two-arm run, and the
+  `visual_match` thresholds were chosen from that calibration. It is a calibration of one signal, not a re-score.
+- The benchmark photos are the catalog's own images, not shopper snapshots of a box.
 - The public WDC labels may be familiar to a pretrained model.
 
 ## Limitations and failure cases
 
-- **A bare product photo is the weak case.** The first end-to-end run (table above) showed the strict build
-  answering almost none of the blind-drawn catalog photos while a single model call answered most of them correctly.
-  `visual_match` was added in response; read the end-to-end table for what was measured after it, and treat any
-  in-sample row as in-sample. A photo of the box or label, with the model number printed, is the case this build
-  is made for.
+- **A bare product photo is the weak case, and with zero taps a single model call beats this build on it.** On
+  blind-drawn catalog photos the full system stopped and asked a question on almost every photo, on the first draw
+  and on the held-out draw, while one Carbon call named the right product on most of them (end-to-end table above).
+  `visual_match` was added in response and, at its strict thresholds, rarely fires. The path the product is designed
+  around is a photo of the box or label with the model number printed, or one confirming tap on the question.
 - **`visual_match` binds on two model judgments with no printed evidence.** Its thresholds come from a calibration on
   a small sample; a wrong bind is possible, and the result card says which basis was used so it can be checked.
 - **"Lowest verified among the stores checked" is not a market-wide claim.** The stores checked are the sellers in

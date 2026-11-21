@@ -139,12 +139,12 @@ export function renderOffer(root, run) {
   const many = winners.length > 1;
   fill(root,
     price && winners.length ? h('p', { class: 'price' }, price) : null,
-    result.basis_label && winners.length ? h('p', { class: 'basis' }, result.basis_label) : null,
+    winners.length && (result.basis_label || checked) ? h('p', { class: 'basis' }, result.basis_label || '',
+      checked ? [result.basis_label ? ' · checked ' : 'Checked ', checked] : null) : null,
     caution(result.caution),
     many ? h('p', { class: 'tie-note' }, `${winners.length} sellers are tied at this price — listed in no particular order.`) : null,
     winners.length ? h('ul', { class: `winners${many ? ' winners-tied' : ''}` }, winners.map((o) => winnerCard(o, many))) : null,
     runnerUp(result.runner_up),
-    checked && winners.length ? h('p', { class: 'checked' }, 'Stores checked at ', checked) : null,
     itemView(result.item_price_view),
   );
 }

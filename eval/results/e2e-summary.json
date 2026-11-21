@@ -431,11 +431,142 @@
     "Why visual_match did not fire on the 20 abstentions that reached the screen (post-hoc, from the probabilities on the question's options): screen_margin_below_threshold x8, screen_top_below_threshold x11, second_model_pick_differs_or_missing x1. The gold product was the top-scored option in 10 of them and among the options in 12.",
     "False accepts by catalog product id, system: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none."
    ]
+  },
+  {
+   "name": "b",
+   "label": "Held-out draw B: new products, frozen before any call, both arms",
+   "draw": "B",
+   "in_sample": false,
+   "held_out": true,
+   "generated_at": 1795296303,
+   "code_sha": "890631904bea6cc760a6acd0371d9ac07d9ba20f",
+   "code_sha_at_end": "c09f42a8659b2304638199e2b7007a902edf45e3",
+   "tree_dirty": true,
+   "pair_version": "v2-carbon-verified-quotes",
+   "visual_match": true,
+   "visual_match_thresholds": {
+    "p": 0.75,
+    "margin": 0.25
+   },
+   "baseline_source": null,
+   "n": 24,
+   "arms": {
+    "system": {
+     "correct": 1,
+     "false_accepts": 1,
+     "abstained": 22,
+     "errors": 0,
+     "answered": 2,
+     "invalid_offers": 0,
+     "invalid_reasons": {},
+     "storefront_checks": {
+      "confirmed": 1,
+      "unavailable": 1
+     },
+     "cheapest_agreement": 0,
+     "cheapest_codes": {
+      "not_applicable": 23,
+      "pricier_than_reference": 1
+     },
+     "reason_codes": {
+      "bind:model_number": 1,
+      "offer_identity:model_number": 1,
+      "question:choice": 17,
+      "question:text": 4,
+      "result:needs_identity": 21,
+      "result:no_verified_offer": 1,
+      "result:winner": 1,
+      "state:complete": 1,
+      "state:needs_detail": 21,
+      "state:partial": 1
+     },
+     "median_ms": 15296
+    },
+    "baseline": {
+     "correct": 21,
+     "false_accepts": 1,
+     "abstained": 2,
+     "errors": 0,
+     "answered": 22,
+     "invalid_offers": 4,
+     "invalid_reasons": {
+      "storefront_mismatch": 4
+     },
+     "storefront_checks": {
+      "confirmed": 17,
+      "mismatch": 4,
+      "unavailable": 1
+     },
+     "cheapest_agreement": 16,
+     "cheapest_codes": {
+      "agree": 16,
+      "cheaper_than_reference": 1,
+      "not_applicable": 3,
+      "pricier_than_reference": 3,
+      "reference_unavailable": 1
+     },
+     "reason_codes": {
+      "abstain": 2,
+      "winner": 1
+     },
+     "median_ms": 4559
+    }
+   },
+   "paired": {
+    "system_abstained__baseline_abstained": 1,
+    "system_abstained__baseline_correct": 21,
+    "system_correct__baseline_false_accept": 1,
+    "system_false_accept__baseline_abstained": 1
+   },
+   "reference_offer_cases": 23,
+   "gold_in_baseline_candidates": 23,
+   "median_case_wall_ms": 20820,
+   "diagnostic": {
+    "post_hoc": true,
+    "changes_scores": false,
+    "system_abstention_codes": {
+     "gate_did_not_pass": 4,
+     "model_number_read_but_not_bound": 3,
+     "no_model_number_or_barcode_in_photo": 15
+    },
+    "system_false_accepts": 1,
+    "system_false_accepts_same_model_number_as_gold": 1,
+    "false_accepts": {
+     "system": {
+      "strict": 1,
+      "same_item_other_catalog_id": 1,
+      "no_same_item_evidence": 0
+     },
+     "baseline": {
+      "strict": 1,
+      "same_item_other_catalog_id": 0,
+      "no_same_item_evidence": 1
+     }
+    },
+    "visual_match_gap": {
+     "abstentions_with_screen_scores": 17,
+     "codes": {
+      "screen_margin_below_threshold": 3,
+      "screen_top_below_threshold": 10,
+      "second_model_pick_differs_or_missing": 4
+     },
+     "gold_is_top_option": 5,
+     "gold_among_options": 12
+    }
+   },
+   "reading": [
+    "Full system: answered 2 of 24 photos (1 the gold product, 1 another catalog product id), stopped without an answer on 22, 0 errors; 0 of its 2 answered offers were invalid.",
+    "One-call baseline: answered 22 of 24 (21 the gold product, 1 another product), abstained on 2, 0 errors; 4 of its 22 answered offers were invalid and 16 matched the reference cheapest valid offer.",
+    "Why visual_match did not fire on the 17 abstentions that reached the screen (post-hoc, from the probabilities on the question's options): screen_margin_below_threshold x3, screen_top_below_threshold x10, second_model_pick_differs_or_missing x4. The gold product was the top-scored option in 5 of them and among the options in 12.",
+    "False accepts by catalog product id, system: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.",
+    "False accepts by catalog product id, baseline: 1 strict, of which 0 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 1 carry none."
+   ]
   }
  ],
- "headline_run": "v1",
+ "headline_run": "b",
  "comparison": [
-  "Full system on draw A: v1 (visual_match off) 0 correct, 1 false accepts, 23 abstained, 0 errors of 24; v2 (visual_match on, IN-SAMPLE) 1 correct, 1 false accepts, 22 abstained, 0 errors of 24. v2 is not an unbiased estimate: the change was designed from this draw."
+  "Full system on draw A: v1 (visual_match off) 0 correct, 1 false accepts, 23 abstained, 0 errors of 24; v2 (visual_match on, IN-SAMPLE) 1 correct, 1 false accepts, 22 abstained, 0 errors of 24. v2 is not an unbiased estimate: the change was designed from this draw.",
+  "Held-out draw B (the number to quote): full system 1 correct, 1 false accepts, 22 abstained, 0 errors of 24; one-call baseline 21 correct, 1 false accepts, 2 abstained, 0 errors of 24."
  ],
  "screens": {
   "a": {
@@ -531,6 +662,100 @@
     "Every frozen case is in the denominator; a failed call is an error case with no judgments. Precision is null when nothing was accepted at a threshold.",
     "The screen orders and annotates listings; in the product it never grants identity on its own."
    ]
+  },
+  "b": {
+   "run": "screen-b",
+   "generated_at": 1795296320,
+   "code_sha": "c09f42a8659b2304638199e2b7007a902edf45e3",
+   "tree_dirty": true,
+   "model": "gemini-decision-1",
+   "listing_cap": 60,
+   "target_source": "photo only: name, brand, model number and variant details read by Gemini 4 Neon in the system-arm run",
+   "label": "positive iff the listing belongs to the drawn (gold) catalog product id",
+   "cases": 24,
+   "calls": 24,
+   "error_cases": 0,
+   "judgments": 240,
+   "not_scored": 0,
+   "positives": 23,
+   "negatives": 217,
+   "cases_without_positive": 1,
+   "median_ms_per_call": 439,
+   "thresholds": [
+    {
+     "threshold": 0.5,
+     "tp": 15,
+     "fp": 1,
+     "fn": 8,
+     "tn": 216,
+     "precision": 0.9375,
+     "recall": 0.6522,
+     "false_accept_rate": 0.0046
+    },
+    {
+     "threshold": 0.75,
+     "tp": 11,
+     "fp": 0,
+     "fn": 12,
+     "tn": 217,
+     "precision": 1.0,
+     "recall": 0.4783,
+     "false_accept_rate": 0.0
+    },
+    {
+     "threshold": 0.9,
+     "tp": 0,
+     "fp": 0,
+     "fn": 23,
+     "tn": 217,
+     "precision": null,
+     "recall": 0.0,
+     "false_accept_rate": 0.0
+    }
+   ],
+   "false_accept_rate_at_0.9": 0.0,
+   "reliability": [
+    {
+     "bin": "0.0-0.2",
+     "count": 212,
+     "mean_predicted": 0.0993,
+     "observed_positive_rate": 0.0094
+    },
+    {
+     "bin": "0.2-0.4",
+     "count": 11,
+     "mean_predicted": 0.2769,
+     "observed_positive_rate": 0.4545
+    },
+    {
+     "bin": "0.4-0.6",
+     "count": 3,
+     "mean_predicted": 0.5062,
+     "observed_positive_rate": 1.0
+    },
+    {
+     "bin": "0.6-0.8",
+     "count": 5,
+     "mean_predicted": 0.7263,
+     "observed_positive_rate": 0.8
+    },
+    {
+     "bin": "0.8-1.0",
+     "count": 9,
+     "mean_predicted": 0.8457,
+     "observed_positive_rate": 1.0
+    }
+   ],
+   "roc_auc": 0.9882,
+   "brier": 0.035,
+   "top1_positive_cases": 20,
+   "cases_with_positive": 23,
+   "notes": [
+    "Same frozen draw and photos as the two-arm run; the candidate rows are the catalog search rows of the draw query, read again at screen time (at most 60 per case). One Decision 1 call per case scores every listing; gold never enters the call.",
+    "Label noise: a listing is positive only if it belongs to the gold catalog product id. The same product listed by a seller outside that catalog cluster counts as a negative here, so precision is a lower bound and the false-accept rate an upper bound.",
+    "Every frozen case is in the denominator; a failed call is an error case with no judgments. Precision is null when nothing was accepted at a threshold.",
+    "The screen orders and annotates listings; in the product it never grants identity on its own."
+   ]
   }
  },
  "notes": [
@@ -545,5 +770,5 @@
   "Baseline rows come from catalog search, which can list fewer sellers of a product than the full product read the reference uses; 'pricier_than_reference' can therefore also mean the cheapest seller was not among the baseline's rows.",
   "During run v1 the runner's rate-limit detector matched a step duration whose digits contained 429; no rate-limit error occurred. The runner paused 30 s and ran one case at a time from then on (two at a time before). No case was affected or re-run."
  ],
- "summarized_at": 1795296030
+ "summarized_at": 1795296321
 }

@@ -200,7 +200,7 @@ function render(doc) {
 
   const parts = summary ? summarySections(summary) : [];
   for (const [k, v] of Object.entries(doc)) {
-    if (['generated_from', 'summary', 'cases', 'failures'].includes(k)) continue;
+    if (['generated_from', 'summary', 'cases', 'failures'].includes(k) || (summary && k in summary)) continue;
     const section = armSection(k, v);
     if (section) parts.push(section);
   }

@@ -1,6 +1,6 @@
 # Judge Q&A: the 15 hardest questions
 
-Two-sentence answers taken from the code on disk and from `eval/results/summary.json` (generated 1795295279; runs: pairs-v1, pairs-v2, pairs-b-v2; end-to-end results included). Where something was not measured the answer says so.
+Two-sentence answers taken from the code on disk and from `eval/results/summary.json` (generated 1795296243; runs: pairs-v1, pairs-v2, pairs-b-v2; end-to-end results included). Where something was not measured the answer says so.
 
 ## 1. Your own table shows the first system scoring below a single model call. Why is this a better system?
 
@@ -20,7 +20,7 @@ All 10 v1 system failures were abstentions on truly matching pairs: seven where 
 
 ## 5. Your end-to-end benchmark says one model call beats your whole system. Why should anyone use it?
 
-On blind-drawn catalog photos with a blank note and no follow-up answer, in the first run the full system found the correct product on 0/24, picked a wrong product on 1 and stopped without an answer on 23 (gate did not pass x2, no model number or barcode in photo x21), while one Carbon call was correct on 20/24 with 0 wrong products (`eval/results/e2e-summary.json`). We added the visual_match basis in response, and its effect is not measured yet: no later run is in the result file. In the app the question it asks can be answered with one tap, and that with-answers path is not what the benchmark measures.
+On blind-drawn catalog photos with a blank note and no follow-up answer, in the first run the full system found the correct product on 0/24, picked a wrong product on 1 and stopped without an answer on 23 (gate did not pass x2, no model number or barcode in photo x21), while one Carbon call was correct on 20/24 with 0 wrong products (`eval/results/e2e-summary.json`). After adding visual_match: run v2 on draw A (in-sample: changed after seeing the first run on these photos, visual_match on) system 1/24 correct with 1 wrong products against 20/24 and 0 for the single call; run b on draw B (held-out, visual_match on) system 1/24 correct with 1 wrong products against 21/24 and 1 for the single call. In the app the question it asks can be answered with one tap, and that with-answers path is not what the benchmark measures.
 
 ## 6. How do you know the price on screen is real and not something a model made up?
 
