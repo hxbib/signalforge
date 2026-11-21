@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SUMMARY = ROOT / "eval" / "results" / "summary.json"
 E2E = ROOT / "eval" / "results" / "e2e-summary.json"
 README = ROOT / "README.md"
+KIT = ROOT / "docs" / "DEMO_KIT.md"
+KIT_START, KIT_END = "<!-- KIT:START (written by scripts/readme_numbers.py; do not edit by hand) -->", "<!-- KIT:END -->"
 START, END = "<!-- EVAL:START (written by scripts/readme_numbers.py; do not edit by hand) -->", "<!-- EVAL:END -->"
 ARM_NAMES = {"baseline": "Baseline: one Gemini 4 Carbon call", "full": "System listing check", "system": "SignalForge full system, zero taps",
              "system_one_tap": "SignalForge with ONE tap: a simulated buyer answers one choice question using the gold label"}
@@ -168,18 +170,67 @@ def block(summary):
     return "\n".join(lines)
 
 
+def kit(summary):
+    """The numbers to say out loud at the table (docs/DEMO_KIT.md), unflattering ones included."""
+    if summary is None:
+        return "Not yet measured."
+    e = json.loads(E2E.read_text()) if E2E.is_file() else summary.get("e2e")
+    vs, out = summary.get("versions") or [], []
+    first, held = (vs[0] if vs else None), [v for v in vs if v.get("held_out")]
+    out.append("`python eval/report.py` (listing check, WDC v2 pairs, abstention = incorrect):")
+    if first:
+        f, b = first["arms"]["full"], first["arms"]["baseline"]
+        out.append(f'- First run, two-model check: {_v(f.get("correct"))}/{_v(f.get("n"))} against {_v(b.get("correct"))}/{_v(b.get("n"))} for one Carbon '
+                   f'call; false matches {_v(f.get("false_accepts"))}/{_v(f.get("actual_negatives"))} and {_v(b.get("false_accepts"))}/{_v(b.get("actual_negatives"))}. It lost, so it was replaced.')
+    if held:
+        f, b = held[-1]["arms"]["full"], held[-1]["arms"]["baseline"]
+        out.append(f'- Held-out draw, current check: {_v(f.get("correct"))}/{_v(f.get("n"))} against {_v(b.get("correct"))}/{_v(b.get("n"))} for one Carbon '
+                   f'call; false matches {_v(f.get("false_accepts"))}/{_v(f.get("actual_negatives"))} and {_v(b.get("false_accepts"))}/{_v(b.get("actual_negatives"))}. Still one behind.')
+    out += ["", "`python eval/e2e/report.py` (photo in, offer out, blind catalog photos, no note):"]
+    runs = (e or {}).get("runs") or []
+    r = ([x for x in runs if x.get("held_out")] or runs[:1] or [None])[-1]
+    if r:
+        n, sy, ba, tap = r.get("n"), r["arms"].get("system") or {}, r["arms"].get("baseline") or {}, r["arms"].get("system_one_tap")
+        kind = "Held-out draw" if r.get("held_out") else "First draw"
+        out.append(f'- {kind}, right product: one Carbon call {_v(ba.get("correct"))}/{_v(n)}; our pipeline with zero taps {_v(sy.get("correct"))}/{_v(n)} '
+                   f'(it stopped and asked on {_v(sy.get("abstained"))}/{_v(n)})' + (f'; with one simulated confirming tap {_v(tap.get("correct"))}/{_v(n)}' if tap else "") + ".")
+        out.append(f'- Same draw, the single call\'s offers: {_v(ba.get("invalid_offers"))} of {_v(ba.get("answered"))} answered were contradicted by the merchant storefront; '
+                   f'{_v(ba.get("cheapest_agreement"))}/{_v(n)} matched the reference cheapest valid offer. Ours: {_v(sy.get("invalid_offers"))} invalid of {_v(sy.get("answered"))} answered (too few to claim anything).')
+    sc = ((e or {}).get("screens") or {}).get("a") or (e or {}).get("screen")
+    if sc:
+        t = next((x for x in sc.get("thresholds") or [] if x.get("threshold") == 0.75), None)
+        out.append(f'- Decision 1 listing screen, first draw: ROC AUC {_v(sc.get("roc_auc"))} over {_v(sc.get("judgments"))} listing judgments'
+                   + (f'; at p >= 0.75, {_v(t.get("tp"))} true accepts, {_v(t.get("fp"))} false accepts of {_v(sc.get("negatives"))} negatives, {_v(t.get("fn"))} missed' if t else "")
+                   + ". The bind rule built on it was broken by a red-team colour variant and is off.")
+    out += ["", "`python -m pytest tests -q` (offline, fakes only under tests/): read the last line; every test must pass."]
+    return "\n".join(out)
+
+
+def _fill(path, start, end, body):
+    text = path.read_text()
+    head, rest = text.split(start, 1)
+    _, tail = rest.split(end, 1)
+    return text, head + start + "\n" + body + "\n" + end + tail
+
+
 def main():
     summary = json.loads(SUMMARY.read_text()) if SUMMARY.is_file() else None
-    text = README.read_text()
-    head, rest = text.split(START, 1)
-    _, tail = rest.split(END, 1)
-    new = head + START + "\n" + block(summary) + "\n" + END + tail
+    jobs = [(README, START, END, block(summary))]
+    if KIT.is_file() and KIT_START in KIT.read_text():
+        jobs.append((KIT, KIT_START, KIT_END, kit(summary)))
+    stale = []
+    for path, start, end, body in jobs:
+        text, new = _fill(path, start, end, body)
+        if "--check" in sys.argv:
+            stale += [path.name] if new != text else []
+        else:
+            path.write_text(new)
     if "--check" in sys.argv:
-        print("README evaluation block matches" if new == text else "README evaluation block is OUT OF DATE",
-              SUMMARY.name if summary else "(no summary.json: not yet measured)")
-        raise SystemExit(0 if new == text else 1)
-    README.write_text(new)
-    print("README.md evaluation block written from", SUMMARY if summary else "nothing (not yet measured)")
+        print("README evaluation block matches" if README.name not in stale else "README evaluation block is OUT OF DATE",
+              SUMMARY.name if summary else "(no summary.json: not yet measured)",
+              "| DEMO_KIT block " + ("OUT OF DATE" if KIT.name in stale else "matches") if len(jobs) > 1 else "")
+        raise SystemExit(1 if stale else 0)
+    print("evaluation blocks written from", SUMMARY if summary else "nothing (not yet measured)", "into", ", ".join(j[0].name for j in jobs))
 
 
 if __name__ == "__main__":

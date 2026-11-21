@@ -12,6 +12,7 @@ Commerce (Shopify)** bonus track.
 | Repository | https://github.com/hxbib/signalforge |
 | One-minute video | [docs/demo/signalforge-demo.mp4](https://github.com/hxbib/signalforge/blob/main/docs/demo/signalforge-demo.mp4) |
 | What was built today | [docs/PROVENANCE.md](docs/PROVENANCE.md) |
+| Demo kit (objects, pre-flight, numbers to say) | [docs/DEMO_KIT.md](docs/DEMO_KIT.md) |
 | Team | Sadman Habib ([hxbib](https://github.com/hxbib)), solo |
 
 ## What it does
