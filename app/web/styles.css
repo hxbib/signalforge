@@ -455,3 +455,5 @@ td { font-variant-numeric: tabular-nums; }
 .handoff-phone { max-width: 520px; margin: 0 auto; padding: 32px 20px; text-align: center; }
 .handoff-phone .actions { justify-content: center; margin-top: 20px; }
 .handoff-phone .btn { font-size: 1.15rem; padding: 18px 28px; }
+@media (max-width: 860px) { .note-row input, .q-input, .watch-form input { font-size: 16px; } }
+.handoff:not([hidden]) { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; z-index: 30; width: min(420px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto; background: var(--surface); box-shadow: var(--shadow); }

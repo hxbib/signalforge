@@ -24,4 +24,4 @@ panel shows. Read every number off the screen; do not say a number that is not v
 ## After recording
 
 - Watch the whole cut with sound. Check that every spoken number matches what is on screen.
-- Upload, open the link in a private window, then put the link in README.md and docs/SUBMISSION.md (both marked TODO-LEAD).
+- The cut is `docs/demo/signalforge-demo.mp4` (58.7 s), linked from README.md and docs/SUBMISSION.md; open that link in a private window to confirm it plays.

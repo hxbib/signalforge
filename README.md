@@ -149,6 +149,10 @@ HTTP surface (`app/main.py`): `POST /api/search` (multipart `image` up to 5 MB, 
 `GET /api/proof/eval`, `GET /api/health`. Runs belong to
 the browser session that created them.
 
+Phone camera hand-off: on a laptop, "Use my phone's camera" shows a QR code; the phone takes the photo and the search
+runs on the laptop (`app/handoff/`; verified through the public URL with two sessions; not yet exercised with a
+physical phone).
+
 Mobile: the same web app, installable to a phone home screen (`app/web/manifest.webmanifest` plus icons; no service
 worker, no native app). QR code to the public URL: `docs/demo/qr.png`.
 

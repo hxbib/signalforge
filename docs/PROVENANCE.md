@@ -43,7 +43,7 @@ field; UPC lookup `not_found`): the reference GTIN-lookup path could not be the 
 ## Commit history
 
 `git log --reverse --format='%h %ad %s' --date=iso`, times shown in ET. Range at the time of writing:
-`0e6fbd2..8b5f11e` (later commits may follow; the repository log is authoritative).
+`0e6fbd2..5c03764` (the repository log is authoritative).
 
 | Commit | Time (ET), Nov 21 2026 | Subject |
 |---|---|---|
@@ -56,6 +56,14 @@ field; UPC lookup `not_found`): the reference GTIN-lookup path could not be the 
 | `5bc338c` | 16:26:04 | Frozen build: watch preview labelled simulation, proof page fixes, evaluation runs v2 and held-out draws |
 | `10d8e58` | 16:29:30 | Demo video page |
 | `8b5f11e` | 16:30:59 | Remove unused demo page |
+| `1adeab6` | 16:34:17 | Visual match off by default, caution wording, final demo video, evaluation: held-out draws and one-tap arm, docs |
+| `67e01fe` | 16:37:17 | Docs and evaluation report in sync with the results files |
+| `8ddf9f6` | 16:38:37 | Submission text: video link |
+| `1277667` | 16:43:03 | Phone camera handoff: scan a QR on the laptop, take the photo on the phone, the search runs on the laptop |
+| `09e85ee` | 16:46:22 | Demo kit: go-to objects, pre-flight, benchmarks to show |
+| `5c03764` | 16:50:28 | Remove a broken developer CLI that built a hand-made rule inside app/ |
+
+Later commits, if any, are documentation and stylesheet only.
 
 The first commit was made at 15:36 ET. Work earlier in the day (the planning notes and reference modules of layer 1)
 was done outside this repository's history, so the log shows when each layer was committed, not when each line was
