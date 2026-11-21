@@ -125,6 +125,32 @@ def _e2e(e):
     return out
 
 
+def _headline(summary, e):
+    """Strongest and weakest measured results, side by side, from the held-out rows where they exist."""
+    out, vs = [], summary.get("versions") or []
+    arms = [(v, k, a) for v in vs for k, a in (v.get("arms") or {}).items() if k in (v.get("arms_run") or [k])]
+    if arms and all(a.get("false_accepts") == 0 for _, _, a in arms):
+        out.append(f'Strongest: 0 false matches in every arm of every listing-check run ({len(arms)} arm runs, each 0/'
+                   f'{_v(arms[0][2].get("actual_negatives"))} on the actually different pairs).')
+    sc = ((e or {}).get("screens") or {}).get("a") or (e or {}).get("screen")
+    if sc:
+        out.append(f'Decision 1 listing screen on the first blind draw: ROC AUC {_v(sc.get("roc_auc"))} over {_v(sc.get("judgments"))} '
+                   f'listing judgments, median {_v(sc.get("median_ms_per_call"))} ms per call.')
+    held = [v for v in vs if v.get("held_out")]
+    if held:
+        f, b = held[-1]["arms"]["full"], held[-1]["arms"]["baseline"]
+        out.append(f'Weakest, stated as plainly: on the held-out pair draw the listing check is correct on {_v(f.get("correct"))}/{_v(f.get("n"))} '
+                   f'against {_v(b.get("correct"))}/{_v(b.get("n"))} for one Carbon call.')
+    runs = [r for r in ((e or {}).get("runs") or []) if r.get("held_out")] or ((e or {}).get("runs") or [])[:1]
+    if runs:
+        r = runs[-1]
+        sy, ba, tap = r["arms"].get("system") or {}, r["arms"].get("baseline") or {}, r["arms"].get("system_one_tap")
+        out.append(f'End to end on {"held-out " if r.get("held_out") else ""}blind catalog photos one Carbon call names the right product on '
+                   f'{_v(ba.get("correct"))}/{_v(r.get("n"))}; the full system on {_v(sy.get("correct"))}/{_v(r.get("n"))} with zero taps'
+                   + (f' and {_v(tap.get("correct"))}/{_v(r.get("n"))} with one simulated confirming tap' if tap else "") + ".")
+    return ["**Summary.** " + " ".join(out), ""] if out else []
+
+
 def block(summary):
     if summary is None:
         return "Not yet measured: `eval/results/summary.json` does not exist, so no number is shown here."
@@ -133,7 +159,7 @@ def block(summary):
     e2e = json.loads(E2E.read_text()) if E2E.is_file() else summary.get("e2e")   # the file is the source of summary["e2e"]
     if e2e:
         files += [name for name in ("e2e-summary.json", "e2e-freeze.json", "e2e-freeze-b.json") if name not in files and (E2E.parent / name).is_file()]
-    lines = _pairs(summary) + [""] + _e2e(e2e) + [
+    lines = _headline(summary, e2e) + _pairs(summary) + [""] + _e2e(e2e) + [
         "",
         f'**Experiment B (five rights-cleared photo-to-offer cases):** status `{b.get("status", "unknown")}`. {b.get("statement", "")}'.rstrip(),
         "",

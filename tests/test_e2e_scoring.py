@@ -377,8 +377,10 @@ def test_one_tap_arm_is_a_third_row_with_its_own_stats():
     t = b["one_tap"]
     assert (t["choice_questions"], t["gold_offered"], t["gold_first"], t["answered_gold"], t["answered_none"]) == (2, 1, 1, 1, 1)
     assert "gold label" in t["note"] and any("The baseline arm gets no such help" in x for x in b["reading"])
+    assert (t["correct_via_tap"], t["correct_without_tap"], t["gold_tap_without_verified_offer"], t["visual_match"]) == (0, 1, 0, True)
+    assert any("SF_VISUAL_MATCH on" in x and "eeeeeeeeeeee" in x for x in b["reading"])
     assert s["photo_caveat"] == summarize.PHOTO_CAVEAT and summarize.PHOTO_CAVEAT in s["notes"]
     flat = " ".join("\n".join(report.lines({"seed": "s" * 40, "created_at": 1}, v1, s)).split())
-    assert "b (draw B, held-out) full system + one correct tap 1/2 0/2" in flat and "gold the FIRST option in 1" in flat
+    assert "b (draw B, held-out) full system + one correct tap [visual_match on] 1/2 0/2" in flat and "gold the FIRST option in 1" in flat
     unfinished = summarize.build(v1, None, None, {"b": (held, None)}, None, {"b": ({**tap, "complete": False}, None)})
     assert "system_one_tap" not in unfinished["runs"][1]["arms"] and "one_tap" not in unfinished["runs"][1]

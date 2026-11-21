@@ -1,72 +1,25 @@
 # Three-minute live demo script
 
-Demo URL: https://reviewing-look-liz-course.trycloudflare.com (evidence page: https://reviewing-look-liz-course.trycloudflare.com/proof). Laptop browser, private
-window, phone ready as camera backup. Everything below is done live on an item chosen after the slot starts.
-Say only what the screen shows. If something fails, show the real failure and the reason the app gives.
+Demo URL: https://reviewing-look-liz-course.trycloudflare.com (evidence page: `/proof`). Laptop browser, private window; phone as camera backup
+(QR: docs/demo/qr.png). Only flows verified on the final build are used: a boxed LEGO 10343 or 75375 photo → winner with
+caution / next verified offer; a photo without a printed model number → one question ordered by Decision 1 → one tap →
+result; the watch sentence → rule preview, playground, sandbox challenge; `/proof`. Say only what the screen shows.
+Each step has one fallback; none of them is a recording. Read every number from the screen.
 
-## 0:00–0:15 · Fresh input
-- Draw the item after the clock starts (shuffle the items on the table, or let a judge point at one; a judge taking
-  part is optional). It needs a visible printed model or set number.
-- Take a new photo or drop a fresh image. Leave the note empty.
-- Say: "One photo, no typing. Find me the cheapest new one."
+| Time | Do | Say | Fallback |
+|---|---|---|---|
+| 0:00–0:40 | Photo of the box (model number printed), note empty. Point at the rows as they finish: Neon reads the photo, Decision 1 gate (probability bar), Carbon reads the request, catalog identity, Carbon binds, Decision 1 screens every listing in one pass (read its listing count and ms), merchant offers verified. Read the card: headline, price basis, seller, stock, the caution if shown, "Next verified offer". | "One photo, no typing. The model number is printed on this box, and that matters: our own benchmark says a photo without one mostly gets a question back. Neon read the number, Decision 1 said one target and confirmed the number is printed, Carbon bound one catalog product, each merchant's storefront confirmed price and stock." If a caution shows: "Verified means the storefront states this. It is not a rating of the merchant." If "partial": "One source answered only partly; the chips say which." | Run ends "unavailable" or "Server busy" → read the message, upload once more. |
+| 0:40–1:10 | Second photo: a product with no printed model number. The app asks one question; the options are ordered by the Decision 1 score, shown on each button. Tap the right one. Read the result and the basis line ("chosen by you"). | "No printed number, so it does not guess. Decision 1 scored every listing against the photo and put the likely product first. One tap, and the same merchant checks run." | It answers without a question (number was readable) → say so and continue. The right product is not offered → tap "None of these", say that the catalog search missed it, move on. |
+| 1:10–1:35 | On either result open "Why a cheaper listing lost" / "Listings that were ruled out"; read the reason on one row. Then the first lead and the coverage chips. | "Ruled out for this field. Leads are shown, tagged unverified, never ranked. This is which sources answered." | Nothing ruled out → read the reason under the cheapest lead, then the coverage row marked limited. |
+| 1:35–2:10 | Watch box: "notify me when this restocks under $25". Read the scope sentence and status ("Preview only"), point at the "Would this alert?" rows tagged simulation. Start the sandbox challenge; do not wait for it. | "Carbon compiled this into a typed rule for one seller and one variant; code tested it on generated timelines. Preview only: no authorized merchant feed, nothing is polled. A Gemini Managed Agent in a hosted sandbox is now trying to break the rule; whatever it reports is replayed here before it is shown." | A question appears → answer it in the box. The challenge reports unavailable or is still running at 2:40 → say so; do not describe a result that is not on screen. |
+| 2:10–2:45 | /proof. Read the held-out rows with denominators: listing check (system, one Carbon call); end to end (zero taps, one tap, one Carbon call); the single call's offer cells (cheapest agrees, invalid offers / answered); the screen calibration (AUC, p >= 0.75 row). Say "held-out" for draw B, "in-sample" for the second draw A row. | "Blind draws, frozen before any run; the photos are the catalog's own images. Zero taps: one model call names the product far more often than our pipeline, which asks one question instead. One tap: more, still fewer. Our two-model listing check lost to one call and was replaced. The screen calibrated well, we built a bind rule on it, a red-team colour variant broke it, it is off. What we do have: no false match in any listing-check arm, and answered offers that the storefront confirmed; read the answered count, it is small." | /proof does not load → README.md on GitHub, section Evaluation: same numbers, written by a script from the same files. |
+| 2:45–3:00 | Back to the watch card: read the challenge status if it finished. Open the evidence drawer: receipts with interaction ids, gate probabilities. | "Every model step has a receipt; Decision 1 issues no id, so none is shown. Models read and disambiguate. Merchant facts, printed evidence and the buyer decide." | Drawer does not open → GET `/api/search/<id>/proof` shows the same receipts as JSON. |
 
-## 0:15–0:50 · The answer
-- While it runs, point at the progress rows: Neon read the photo, Decision 1 gate, Carbon read the request, Carbon
-  bound the exact product, merchants checked. These are real calls with real timings.
-- When the result appears, read the headline exactly as shown ("Lowest verified among the stores checked", "One
-  verified offer" or "No verified offer yet"), the price basis line (item price, USD, before shipping and tax), the
-  seller and the stock evidence.
-- Open the merchant link. If the merchant's page shows a different price now, say so and run the search again.
-- If the app asks a question instead (two items in frame, no readable model number), answer it with one tap and say
-  that this is the gate refusing to guess.
+## If the public URL does not load
+Use http://localhost:8000 on the event machine and say that the public link is a tunnel to the same server.
 
-## 0:50–1:25 · Why a cheaper listing lost
-- Open "Why a cheaper listing lost" (or "Listings that were ruled out"). Read the exact reason on the cheapest
-  rejected listing: sold out, not priced in USD, used or condition not confirmed, identity not confirmed, and so on.
-- If nothing was rejected, open the coverage details instead and show a source that answered only partly or a
-  listing left as an unverified lead, and say what that means: a lead is never ranked.
-
-## 1:25–2:05 · The watch
-- In the watch box type: "Notify me when this seller restocks under $25".
-- Read the scope sentence and the status as shown. In this build the status is a preview ("not armed") because no
-  authorized merchant feed is connected; say that plainly.
-- Point at the "Would this alert?" rows, each tagged simulation: the price drops while the item stays in stock, and
-  a restock watch stays quiet; a real restock under the cap alerts once.
-- This explicit request should need no question, but it is not reliable yet: on a live run at 15:58 ET (winner in
-  stock at a price far above the cap) the app asked which seller and which event was meant. If a question appears,
-  read it aloud, answer it in the box, and say that the app asks instead of guessing. Rehearse this step on the
-  frozen build before going on stage.
-
-## 2:05–2:40 · Proof
-- Open /proof. Read the rows straight from the page, each with its denominator: the one-call baseline, the first
-  listing check (v1) and the changed one (v2). Say which draw each row is on, and say "in-sample" for v2 on draw A
-  (the change was chosen after seeing v1 fail on those pairs) and "held-out" only for a row on draw B.
-- Say what each arm saw: the same text packet from independently labelled public product pairs (WDC v2), ids and
-  labels withheld; the baseline is one Carbon call.
-- Say the honest story: the first two-model check abstained more than a single call and scored lower, with no false
-  match in any arm; we read the failures case by case and changed the check once. Show one failing case from the
-  list on the page.
-- Read the end-to-end table (whole pipeline on blind-drawn catalog photos, no answers given, against one Carbon
-  call) exactly as shown, held-out row first, and say it before a judge finds it: with zero taps the single call names
-  the right product on most photos and our system stops and asks on almost all of them. Then read the offer-level
-  cells from the same rows: how many of the single call's offers agree with the reference cheapest valid offer, and
-  how many were contradicted by the merchant's storefront. Do not claim more than those cells show: our system
-  answered too few photos for its own offer cells to mean anything.
-- Then say what the demo item has that those photos lack: the model number printed on the box.
-- Say that the five-case experiment with human-adjudicated prices was not run and why (no rights-cleared merchant
-  evidence in time).
-
-## 2:40–3:00 · One real trace, then close
-- Back on the result, open the evidence drawer once: Neon's reading (brand, model number), Decision 1's choice and
-  confidence against the 0.75 threshold, Carbon's receipts with interaction ids, the merchant's confirmation.
-  Decision 1 issues no id; the drawer shows none.
-- Close: "Models read and disambiguate. Merchant facts and code decide. That is the buyer's answer."
-
-## If things go wrong
-| Situation | What to do |
-|---|---|
-| The run ends "unavailable" | Read the reason shown, retry once with a new photo. Do not switch to a recording. |
-| A source times out | The result is marked partial; show the coverage row and continue. |
-| The tunnel URL does not load | Use http://localhost:8000 on the event machine and say that the public link is a tunnel to the same server. |
-| The winner's page changed | Say it, search again, compare. |
-| Asked about anything not on screen | Answer from docs/QA.md; say "not measured" when it was not measured. |
+## Not to be claimed on stage
+- That the system beats the single-call baseline on any measured benchmark.
+- That "verified" vouches for a merchant, that colour variants are told apart, or that the result is the lowest price on the market.
+- That the watch notifies anyone, or that the Decision 1 screen establishes identity.
+- A sandbox result that is not on screen. The one recorded run (16:19 ET) found no counterexample; the timeline count is the agent's own.

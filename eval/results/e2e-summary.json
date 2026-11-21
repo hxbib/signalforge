@@ -460,7 +460,8 @@
      "gold_is_top_option": 10,
      "gold_among_options": 12
     },
-    "no_lead_rule": null
+    "no_lead_rule": null,
+    "no_lead_rule_note": "not computed: this run's recording never shows the second model's pick differing, so it cannot tell whether the pick agreed with the top-scored product"
    },
    "one_tap": {
     "cases": 24,
@@ -471,20 +472,24 @@
     "gold_first": 11,
     "answered_gold": 14,
     "answered_none": 7,
+    "correct_via_tap": 12,
+    "correct_without_tap": 0,
+    "gold_tap_without_verified_offer": 2,
     "source": "e2e-a-tap.json",
     "code_sha": "10d8e58be4573a86a633f9725e2dcf1c80126ad3",
     "tree_dirty": true,
     "visual_match": false,
     "generated_at": 1795296846,
-    "note": "system_one_tap: the system run plus at most one answer to a choice question, given by a simulated buyer who knows what they are holding (the gold option if it is offered, otherwise 'None of these'). The tap uses the gold label, so this arm measures the system given one correct human confirmation; the baseline arm gets no such help. It is a separate fresh run of the system, so its first leg can differ from the zero-tap system row."
+    "note": "system_one_tap: the system run plus at most one answer to a choice question, given by a simulated buyer who knows what they are holding (the gold option if it is offered, otherwise 'None of these'). The tap uses the gold label, so this arm measures the system given one correct human confirmation; the baseline arm gets no such help. It is a separate fresh run of the system, so its first leg can differ from the zero-tap system row, and it carries its own code SHA and SF_VISUAL_MATCH setting: the one-tap run on draw B had visual_match on, the one on draw A ran after the shipped default became off."
    },
    "reading": [
     "Full system: answered 2 of 24 photos (1 the gold product, 1 another catalog product id), stopped without an answer on 22, 0 errors; 0 of its 2 answered offers were invalid.",
     "One-call baseline: answered 20 of 24 (20 the gold product, 0 another product), abstained on 4, 0 errors; 1 of its 20 answered offers were invalid and 12 matched the reference cheapest valid offer.",
-    "With one correct tap (system_one_tap, the tap uses the gold label): 12 correct, 1 false accepts, 11 abstained, 0 errors of 24; 0 of its 13 answered offers were invalid and 12 matched the reference cheapest valid offer. The system asked a choice question in 21 of 24 cases; the gold product was among the options in 14 and was the first option (ordered by the Decision 1 screen) in 11. The baseline arm gets no such help.",
+    "With one correct tap (system_one_tap, the tap uses the gold label; this arm ran on code 10d8e58be457 with SF_VISUAL_MATCH off (the shipped default)): 12 correct (12 through the tap, 0 without one), 1 false accepts, 11 abstained, 0 errors of 24; 0 of its 13 answered offers were invalid and 12 matched the reference cheapest valid offer. The system asked a choice question in 21 of 24 cases; the gold product was among the options in 14 and was the first option (ordered by the Decision 1 screen) in 11; 2 gold taps ended with no verified offer. The baseline arm gets no such help.",
     "Why visual_match did not fire on the 20 abstentions that reached the screen (post-hoc, from the probabilities on the question's options): screen_margin_below_threshold x8, screen_top_below_threshold x11, second_model_pick_differs_or_missing x1. The gold product was the top-scored option in 10 of them and among the options in 12.",
     "False accepts by catalog product id, system: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.",
-    "False accepts by catalog product id, system_one_tap: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none."
+    "False accepts by catalog product id, system_one_tap: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.",
+    "Documented next step (a rule without the lead requirement), NOT deployed and NOT a score: not computed: this run's recording never shows the second model's pick differing, so it cannot tell whether the pick agreed with the top-scored product."
    ]
   },
   {
@@ -654,7 +659,8 @@
      "accepted_by_deployed_rule": 1,
      "accepted_gold": 1,
      "accepted_other_catalog_id": 1
-    }
+    },
+    "no_lead_rule_note": null
    },
    "one_tap": {
     "cases": 24,
@@ -665,17 +671,20 @@
     "gold_first": 8,
     "answered_gold": 11,
     "answered_none": 6,
+    "correct_via_tap": 7,
+    "correct_without_tap": 1,
+    "gold_tap_without_verified_offer": 4,
     "source": "e2e-b-tap.json",
     "code_sha": "5bc338c6e6048ec45d8bc740c22f4529cb838fa3",
     "tree_dirty": true,
     "visual_match": true,
     "generated_at": 1795296641,
-    "note": "system_one_tap: the system run plus at most one answer to a choice question, given by a simulated buyer who knows what they are holding (the gold option if it is offered, otherwise 'None of these'). The tap uses the gold label, so this arm measures the system given one correct human confirmation; the baseline arm gets no such help. It is a separate fresh run of the system, so its first leg can differ from the zero-tap system row."
+    "note": "system_one_tap: the system run plus at most one answer to a choice question, given by a simulated buyer who knows what they are holding (the gold option if it is offered, otherwise 'None of these'). The tap uses the gold label, so this arm measures the system given one correct human confirmation; the baseline arm gets no such help. It is a separate fresh run of the system, so its first leg can differ from the zero-tap system row, and it carries its own code SHA and SF_VISUAL_MATCH setting: the one-tap run on draw B had visual_match on, the one on draw A ran after the shipped default became off."
    },
    "reading": [
     "Full system: answered 2 of 24 photos (1 the gold product, 1 another catalog product id), stopped without an answer on 22, 0 errors; 0 of its 2 answered offers were invalid.",
     "One-call baseline: answered 22 of 24 (21 the gold product, 1 another product), abstained on 2, 0 errors; 4 of its 22 answered offers were invalid and 16 matched the reference cheapest valid offer.",
-    "With one correct tap (system_one_tap, the tap uses the gold label): 8 correct, 1 false accepts, 15 abstained, 0 errors of 24; 0 of its 9 answered offers were invalid and 7 matched the reference cheapest valid offer. The system asked a choice question in 17 of 24 cases; the gold product was among the options in 11 and was the first option (ordered by the Decision 1 screen) in 8. The baseline arm gets no such help.",
+    "With one correct tap (system_one_tap, the tap uses the gold label; this arm ran on code 5bc338c6e604 with SF_VISUAL_MATCH on): 8 correct (7 through the tap, 1 without one), 1 false accepts, 15 abstained, 0 errors of 24; 0 of its 9 answered offers were invalid and 7 matched the reference cheapest valid offer. The system asked a choice question in 17 of 24 cases; the gold product was among the options in 11 and was the first option (ordered by the Decision 1 screen) in 8; 4 gold taps ended with no verified offer. The baseline arm gets no such help.",
     "Why visual_match did not fire on the 17 abstentions that reached the screen (post-hoc, from the probabilities on the question's options): screen_margin_below_threshold x3, screen_top_below_threshold x10, second_model_pick_differs_or_missing x4. The gold product was the top-scored option in 5 of them and among the options in 12.",
     "False accepts by catalog product id, system: 1 strict, of which 1 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 0 carry none.",
     "False accepts by catalog product id, baseline: 1 strict, of which 0 carry mechanical evidence of being the same item under another catalog product id (same model number or identical catalog title) and 1 carry none.",
@@ -688,8 +697,9 @@
  "comparison": [
   "Full system on draw A: v1 (visual_match off) 0 correct, 1 false accepts, 23 abstained, 0 errors of 24; v2 (visual_match on, IN-SAMPLE) 1 correct, 1 false accepts, 22 abstained, 0 errors of 24. v2 is not an unbiased estimate: the change was designed from this draw.",
   "Held-out draw B (the number to quote): full system 1 correct, 1 false accepts, 22 abstained, 0 errors of 24; one-call baseline 21 correct, 1 false accepts, 2 abstained, 0 errors of 24.",
-  "Run v2: With one correct tap (system_one_tap, the tap uses the gold label): 12 correct, 1 false accepts, 11 abstained, 0 errors of 24; 0 of its 13 answered offers were invalid and 12 matched the reference cheapest valid offer. The system asked a choice question in 21 of 24 cases; the gold product was among the options in 14 and was the first option (ordered by the Decision 1 screen) in 11. The baseline arm gets no such help.",
-  "Run b: With one correct tap (system_one_tap, the tap uses the gold label): 8 correct, 1 false accepts, 15 abstained, 0 errors of 24; 0 of its 9 answered offers were invalid and 7 matched the reference cheapest valid offer. The system asked a choice question in 17 of 24 cases; the gold product was among the options in 11 and was the first option (ordered by the Decision 1 screen) in 8. The baseline arm gets no such help.",
+  "Run v2: With one correct tap (system_one_tap, the tap uses the gold label; this arm ran on code 10d8e58be457 with SF_VISUAL_MATCH off (the shipped default)): 12 correct (12 through the tap, 0 without one), 1 false accepts, 11 abstained, 0 errors of 24; 0 of its 13 answered offers were invalid and 12 matched the reference cheapest valid offer. The system asked a choice question in 21 of 24 cases; the gold product was among the options in 14 and was the first option (ordered by the Decision 1 screen) in 11; 2 gold taps ended with no verified offer. The baseline arm gets no such help.",
+  "Run v2: Documented next step (a rule without the lead requirement), NOT deployed and NOT a score: not computed: this run's recording never shows the second model's pick differing, so it cannot tell whether the pick agreed with the top-scored product.",
+  "Run b: With one correct tap (system_one_tap, the tap uses the gold label; this arm ran on code 5bc338c6e604 with SF_VISUAL_MATCH on): 8 correct (7 through the tap, 1 without one), 1 false accepts, 15 abstained, 0 errors of 24; 0 of its 9 answered offers were invalid and 7 matched the reference cheapest valid offer. The system asked a choice question in 17 of 24 cases; the gold product was among the options in 11 and was the first option (ordered by the Decision 1 screen) in 8; 4 gold taps ended with no verified offer. The baseline arm gets no such help.",
   "Run b: Documented next step, NOT deployed and NOT a score (computed from the recorded runs, nothing re-run): a rule without the lead requirement (top catalog product's screen probability >= 0.75 and the second model picked the same product; no lead requirement) would have accepted 2 of 24 cases (1 of them also accepted by the deployed rule): 1 the gold product, 1 another catalog product id."
  ],
  "photo_caveat": "What the photos are: every case photo is the catalog's own product image of the drawn product. That is the easiest input for a model that matches a picture to a listing (the candidate listing was made from that very image) and the hardest for a rule that wants printed evidence (a studio shot rarely shows a model number or a barcode). The benchmark therefore shows how each arm behaves on clean merchant imagery with no typed hint: how often it answers, how often the answer is another product, and whether the answered offer survives the checks. It does not show how either arm performs on a shopper's own photo of an item in hand, where the picture is not the listing's own and packaging text may be readable; neither arm was measured on such photos here.",
@@ -890,12 +900,12 @@
   "The photos are the merchants' own catalog images. Many show no printed model number, so the full system is expected to stop and ask one question; zero follow-up answers were given, so those cases count as abstained.",
   "The baseline is handed the listing rows of the draw query (which normally contain the gold product); the full system has to find the product in the whole catalog from the photo alone.",
   "What the photos are: every case photo is the catalog's own product image of the drawn product. That is the easiest input for a model that matches a picture to a listing (the candidate listing was made from that very image) and the hardest for a rule that wants printed evidence (a studio shot rarely shows a model number or a barcode). The benchmark therefore shows how each arm behaves on clean merchant imagery with no typed hint: how often it answers, how often the answer is another product, and whether the answered offer survives the checks. It does not show how either arm performs on a shopper's own photo of an item in hand, where the picture is not the listing's own and packaging text may be readable; neither arm was measured on such photos here.",
-  "system_one_tap: the system run plus at most one answer to a choice question, given by a simulated buyer who knows what they are holding (the gold option if it is offered, otherwise 'None of these'). The tap uses the gold label, so this arm measures the system given one correct human confirmation; the baseline arm gets no such help. It is a separate fresh run of the system, so its first leg can differ from the zero-tap system row.",
+  "system_one_tap: the system run plus at most one answer to a choice question, given by a simulated buyer who knows what they are holding (the gold option if it is offered, otherwise 'None of these'). The tap uses the gold label, so this arm measures the system given one correct human confirmation; the baseline arm gets no such help. It is a separate fresh run of the system, so its first leg can differ from the zero-tap system row, and it carries its own code SHA and SF_VISUAL_MATCH setting: the one-tap run on draw B had visual_match on, the one on draw A ran after the shipped default became off.",
   "Cheapest-valid agreement is circular for the full system: the reference winner is computed by the same deterministic evaluator (app.merchants.ranking.evaluate) the system uses, over the gold product's rows. For the system it tests binding and lane wiring; for the baseline it tests constraint-following.",
   "An invalid offer is an answered offer that is not new / in stock / USD on its own row, or whose merchant storefront disagreed on price or stock when re-read at scoring time (storefront_mismatch).",
   "A system run that ended 'unavailable' with an error is counted as an error, not as an abstention.",
   "Baseline rows come from catalog search, which can list fewer sellers of a product than the full product read the reference uses; 'pricier_than_reference' can therefore also mean the cheapest seller was not among the baseline's rows.",
   "During run v1 the runner's rate-limit detector matched a step duration whose digits contained 429; no rate-limit error occurred. The runner paused 30 s and ran one case at a time from then on (two at a time before). No case was affected or re-run."
  ],
- "summarized_at": 1795296853
+ "summarized_at": 1795296887
 }

@@ -122,7 +122,9 @@ abstained. Scoring is identical to the other arms; the time includes both legs.
 **The tap uses the gold label.** This arm measures the system given one correct human confirmation; the
 baseline arm gets no such help, so the two rows are not a like-for-like comparison. The report also prints how
 often the gold product was among the options and how often it was the first option (options are ordered by the
-Decision 1 screen). It is a separate fresh run, so its first leg can differ from the zero-tap row.
+Decision 1 screen). It is a separate fresh run, so its first leg can differ from the zero-tap row, and each
+one-tap run records its own code SHA and `SF_VISUAL_MATCH` setting, printed in its row: the draw-B run had
+visual_match on; the draw-A run started after the shipped default became off, and draw A stays in-sample.
 
 ## A documented next step that is NOT deployed and NOT a score
 

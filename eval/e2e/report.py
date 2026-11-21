@@ -48,6 +48,8 @@ def runs_table(summary: dict) -> list[str]:
             a, n = r["arms"][arm], r["n"]
             same = split.get(arm, {}).get("same_item_other_catalog_id")
             label = ARM_LABEL[arm] + (" [from v1]" if arm == "baseline" and r.get("baseline_source") else "")
+            if arm == "system_one_tap" and r.get("one_tap"):
+                label += f" [visual_match {'on' if r['one_tap']['visual_match'] else 'off'}]"
             rows.append([tag, label, f"{a['correct']}/{n}", f"{a['false_accepts']}/{n}",
                          "not analysed" if same is None else f"{same} of {a['false_accepts']}", f"{a['abstained']}/{n}",
                          f"{a['errors']}/{n}", f"{a['invalid_offers']}/{a['answered']} answered",
@@ -66,7 +68,11 @@ def runs_table(summary: dict) -> list[str]:
             out.append(f"  full-system abstentions by cause: {_codes(codes)}")
         t = r.get("one_tap")
         if t:
-            out.append(f"  one-tap arm ({t['source']}, code {str(t.get('code_sha'))[:12]}): choice question in "
+            out.append(f"  one-tap arm ({t['source']}, code {str(t.get('code_sha'))[:12]}"
+                       f"{' + uncommitted changes' if t.get('tree_dirty') else ''}, SF_VISUAL_MATCH "
+                       f"{'on' if t['visual_match'] else 'off'}): {t['correct_via_tap']} correct through the tap, "
+                       f"{t['correct_without_tap']} without one, {t['gold_tap_without_verified_offer']} gold taps ended with "
+                       f"no verified offer; choice question in "
                        f"{t['choice_questions']}/{t['cases']} cases, text question in {t['text_questions']}; gold among the "
                        f"options in {t['gold_offered']}, gold the FIRST option in {t['gold_first']}; simulated buyer tapped "
                        f"gold {t['answered_gold']} times, 'none' {t['answered_none']} times. The tap uses the gold label.")
@@ -75,6 +81,8 @@ def runs_table(summary: dict) -> list[str]:
             out.append(f"  documented next step, NOT deployed, NOT a score: without the lead requirement the rule would "
                        f"have accepted {nl['accepted']}/{nl['cases']} ({nl['accepted_by_deployed_rule']} also by the deployed "
                        f"rule): {nl['accepted_gold']} gold, {nl['accepted_other_catalog_id']} another catalog product id")
+        elif (r.get("diagnostic") or {}).get("no_lead_rule_note"):
+            out.append(f"  documented next step, NOT deployed, NOT a score: {r['diagnostic']['no_lead_rule_note']}")
         gap = (r.get("diagnostic") or {}).get("visual_match_gap")
         if gap:
             out.append(f"  why visual_match did not fire ({gap['abstentions_with_screen_scores']} abstentions with screen "

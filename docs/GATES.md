@@ -1,7 +1,8 @@
 # Release gates: walk of ops/gates.csv
 
 Walked line by line against the repository and the running demo (https://reviewing-look-liz-course.trycloudflare.com) at **16:29 ET**,
-on the frozen build (server restarted 16:27:31 ET with `SF_VISUAL_MATCH=0`, `SF_STORE_INTERACTIONS=delete`).
+on the frozen build (server restarted 16:27:31 ET with `SF_VISUAL_MATCH=0`, `SF_STORE_INTERACTIONS=delete`; restarted
+once more at 16:34:14 ET with the same settings, after these runs; `/api/health` → 200 and all lanes loaded at 16:34 ET).
 PASS means the evidence below was produced by a command or a real run today. NOT-YET means the evidence does not
 exist yet. FAIL means the evidence contradicts the gate. An earlier walk at 16:01 ET found two failures (the explicit
 watch asked a question; a failed catalog call was reported as ok); both were fixed by their lanes and re-checked here.

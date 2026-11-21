@@ -26,7 +26,7 @@ RUN_META = {
           "draw": "B", "in_sample": False, "held_out": True},
 }
 DIAGNOSTIC_KEYS = ("post_hoc", "changes_scores", "system_abstention_codes", "system_false_accepts",
-                   "system_false_accepts_same_model_number_as_gold", "false_accepts", "visual_match_gap", "no_lead_rule")
+                   "system_false_accepts_same_model_number_as_gold", "false_accepts", "visual_match_gap", "no_lead_rule", "no_lead_rule_note")
 PHOTO_CAVEAT = (
     "What the photos are: every case photo is the catalog's own product image of the drawn product. That is the "
     "easiest input for a model that matches a picture to a listing (the candidate listing was made from that very "
@@ -39,7 +39,9 @@ ONE_TAP_NOTE = (
     "system_one_tap: the system run plus at most one answer to a choice question, given by a simulated buyer who "
     "knows what they are holding (the gold option if it is offered, otherwise 'None of these'). The tap uses the gold "
     "label, so this arm measures the system given one correct human confirmation; the baseline arm gets no such help. "
-    "It is a separate fresh run of the system, so its first leg can differ from the zero-tap system row.")
+    "It is a separate fresh run of the system, so its first leg can differ from the zero-tap system row, and it "
+    "carries its own code SHA and SF_VISUAL_MATCH setting: the one-tap run on draw B had visual_match on, the one on "
+    "draw A ran after the shipped default became off.")
 
 NOTES = [
     "Blind draw: 30 product-family queries fixed first, one catalog product per query picked by a RNG seeded with the code SHA, frozen before any arm ran. Every frozen case is in the denominator; none was dropped, re-drawn or re-run.",
@@ -123,6 +125,12 @@ def tap_stats(doc: dict) -> dict:
             "gold_first": sum(bool(t.get("gold_first")) for t in taps),
             "answered_gold": sum(t.get("answered") == "gold" for t in taps),
             "answered_none": sum(t.get("answered") == "none" for t in taps),
+            "correct_via_tap": sum(c["arms"]["system_one_tap"]["outcome"] == "correct"
+                                   and "bind:buyer_choice" in c["arms"]["system_one_tap"]["reasons"] for c in doc["cases"]),
+            "correct_without_tap": sum(c["arms"]["system_one_tap"]["outcome"] == "correct"
+                                       and "bind:buyer_choice" not in c["arms"]["system_one_tap"]["reasons"] for c in doc["cases"]),
+            "gold_tap_without_verified_offer": sum((c.get("tap") or {}).get("answered") == "gold"
+                                                   and c["arms"]["system_one_tap"]["outcome"] == "abstained" for c in doc["cases"]),
             "source": f"e2e-{doc['run']}.json", "code_sha": doc.get("code_sha"), "tree_dirty": doc.get("tree_dirty"),
             "visual_match": bool(doc.get("visual_match")), "generated_at": doc.get("generated_at"), "note": ONE_TAP_NOTE}
 
@@ -167,18 +175,23 @@ def tap_reading(block: dict) -> list[str]:
     if not t or not a:
         return []
     n = block["n"]
-    return [f"With one correct tap (system_one_tap, the tap uses the gold label): {a['correct']} correct, "
+    setting = "on" if t["visual_match"] else "off (the shipped default)"
+    return [f"With one correct tap (system_one_tap, the tap uses the gold label; this arm ran on code "
+            f"{str(t.get('code_sha'))[:12]} with SF_VISUAL_MATCH {setting}): {a['correct']} correct "
+            f"({t['correct_via_tap']} through the tap, {t['correct_without_tap']} without one), "
             f"{a['false_accepts']} false accepts, {a['abstained']} abstained, {a['errors']} errors of {n}; "
             f"{a['invalid_offers']} of its {a['answered']} answered offers were invalid and {a['cheapest_agreement']} matched "
             f"the reference cheapest valid offer. The system asked a choice question in {t['choice_questions']} of {n} "
             f"cases; the gold product was among the options in {t['gold_offered']} and was the first option (ordered "
-            f"by the Decision 1 screen) in {t['gold_first']}. The baseline arm gets no such help."]
+            f"by the Decision 1 screen) in {t['gold_first']}; {t['gold_tap_without_verified_offer']} gold taps ended with "
+            f"no verified offer. The baseline arm gets no such help."]
 
 
 def no_lead_reading(block: dict) -> list[str]:
     r = (block.get("diagnostic") or {}).get("no_lead_rule")
     if not r:
-        return []
+        note = (block.get("diagnostic") or {}).get("no_lead_rule_note")
+        return [f"Documented next step (a rule without the lead requirement), NOT deployed and NOT a score: {note}."] if note else []
     return [f"Documented next step, NOT deployed and NOT a score (computed from the recorded runs, nothing re-run): a "
             f"rule without the lead requirement ({r['rule']}) would have accepted {r['accepted']} of {r['cases']} cases "
             f"({r['accepted_by_deployed_rule']} of them also accepted by the deployed rule): {r['accepted_gold']} the "
